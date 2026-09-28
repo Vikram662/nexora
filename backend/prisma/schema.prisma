@@ -1,0 +1,745 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------- Identity & Org ----------
+
+model User {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  phone            String?           @unique
+  passwordHash     String?
+  name             String?
+  mfaSecret        String?
+  mfaEnabled       Boolean           @default(false)
+  memberships      OrgMember[]
+  otpVerifications OtpVerification[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+enum OtpChannel {
+  EMAIL
+  PHONE
+}
+
+enum OtpPurpose {
+  LOGIN
+  SIGNUP
+}
+
+model OtpVerification {
+  id          String     @id @default(uuid())
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel     OtpChannel
+  destination String
+  purpose     OtpPurpose @default(LOGIN)
+  codeHash    String
+  attempts    Int        @default(0)
+  maxAttempts Int        @default(5)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@index([destination, purpose, createdAt])
+}
+
+model Organization {
+  id                    String                  @id @default(uuid())
+  name                  String
+  walletBalance         Decimal                 @default(0.00) @db.Decimal(12, 4)
+  planTier              PlanTier                @default(STARTER)
+  billingEmail          String
+  autoRechargeEnabled   Boolean                 @default(false)
+  autoRechargeThreshold Decimal?                @db.Decimal(12, 4)
+  autoRechargeAmount    Decimal?                @db.Decimal(12, 4)
+  razorpayMandateId     String?
+
+  kycVerification        KycVerification?
+  billingProfile         BillingProfile?
+  notificationPreference NotificationPreference?
+  rateOverrides          OrganizationRateOverride[]
+  offerRedemptions       WalletOfferRedemption[]
+  members                OrgMember[]
+  projects               Project[]
+  transactions           Transaction[]
+  invoices               Invoice[]
+  tickets                SupportTicket[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  DEVELOPER
+  BILLING
+}
+
+model OrgMember {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           OrgRole      @default(DEVELOPER)
+  invitedAt      DateTime     @default(now())
+  acceptedAt     DateTime?
+
+  @@unique([organizationId, userId])
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+enum NotificationType {
+  WELCOME
+  KYC_APPROVED
+  KYC_REJECTED
+  LOW_BALANCE
+  INVOICE_GENERATED
+  PAYMENT_RECEIVED
+  REFUND_PROCESSED
+  AUTO_RECHARGE_FAILED
+  WEBHOOK_ENDPOINT_DEGRADED
+  API_KEY_ROTATED
+  SECURITY_ALERT
+  PLAN_LIMIT_REACHED
+}
+
+model NotificationPreference {
+  id                 String       @id @default(uuid())
+  organizationId     String       @unique
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  emailEnabled       Boolean      @default(true)
+  smsEnabled         Boolean      @default(false)
+  criticalOnlyViaSms Boolean      @default(true)
+  updatedAt          DateTime     @updatedAt
+}
+
+model NotificationLog {
+  id             String              @id @default(uuid())
+  organizationId String
+  type           NotificationType
+  channel        NotificationChannel
+  destination    String
+  status         NotificationStatus  @default(QUEUED)
+  providerRef    String?
+  errorReason    String?
+  createdAt      DateTime            @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+// ---------- KYC / Verification ----------
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum KycDocumentType {
+  PAN
+  AADHAAR
+  GSTIN
+  COMPANY_CIN
+  UDYAM
+}
+
+model KycVerification {
+  id                      String          @id @default(uuid())
+  organizationId          String          @unique
+  organization            Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  documentType            KycDocumentType
+  encryptedDocumentNumber String          @db.Text
+  encryptionIv            String
+  encryptionAuthTag       String
+  keyVersion              Int             @default(1)
+
+  documentFileKey         String?
+  verifiedViaDigiLocker   Boolean         @default(false)
+
+  status                  KycStatus       @default(NOT_STARTED)
+  reviewedByStaffId       String?
+  reviewedAt              DateTime?
+  rejectionReason         String?
+
+  submittedAt             DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@index([status])
+}
+
+// ---------- Billing Profile & GST Invoices ----------
+
+model BillingProfile {
+  id                     String       @id @default(uuid())
+  organizationId         String       @unique
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  legalBusinessName      String
+  gstin                  String?
+  panNumber              String
+  billingAddressLine1    String
+  billingAddressLine2    String?
+  city                   String
+  placeOfSupplyStateCode String
+  pincode                String
+  invoiceEmail           String
+  gstinSourcedFromKyc    Boolean      @default(false)
+
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+}
+
+model Invoice {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoiceNumber   String       @unique
+  periodStart     DateTime
+  periodEnd       DateTime
+  subtotal        Decimal      @db.Decimal(12, 4)
+  cgstAmount      Decimal      @default(0.00) @db.Decimal(12, 4)
+  sgstAmount      Decimal      @default(0.00) @db.Decimal(12, 4)
+  igstAmount      Decimal      @default(0.00) @db.Decimal(12, 4)
+  totalAmount     Decimal      @db.Decimal(12, 4)
+  sacCode         String       @default("998314")
+  pdfObjectKey    String?
+  billingSnapshot Json
+  createdAt       DateTime     @default(now())
+
+  @@index([organizationId, periodStart])
+}
+
+// ---------- Projects & Keys ----------
+
+model Project {
+  id                      String              @id @default(uuid())
+  organizationId          String
+  organization            Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                    String
+  environment             Environment         @default(PRODUCTION)
+
+  apiKeyPrefix            String              @unique
+  apiSecretHash           String
+  apiSecretRolledAt       DateTime            @default(now())
+  previousSecretHash      String?
+  previousSecretExpiresAt DateTime?
+
+  ipAllowlist             Json?
+  maxConcurrentRooms      Int                 @default(50)
+  maxTokenTtlSeconds      Int                 @default(600)
+  isSuspended             Boolean             @default(false)
+
+  storageConfigs          StorageConfig[]
+  firebaseConfig          FirebaseConfig?
+  webhookEndpoints        WebhookEndpoint[]
+  usageLogs               UsageLog[]
+  recordings              Recording[]
+  aiProviderConfigs       AiProviderConfig[]
+  aiAgentProfiles         AiAgentProfile[]
+  aiAgentSessions         AiAgentSession[]
+  broadcastSessions       BroadcastSession[]
+
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  @@index([organizationId])
+}
+
+enum Environment {
+  SANDBOX
+  PRODUCTION
+}
+
+// ---------- BYOS ----------
+
+enum StorageProvider {
+  AWS_S3
+  CLOUDFLARE_R2
+  GOOGLE_CLOUD
+}
+
+model StorageConfig {
+  id                 String          @id @default(uuid())
+  projectId          String
+  project            Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  provider           StorageProvider
+  label              String
+  isDefault          Boolean         @default(true)
+
+  bucketName         String
+  region             String?
+  endpoint           String?
+
+  encryptedAccessKey String          @db.Text
+  encryptedSecretKey String          @db.Text
+  encryptionIv       String
+  encryptionAuthTag  String
+  keyVersion         Int             @default(1)
+
+  lastVerifiedAt     DateTime?
+  lastVerifyError    String?         @db.Text
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([projectId, label])
+  @@index([projectId])
+}
+
+// ---------- BYOF ----------
+
+model FirebaseConfig {
+  id                          String   @id @default(uuid())
+  projectId                   String   @unique
+  project                     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  firebaseProjectId           String
+  encryptedServiceAccountJson String   @db.Text
+  encryptionIv                String
+  encryptionAuthTag           String
+  keyVersion                  Int      @default(1)
+
+  lastVerifiedAt              DateTime?
+  lastVerifyError             String?  @db.Text
+
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+// ---------- BYOK: AI Voice Agent ----------
+
+enum AiProviderType {
+  LLM
+  STT
+  TTS
+}
+
+enum AiVendor {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  DEEPGRAM
+  ASSEMBLYAI
+  ELEVENLABS
+  PLAYHT
+  CARTESIA
+  AZURE_SPEECH
+  CUSTOM
+}
+
+model AiProviderConfig {
+  id                String         @id @default(uuid())
+  projectId         String
+  project           Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  providerType      AiProviderType
+  vendor            AiVendor
+  encryptedApiKey   String         @db.Text
+  encryptionIv      String
+  encryptionAuthTag String
+  keyVersion        Int            @default(1)
+
+  modelName         String?
+  extraConfig       Json?
+
+  lastVerifiedAt    DateTime?
+  lastVerifyError   String?        @db.Text
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([projectId, providerType])
+}
+
+model AiAgentProfile {
+  id            String           @id @default(uuid())
+  projectId     String
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name          String
+  systemPrompt  String           @db.Text
+  greetingText  String?
+  language      String           @default("en-US")
+  interruptible Boolean          @default(true)
+  isActive      Boolean          @default(true)
+  sessions      AiAgentSession[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model AiAgentSession {
+  id              String         @id @default(uuid())
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentProfileId  String
+  agentProfile    AiAgentProfile @relation(fields: [agentProfileId], references: [id])
+  roomName        String
+  startedAt       DateTime
+  endedAt         DateTime?
+  billableSeconds Int?
+  ratePerMinute   Decimal?       @db.Decimal(8, 4)
+  amountDeducted  Decimal?       @db.Decimal(12, 4)
+  endReason       String?
+
+  createdAt       DateTime       @default(now())
+
+  @@index([projectId, startedAt])
+  @@index([roomName])
+}
+
+// ---------- Live Broadcast ----------
+
+enum BroadcastDeliveryMode {
+  WEBRTC_SFU
+  HLS_CDN
+}
+
+model BroadcastSession {
+  id              String                @id @default(uuid())
+  projectId       String
+  project         Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  roomName        String
+  hostIdentity    String
+  deliveryMode    BroadcastDeliveryMode @default(WEBRTC_SFU)
+  ingressId       String?
+  hlsEgressId     String?
+  hlsPlaylistUrl  String?
+  peakViewerCount Int?
+  startedAt       DateTime
+  endedAt         DateTime?
+  restreamTargets RestreamDestination[]
+
+  @@index([projectId, startedAt])
+}
+
+model RestreamDestination {
+  id                 String           @id @default(uuid())
+  broadcastSessionId String
+  broadcastSession   BroadcastSession @relation(fields: [broadcastSessionId], references: [id], onDelete: Cascade)
+  label              String
+  encryptedRtmpUrl   String           @db.Text
+  encryptionIv       String
+  encryptionAuthTag  String
+  keyVersion         Int              @default(1)
+  status             RestreamStatus   @default(PENDING)
+
+  @@index([broadcastSessionId])
+}
+
+enum RestreamStatus {
+  PENDING
+  LIVE
+  FAILED
+  ENDED
+}
+
+// ---------- Usage & Billing ----------
+
+enum RoomType {
+  AUDIO_CALL
+  VIDEO_CALL
+  LIVE_BROADCAST
+  AI_AGENT_ORCHESTRATION
+}
+
+model UsageLog {
+  id                  String    @id @default(uuid())
+  projectId           String
+  project             Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  roomName            String
+  roomType            RoomType
+  participantIdentity String
+  startedAt           DateTime
+  endedAt             DateTime?
+  billableSeconds     Int?
+  ratePerMinute       Decimal   @db.Decimal(8, 4)
+  amountDeducted      Decimal?  @db.Decimal(12, 4)
+  livekitEgressId     String?
+
+  createdAt           DateTime  @default(now())
+
+  @@index([projectId, startedAt])
+  @@index([roomName])
+}
+
+model Transaction {
+  id                    String            @id @default(uuid())
+  organizationId        String
+  organization          Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type                  TransactionType
+  amount                Decimal           @db.Decimal(12, 4)
+
+  gatewayOrderId        String?
+  gatewayPaymentId      String?           @unique
+  gatewayRefundId       String?           @unique
+  originalTransactionId String?
+  originalTransaction   Transaction?      @relation("RefundOf", fields: [originalTransactionId], references: [id])
+  refunds               Transaction[]     @relation("RefundOf")
+  webhookVerified       Boolean           @default(false)
+  status                TransactionStatus @default(PENDING)
+  balanceAfter          Decimal?          @db.Decimal(12, 4)
+  createdAt             DateTime          @default(now())
+
+  @@index([organizationId, status])
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum TransactionType {
+  WALLET_TOPUP
+  AUTO_RECHARGE
+  USAGE_DEDUCTION
+  REFUND
+  MANUAL_ADJUSTMENT
+  PROMOTIONAL_CREDIT
+}
+
+enum BonusType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model WalletOffer {
+  id                 String                  @id @default(uuid())
+  title              String
+  minRechargeAmount  Decimal                 @db.Decimal(12, 4)
+  bonusType          BonusType
+  bonusValue         Decimal                 @db.Decimal(8, 4)
+  maxBonusAmount     Decimal?                @db.Decimal(12, 4)
+  perOrgLimit        Int                     @default(1)
+  totalRedemptionCap Int?
+  isActive           Boolean                 @default(true)
+  validFrom          DateTime
+  validUntil         DateTime
+  createdByStaffId   String
+  redemptions        WalletOfferRedemption[]
+  createdAt          DateTime                @default(now())
+
+  @@index([isActive, validFrom, validUntil])
+}
+
+model WalletOfferRedemption {
+  id             String       @id @default(uuid())
+  offerId        String
+  offer          WalletOffer  @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactionId  String       @unique
+  bonusAmount    Decimal      @db.Decimal(12, 4)
+  createdAt      DateTime     @default(now())
+
+  @@index([offerId, organizationId])
+}
+
+// ---------- Recordings (Metadata only) ----------
+
+model Recording {
+  id              String          @id @default(uuid())
+  projectId       String
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  roomName        String
+  livekitEgressId String          @unique
+  storageProvider StorageProvider
+  bucketName      String
+  objectKey       String
+  durationSeconds Int?
+  fileSizeBytes   BigInt?
+  status          RecordingStatus @default(PROCESSING)
+  failureReason   String?         @db.Text
+  startedAt       DateTime
+  completedAt     DateTime?
+
+  @@index([projectId, startedAt])
+}
+
+enum RecordingStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ---------- Outbound Webhooks ----------
+
+model WebhookEndpoint {
+  id            String            @id @default(uuid())
+  projectId     String
+  project       Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url           String
+  signingSecret String
+  events        Json
+  isActive      Boolean           @default(true)
+  deliveries    WebhookDelivery[]
+  createdAt     DateTime          @default(now())
+}
+
+model WebhookDelivery {
+  id           String          @id @default(uuid())
+  endpointId   String
+  endpoint     WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  eventType    String
+  payload      Json
+  attempt      Int             @default(1)
+  responseCode Int?
+  succeeded    Boolean         @default(false)
+  nextRetryAt  DateTime?
+  createdAt    DateTime        @default(now())
+
+  @@index([endpointId, succeeded, nextRetryAt])
+}
+
+// ---------- Audit Logs ----------
+
+model CredentialAccessLog {
+  id         String   @id @default(uuid())
+  targetType String
+  targetId   String
+  actor      String
+  purpose    String
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId, createdAt])
+}
+
+enum StaffRole {
+  SUPER_ADMIN
+  SUPPORT
+  BILLING_OPS
+  KYC_REVIEWER
+  SECURITY_ADMIN
+}
+
+model StaffUser {
+  id           String           @id @default(uuid())
+  email        String           @unique
+  passwordHash String
+  mfaSecret    String
+  mfaEnabled   Boolean          @default(false)
+  role         StaffRole
+  isActive     Boolean          @default(true)
+  lastLoginAt  DateTime?
+  actions      AdminActionLog[]
+  createdAt    DateTime         @default(now())
+}
+
+model AdminActionLog {
+  id          String    @id @default(uuid())
+  staffUserId String
+  staffUser   StaffUser @relation(fields: [staffUserId], references: [id])
+  action      String
+  targetType  String
+  targetId    String
+  reason      String?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([targetType, targetId, createdAt])
+  @@index([staffUserId, createdAt])
+}
+
+enum PlanTier {
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+// ---------- Plan Rate Cards ----------
+
+model PlanRateCard {
+  id            String   @id @default(uuid())
+  planTier      PlanTier
+  roomType      RoomType
+  ratePerMinute Decimal  @db.Decimal(8, 4)
+  effectiveFrom DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@unique([planTier, roomType, effectiveFrom])
+  @@index([planTier, roomType])
+}
+
+model OrganizationRateOverride {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roomType       RoomType
+  ratePerMinute  Decimal      @db.Decimal(8, 4)
+  reason         String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, roomType])
+}
+
+// ---------- Support Tickets ----------
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketCategory {
+  MEDIA_QUALITY
+  RECORDING_EGRESS
+  BILLING_WALLET
+  API_INTEGRATION
+  FEATURE_REQUEST
+}
+
+model SupportTicket {
+  id             String          @id @default(uuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ticketNumber   String          @unique // e.g. "TICK-1024"
+  subject        String
+  category       TicketCategory
+  priority       TicketPriority  @default(MEDIUM)
+  status         TicketStatus    @default(OPEN)
+  messages       TicketMessage[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([organizationId, status])
+}
+
+model TicketMessage {
+  id        String        @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    String        // "developer:user@company.com" or "support:staff_agent"
+  content   String        @db.Text
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId])
+}

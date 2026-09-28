@@ -1,0 +1,34 @@
+port: 7880
+bind_addresses:
+  - ""
+
+# Nexora RTC Control Plane Master Key
+keys:
+  devkey: nexora_secret_key_32chars_long_2026
+
+
+logging:
+  json: true
+  level: info
+
+# Distributed Redis for Multi-Node Scaling
+redis:
+  address: 127.0.0.1:6379
+  password: nexora_redis_secret_2026
+  db: 0
+
+# WebRTC & Media Ports
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: true
+  stun_servers:
+    - stun.l.google.com:19302
+    - stun1.l.google.com:19302
+
+# Webhook to dispatch room events to Nexora Backend
+webhook:
+  api_key: devkey
+  urls:
+    - http://127.0.0.1:4000/v1/webhooks/livekit

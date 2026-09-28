@@ -1,0 +1,26 @@
+port: 7880
+bind_addresses:
+  - ""
+
+# API keys used by Nexora Control Plane (backend)
+keys:
+  devkey: nexora_secret_key_32chars_long_2026
+
+
+logging:
+  json: false
+  level: info
+
+# WebRTC configuration
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: false
+  # Google Public STUN servers for NAT traversal
+  stun_servers:
+    - stun.l.google.com:19302
+    - stun1.l.google.com:19302
+
+# Local development doesn't require Redis (in-memory mode)
+# In production, Redis is enabled via livekit.prod.yaml
