@@ -105,6 +105,14 @@ export const FOOTER_GROUPS = [
       { href: '/signup', label: 'Create an account' },
     ],
   },
+  {
+    heading: 'Legal',
+    links: [
+      { href: '/privacy', label: 'Privacy policy' },
+      { href: '/terms', label: 'Terms of service' },
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
 ] as const;
 
 export interface Step { title: string; body: string }
