@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Flame, CheckCircle2 } from 'lucide-react';
 import { fetchOrganizationData, saveFirebase, OrganizationData, errorMessage } from '@/lib/api';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UserFirebasePage() {
+  const { success, error: toastError } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [fbProjectId, setFbProjectId] = useState('');
@@ -33,9 +35,10 @@ export default function UserFirebasePage() {
         serviceAccountJson: fbServiceAccountJson,
       });
       setFbSuccess(true);
+      success('Firebase configuration saved successfully');
       setTimeout(() => setFbSuccess(false), 3000);
     } catch (err) {
-      alert(errorMessage(err,'Failed to save Firebase config'));
+      toastError(errorMessage(err,'Failed to save Firebase config'));
     }
   };
 

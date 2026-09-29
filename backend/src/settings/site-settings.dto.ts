@@ -28,17 +28,17 @@ export class ContactSettingsDto {
   @IsOptional()
   companyName?: string;
 
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @IsEmail()
   @IsOptional()
   email?: string;
 
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @Matches(/^[+0-9 ()-]{7,20}$/, { message: 'phone must be 7-20 digits, spaces, +, - or brackets' })
   @IsOptional()
   phone?: string;
 
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @Matches(/^[+0-9 ()-]{7,20}$/, { message: 'whatsapp must be 7-20 digits, spaces, +, - or brackets' })
   @IsOptional()
   whatsapp?: string;
@@ -67,7 +67,7 @@ export class BrandSettingsDto {
   @IsOptional()
   tagline?: string;
 
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @IsUrl(URL_OPTIONS)
   @MaxLength(500)
   @IsOptional()
@@ -80,22 +80,22 @@ export class BrandSettingsDto {
 }
 
 export class SocialLinksDto {
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @IsUrl(URL_OPTIONS)
   @IsOptional()
   linkedin?: string;
 
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @IsUrl(URL_OPTIONS)
   @IsOptional()
   twitter?: string;
 
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @IsUrl(URL_OPTIONS)
   @IsOptional()
   github?: string;
 
-  @ValidateIf((_, v) => v !== '' && v !== undefined)
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
   @IsUrl(URL_OPTIONS)
   @IsOptional()
   youtube?: string;

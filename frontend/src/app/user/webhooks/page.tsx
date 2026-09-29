@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { BellRing, CheckCircle2 } from 'lucide-react';
 import { fetchOrganizationData, addWebhookEndpoint, OrganizationData, errorMessage } from '@/lib/api';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UserWebhooksPage() {
+  const { success, error: toastError, info } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -31,13 +33,14 @@ export default function UserWebhooksPage() {
         url: webhookUrl,
         events: ['recording.completed', 'room_finished', 'low_balance'],
       });
-      alert(`Webhook Registered Successfully!\n\nYour HMAC-SHA256 Signing Secret:\n${res.data.signingSecret}\n\nUse this secret to verify signatures in x-nexora-signature header.`);
+      info(`Webhook Registered! Signing Secret: ${res.data.signingSecret}`);
+      success('Webhook endpoint registered successfully');
       setWebhookSuccess(true);
       setWebhookUrl('');
       setTimeout(() => setWebhookSuccess(false), 3000);
       fetchOrganizationData().then((d) => setOrgData(d));
     } catch (err) {
-      alert(errorMessage(err,'Failed to add webhook'));
+      toastError(errorMessage(err,'Failed to add webhook'));
     }
   };
 

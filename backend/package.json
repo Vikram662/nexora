@@ -31,7 +31,6 @@
     "@nestjs/observe": "^0.1.8",
     "@nestjs/platform-express": "^12.0.1",
     "@nestjs/throttler": "^6.7.1",
-    "@types/cookie-parser": "^1.4.10",
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.3.9",
     "class-transformer": "^0.5.1",
@@ -53,6 +52,7 @@
     "@nestjs/testing": "^12.0.1",
     "@prisma/client": "^6.19.3",
     "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.0",
@@ -71,4 +71,3 @@
     "seed": "npx tsx prisma/seed.ts"
   }
 }
-

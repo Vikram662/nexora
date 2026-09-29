@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { Tag, Plus, Calendar, RefreshCw, Gift } from 'lucide-react';
 import { fetchAdminOffers, createAdminOffer, toggleAdminOffer, errorMessage } from '@/lib/api';
 import type { PromoOffer } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
 
 export default function AdminOffersPage() {
+  const { success, error: toastError } = useToast();
   const [offers, setOffers] = useState<PromoOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,9 +54,10 @@ export default function AdminOffersPage() {
       });
       setShowModal(false);
       setTitle('');
+      success('Promotional offer created successfully');
       await loadOffers();
     } catch (err) {
-      alert(errorMessage(err,'Failed to create offer'));
+      toastError(errorMessage(err,'Failed to create offer'));
     } finally {
       setSubmitting(false);
     }
@@ -63,9 +66,10 @@ export default function AdminOffersPage() {
   const handleToggle = async (id: string) => {
     try {
       await toggleAdminOffer(id);
+      success('Offer status updated');
       await loadOffers();
     } catch (err) {
-      alert(errorMessage(err,'Failed to change offer status'));
+      toastError(errorMessage(err,'Failed to change offer status'));
     }
   };
 

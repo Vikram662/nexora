@@ -5,8 +5,10 @@ import { useEffect, useState } from 'react';
 import { BadgeCheck, CheckCircle2, XCircle } from 'lucide-react';
 import { fetchAdminKycList, reviewAdminKyc, errorMessage } from '@/lib/api';
 import type { KycSubmission } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
 
 export default function AdminKycReviewPage() {
+  const { success, error: toastError } = useToast();
   const [submissions, setSubmissions] = useState<KycSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +40,10 @@ export default function AdminKycReviewPage() {
     setReviewingId(id);
     try {
       await reviewAdminKyc(id, action, reason);
+      success(`KYC status updated: ${action === 'APPROVE' ? 'Verified' : 'Rejected'}`);
       loadData();
     } catch (err) {
-      alert(errorMessage(err,'Failed to review KYC'));
+      toastError(errorMessage(err,'Failed to review KYC'));
     } finally {
       setReviewingId(null);
     }

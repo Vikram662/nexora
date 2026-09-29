@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { HelpCircle, CheckCircle2 } from 'lucide-react';
 import { fetchSupportTickets, createSupportTicket, errorMessage } from '@/lib/api';
 import type { SupportTicket } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UserTicketsPage() {
+  const { success, error: toastError } = useToast();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketCategory, setTicketCategory] = useState<'MEDIA_QUALITY' | 'RECORDING_EGRESS' | 'BILLING_WALLET' | 'API_INTEGRATION'>('API_INTEGRATION');
@@ -41,10 +43,11 @@ export default function UserTicketsPage() {
       setTicketSuccess(true);
       setTicketSubject('');
       setTicketMessage('');
+      success('Support ticket submitted successfully');
       setTimeout(() => setTicketSuccess(false), 4000);
       loadTickets();
     } catch (err) {
-      alert(errorMessage(err,'Failed to submit ticket'));
+      toastError(errorMessage(err,'Failed to submit ticket'));
     }
   };
 

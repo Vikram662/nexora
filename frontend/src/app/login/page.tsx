@@ -26,6 +26,9 @@ export default function LoginPage() {
 
     try {
       const res = await loginUser(email, password);
+      if (res.data?.token) {
+        document.cookie = `nexora_auth_token=${res.data.token}; path=/; max-age=86400; SameSite=Lax`;
+      }
       window.location.href = resolveDestination(redirectTo, Boolean(res.data?.user?.isStaff));
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Sign-in failed. Check your email and password.');

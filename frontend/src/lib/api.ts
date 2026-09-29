@@ -376,7 +376,10 @@ export async function mintRtcToken(params: {
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to mint LiveKit token');
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message || errorData.error || 'Failed to mint LiveKit token';
+    throw new Error(message);
   }
 
   return res.json();

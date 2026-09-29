@@ -8,8 +8,10 @@ import {
   rotateProjectSecret,
   updateProjectIpAllowlist,
   OrganizationData, errorMessage } from '@/lib/api';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UserProjectsPage() {
+  const { success, error: toastError, info } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -52,10 +54,10 @@ export default function UserProjectsPage() {
         .map((s) => s.trim())
         .filter(Boolean);
       await updateProjectIpAllowlist(projectId, list);
-      alert('Security IP allowlist updated successfully!');
+      success('Security IP allowlist updated successfully');
       loadData();
     } catch (err) {
-      alert(errorMessage(err,'Failed to update IP allowlist'));
+      toastError(errorMessage(err,'Failed to update IP allowlist'));
     } finally {
       setSavingIp(null);
     }
@@ -64,6 +66,7 @@ export default function UserProjectsPage() {
   const handleCopy = (text: string, identifier: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(identifier);
+    success('Copied to clipboard');
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
@@ -77,9 +80,10 @@ export default function UserProjectsPage() {
       });
       setShowNewProjectModal(false);
       setNewProjectName('');
+      success('New project created successfully');
       loadData();
     } catch (err) {
-      alert(errorMessage(err,'Failed to create project'));
+      toastError(errorMessage(err,'Failed to create project'));
     }
   };
 
@@ -89,10 +93,14 @@ export default function UserProjectsPage() {
     }
     try {
       const res = await rotateProjectSecret(projectId);
-      alert(`New API Secret Generated:\n\n${res.newSecret}\n\nSave this now! The previous secret will expire at:\n${new Date(res.graceWindowExpiresAt).toLocaleString()}`);
+      setCreatedSecretAlert({
+        key: 'Rotated Secret',
+        secret: res.newSecret,
+      });
+      info(`New Secret Generated. Previous secret expires at ${new Date(res.graceWindowExpiresAt).toLocaleString()}`);
       loadData();
     } catch (err) {
-      alert(errorMessage(err,'Failed to rotate secret'));
+      toastError(errorMessage(err,'Failed to rotate secret'));
     }
   };
 

@@ -72,7 +72,7 @@ export class SiteSettingsService {
 
   private async readAll(): Promise<Map<string, unknown>> {
     const rows = await this.prisma.siteSetting.findMany();
-    return new Map(rows.map((r) => [r.key, r.value]));
+    return new Map(rows.map((r: any) => [r.key, r.value]));
   }
 
   async getBilling(): Promise<BillingSettings> {

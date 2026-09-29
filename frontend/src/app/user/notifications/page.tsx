@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { fetchNotificationPreferences, updateNotificationPreferences, errorMessage } from '@/lib/api';
 import type { LucideIcon } from 'lucide-react';
+import { useToast } from '@/components/ToastProvider';
 
 interface AlertConfig {
   key: string;
@@ -125,6 +126,7 @@ const ALL_ALERTS: AlertConfig[] = [
 ];
 
 export default function NotificationsPage() {
+  const { success, error: toastError } = useToast();
   const [, setLoading] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [smsEnabled, setSmsEnabled] = useState(false);
@@ -172,9 +174,10 @@ export default function NotificationsPage() {
         criticalOnlyViaSms,
       });
       setSuccessAlert(true);
+      success('Notification preferences updated successfully');
       setTimeout(() => setSuccessAlert(false), 4000);
     } catch (err) {
-      alert(errorMessage(err,'Failed to save notification preferences'));
+      toastError(errorMessage(err,'Failed to save notification preferences'));
     }
   };
 

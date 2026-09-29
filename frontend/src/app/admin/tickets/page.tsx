@@ -5,8 +5,10 @@ import { useEffect, useState } from 'react';
 import { HelpCircle, MessageSquare, Send, User, Shield } from 'lucide-react';
 import { fetchAdminTickets, replyAdminTicket, errorMessage } from '@/lib/api';
 import type { SupportTicket, TicketMessage } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
 
 export default function AdminTicketsPage() {
+  const { success, error: toastError } = useToast();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +44,10 @@ export default function AdminTicketsPage() {
     try {
       await replyAdminTicket(selectedTicket.id, replyMessage.trim(), newStatus);
       setReplyMessage('');
+      success('Ticket reply sent successfully');
       loadData();
     } catch (err) {
-      alert(errorMessage(err,'Failed to send reply'));
+      toastError(errorMessage(err, 'Failed to send reply'));
     } finally {
       setReplyLoading(false);
     }

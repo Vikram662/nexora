@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { HardDrive, CheckCircle2 } from 'lucide-react';
 import { fetchOrganizationData, saveStorage, OrganizationData, errorMessage, type StorageConfig } from '@/lib/api';
-import type {  } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UserStoragePage() {
+  const { success, error: toastError } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [storageProvider, setStorageProvider] = useState<'AWS_S3' | 'CLOUDFLARE_R2' | 'GOOGLE_CLOUD'>('GOOGLE_CLOUD');
@@ -44,10 +45,11 @@ export default function UserStoragePage() {
         gcsServiceAccountJson: storageProvider === 'GOOGLE_CLOUD' ? gcsServiceAccountJson : undefined,
       });
       setStorageSuccess(true);
+      success('Storage configuration updated successfully');
       setTimeout(() => setStorageSuccess(false), 3000);
       fetchOrganizationData().then((d) => setOrgData(d));
     } catch (err) {
-      alert(errorMessage(err,'Failed to save storage'));
+      toastError(errorMessage(err,'Failed to save storage'));
     }
   };
 

@@ -10,8 +10,10 @@ import {
   OrganizationData,
   getApiBaseUrl, errorMessage } from '@/lib/api';
 import type { PaymentOrder, TaxInvoice, RazorpayResponse } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UserBillingPage() {
+  const { success, error: toastError, info } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [topupAmount, setTopupAmount] = useState(1000);
   const [topupLoading, setTopupLoading] = useState(false);
@@ -71,10 +73,11 @@ export default function UserBillingPage() {
     try {
       await updateCustomerBillingProfile(profileForm);
       setProfileSavedSuccess(true);
+      success('Billing profile updated successfully');
       setTimeout(() => setProfileSavedSuccess(false), 3000);
       loadData();
     } catch (err) {
-      alert(errorMessage(err,'Failed to save billing profile'));
+      toastError(errorMessage(err,'Failed to save billing profile'));
     } finally {
       setSavingProfile(false);
     }
@@ -104,10 +107,11 @@ export default function UserBillingPage() {
                 razorpaySignature: response.razorpay_signature,
               });
               setPaymentSuccessAlert(true);
+              success(`Wallet recharged with ₹${order.amount}!`);
               setTimeout(() => setPaymentSuccessAlert(false), 4000);
               loadData();
             } catch (err) {
-              alert(errorMessage(err,'Payment Verification Failed: Invalid Gateway Signature'));
+              toastError(errorMessage(err,'Payment Verification Failed: Invalid Gateway Signature'));
             }
           },
           prefill: {
@@ -121,7 +125,7 @@ export default function UserBillingPage() {
 
         const rzp = new window.Razorpay!(options);
         rzp.on('payment.failed', function (resp) {
-          alert(`Payment failed: ${resp.error.description}`);
+          toastError(`Payment failed: ${resp.error.description}`);
         });
         rzp.open();
       } else {
@@ -130,7 +134,7 @@ export default function UserBillingPage() {
         setShowPaymentModal(true);
       }
     } catch (err) {
-      alert(errorMessage(err,'Payment initiation failed'));
+      toastError(errorMessage(err,'Payment initiation failed'));
     } finally {
       setTopupLoading(false);
     }
@@ -138,7 +142,7 @@ export default function UserBillingPage() {
 
   const handleConfirmPayment = async () => {
     if (!activePaymentOrder) return;
-    alert('Real verification enforced: Please enter valid Razorpay credentials in Admin Settings or pay via live Razorpay checkout to generate a verified cryptographic signature.');
+    info('Real verification enforced: Please enter valid Razorpay credentials in Admin Settings or pay via live Razorpay checkout to generate a verified cryptographic signature.');
     setShowPaymentModal(false);
   };
 

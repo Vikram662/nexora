@@ -31,6 +31,8 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', title: 'Nexora RTC', description: DESCRIPTION },
 };
 
+import { ToastProvider } from '@/components/ToastProvider';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="light" suppressHydrationWarning>
@@ -41,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${bricolage.variable} ${dmSans.variable} ${jetbrains.variable} font-sans bg-paper text-ink antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

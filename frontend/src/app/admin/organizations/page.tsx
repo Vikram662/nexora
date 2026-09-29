@@ -5,8 +5,10 @@ import { useEffect, useState } from 'react';
 import { Building2, CreditCard, CheckCircle2 } from 'lucide-react';
 import { fetchAdminOrganizations, adjustOrgBalance, errorMessage } from '@/lib/api';
 import type { OrgSummary } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
 
 export default function AdminOrganizationsPage() {
+  const { success, error: toastError } = useToast();
   const [orgs, setOrgs] = useState<OrgSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,11 +41,11 @@ export default function AdminOrganizationsPage() {
     setSuccessMsg(null);
     try {
       await adjustOrgBalance(selectedOrg.id, Number(adjustAmount), adjustReason);
-      setSuccessMsg(`Successfully credited ₹${adjustAmount} to ${selectedOrg.name}!`);
+      success(`Successfully credited ₹${adjustAmount} to ${selectedOrg.name}!`);
       setSelectedOrg(null);
       loadData();
     } catch (err) {
-      alert(errorMessage(err,'Failed to adjust balance'));
+      toastError(errorMessage(err, 'Failed to adjust balance'));
     } finally {
       setAdjustLoading(false);
     }

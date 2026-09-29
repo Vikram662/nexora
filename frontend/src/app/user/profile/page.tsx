@@ -4,8 +4,10 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { User, Mail, Phone, Lock, Save, CheckCircle2, Smartphone, X } from 'lucide-react';
 import { fetchOrganizationData, OrganizationData, fetch2faSetup, verifyAndToggle2fa, errorMessage } from '@/lib/api';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UserProfilePage() {
+  const { success, error: toastError } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [, setLoading] = useState(true);
   const [name, setName] = useState('Lead Engineer');
@@ -87,15 +89,17 @@ export default function UserProfilePage() {
       await verifyAndToggle2fa('', false);
       setTwoFactorEnabled(false);
       setSavedSuccess(true);
+      success('Two-Factor Authentication disabled successfully');
       setTimeout(() => setSavedSuccess(false), 4000);
     } catch (err) {
-      alert(errorMessage(err,'Failed to disable 2FA'));
+      toastError(errorMessage(err,'Failed to disable 2FA'));
     }
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     setSavedSuccess(true);
+    success('Profile updated successfully');
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
