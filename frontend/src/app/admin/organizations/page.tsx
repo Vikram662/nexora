@@ -2,32 +2,23 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import {
-  Building2,
-  CreditCard,
-  PlusCircle,
-  FolderKanban,
-  Users2,
-  ArrowUpDown,
-  Search,
-  CheckCircle2,
-} from 'lucide-react';
-import { fetchAdminOrganizations, adjustOrgBalance } from '@/lib/api';
+import { Building2, CreditCard, CheckCircle2 } from 'lucide-react';
+import { fetchAdminOrganizations, adjustOrgBalance, errorMessage } from '@/lib/api';
+import type { OrgSummary } from '@/lib/types';
 
 export default function AdminOrganizationsPage() {
-  const [orgs, setOrgs] = useState<any[]>([]);
+  const [orgs, setOrgs] = useState<OrgSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Balance adjustment modal state
-  const [selectedOrg, setSelectedOrg] = useState<any | null>(null);
+  const [selectedOrg, setSelectedOrg] = useState<OrgSummary | null>(null);
   const [adjustAmount, setAdjustAmount] = useState<number>(1000);
   const [adjustReason, setAdjustReason] = useState<string>('Discretionary test credits / promo');
   const [adjustLoading, setAdjustLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const loadData = () => {
-    setLoading(true);
     fetchAdminOrganizations()
       .then((data) => {
         setOrgs(data);
@@ -51,8 +42,8 @@ export default function AdminOrganizationsPage() {
       setSuccessMsg(`Successfully credited ₹${adjustAmount} to ${selectedOrg.name}!`);
       setSelectedOrg(null);
       loadData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to adjust balance');
+    } catch (err) {
+      alert(errorMessage(err,'Failed to adjust balance'));
     } finally {
       setAdjustLoading(false);
     }
@@ -62,35 +53,35 @@ export default function AdminOrganizationsPage() {
     <div className="p-8 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Building2 className="h-6 w-6 text-blue-600" />
+          <h1 className="text-2xl font-semibold text-ink tracking-tight flex items-center gap-2.5">
+            <Building2 className="h-6 w-6 text-accent" />
             <span>Organizations & Custom Rates</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-muted mt-1">
             Manage enterprise organizations, review live project allocations, and issue wallet balance adjustments.
           </p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+        <div className="p-4 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+        <div className="p-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
           Error: {error}
         </div>
       )}
 
       {/* Orgs Grid */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-line shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+              <tr className="bg-paper border-b border-line text-muted font-bold uppercase text-[10px] tracking-wider">
                 <th className="py-3.5 px-5">Organization</th>
                 <th className="py-3.5 px-5">Plan Tier</th>
                 <th className="py-3.5 px-5">Wallet Balance</th>
@@ -100,7 +91,7 @@ export default function AdminOrganizationsPage() {
                 <th className="py-3.5 px-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-slate-400">
@@ -115,14 +106,14 @@ export default function AdminOrganizationsPage() {
                 </tr>
               ) : (
                 orgs.map((org) => (
-                  <tr key={org.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={org.id} className="hover:bg-paper/80 transition-colors">
                     <td className="py-4 px-5">
-                      <div className="font-bold text-slate-900">{org.name}</div>
+                      <div className="font-bold text-ink">{org.name}</div>
                       <div className="text-[11px] text-slate-400 font-mono">{org.billingEmail}</div>
                     </td>
 
                     <td className="py-4 px-5">
-                      <span className="font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px]">
+                      <span className="font-bold text-accent-deep bg-accent/10 border border-accent/30 px-2.5 py-0.5 rounded-full text-[10px]">
                         {org.planTier}
                       </span>
                     </td>
@@ -131,7 +122,7 @@ export default function AdminOrganizationsPage() {
                       ₹{Number(org.walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
 
-                    <td className="py-4 px-5 text-slate-600 font-semibold">
+                    <td className="py-4 px-5 text-muted font-semibold">
                       {org.projects?.length || org._count?.projects || 0} Apps
                     </td>
 
@@ -147,14 +138,14 @@ export default function AdminOrganizationsPage() {
                       </span>
                     </td>
 
-                    <td className="py-4 px-5 text-slate-500 text-[11px]">
+                    <td className="py-4 px-5 text-muted text-[11px]">
                       {new Date(org.createdAt).toLocaleDateString()}
                     </td>
 
                     <td className="py-4 px-5 text-right">
                       <button
                         onClick={() => setSelectedOrg(org)}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors shadow-sm cursor-pointer inline-flex items-center gap-1.5"
+                        className="px-3 py-1.5 bg-console hover:bg-console-line text-white rounded-lg text-xs font-bold transition-colors shadow-sm cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <CreditCard className="h-3 w-3" /> Adjust Balance
                       </button>
@@ -170,19 +161,19 @@ export default function AdminOrganizationsPage() {
       {/* Adjust Balance Modal */}
       {selectedOrg && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-line space-y-5 animate-in fade-in zoom-in-95">
             <div>
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="text-base font-bold text-ink">
                 Adjust Wallet Balance for {selectedOrg.name}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Current Escrow Balance: <strong className="text-emerald-600">₹{Number(selectedOrg.walletBalance).toFixed(2)}</strong>
               </p>
             </div>
 
             <form onSubmit={handleAdjustSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-ink mb-1">
                   Credit / Debit Amount (INR ₹)
                 </label>
                 <input
@@ -191,7 +182,7 @@ export default function AdminOrganizationsPage() {
                   value={adjustAmount}
                   onChange={(e) => setAdjustAmount(Number(e.target.value))}
                   placeholder="e.g. 500 or -200"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono text-sm"
                   required
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -200,28 +191,28 @@ export default function AdminOrganizationsPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Adjustment Reason / Notes</label>
+                <label className="block font-semibold text-ink mb-1">Adjustment Reason / Notes</label>
                 <input
                   type="text"
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setSelectedOrg(null)}
-                  className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 text-muted font-bold hover:bg-paper-deep rounded-md transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={adjustLoading}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {adjustLoading ? 'Processing...' : 'Confirm Balance Adjustment'}
                 </button>

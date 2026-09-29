@@ -2,28 +2,18 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import {
-  BadgeCheck,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  ShieldAlert,
-  Building2,
-  FileText,
-  Search,
-  Filter,
-} from 'lucide-react';
-import { fetchAdminKycList, reviewAdminKyc } from '@/lib/api';
+import { BadgeCheck, CheckCircle2, XCircle } from 'lucide-react';
+import { fetchAdminKycList, reviewAdminKyc, errorMessage } from '@/lib/api';
+import type { KycSubmission } from '@/lib/types';
 
 export default function AdminKycReviewPage() {
-  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<KycSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
 
   const loadData = () => {
-    setLoading(true);
     fetchAdminKycList()
       .then((data) => {
         setSubmissions(data);
@@ -49,8 +39,8 @@ export default function AdminKycReviewPage() {
     try {
       await reviewAdminKyc(id, action, reason);
       loadData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to review KYC');
+    } catch (err) {
+      alert(errorMessage(err,'Failed to review KYC'));
     } finally {
       setReviewingId(null);
     }
@@ -65,11 +55,11 @@ export default function AdminKycReviewPage() {
     <div className="p-8 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <BadgeCheck className="h-6 w-6 text-blue-600" />
+          <h1 className="text-2xl font-semibold text-ink tracking-tight flex items-center gap-2.5">
+            <BadgeCheck className="h-6 w-6 text-accent" />
             <span>KYC Compliance & Verification Queue</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-muted mt-1">
             Review customer PAN, GSTIN, Company CIN, or DigiLocker submissions to unlock production live streaming.
           </p>
         </div>
@@ -79,10 +69,10 @@ export default function AdminKycReviewPage() {
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 filterStatus === st
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-console text-white shadow-sm'
+                  : 'bg-white border border-line text-muted hover:bg-paper'
               }`}
             >
               {st.replace('_', ' ')}
@@ -92,17 +82,17 @@ export default function AdminKycReviewPage() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+        <div className="p-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
           Error: {error}
         </div>
       )}
 
       {/* Submissions Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-line shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+              <tr className="bg-paper border-b border-line text-muted font-bold uppercase text-[10px] tracking-wider">
                 <th className="py-3.5 px-5">Organization</th>
                 <th className="py-3.5 px-5">Document Type</th>
                 <th className="py-3.5 px-5">Decrypted Identifier</th>
@@ -112,7 +102,7 @@ export default function AdminKycReviewPage() {
                 <th className="py-3.5 px-5 text-right">Review Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-slate-400">
@@ -127,19 +117,19 @@ export default function AdminKycReviewPage() {
                 </tr>
               ) : (
                 filtered.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={sub.id} className="hover:bg-paper/80 transition-colors">
                     <td className="py-4 px-5">
-                      <div className="font-bold text-slate-900">{sub.organizationName}</div>
+                      <div className="font-bold text-ink">{sub.organizationName}</div>
                       <div className="text-[11px] text-slate-400">{sub.organizationEmail}</div>
                     </td>
 
                     <td className="py-4 px-5">
-                      <span className="font-semibold text-slate-700 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px]">
+                      <span className="font-semibold text-ink px-2 py-0.5 rounded bg-paper-deep border border-line text-[11px]">
                         {sub.documentType}
                       </span>
                     </td>
 
-                    <td className="py-4 px-5 font-mono font-bold text-slate-900">
+                    <td className="py-4 px-5 font-mono font-bold text-ink">
                       {sub.documentNumber}
                     </td>
 
@@ -149,7 +139,7 @@ export default function AdminKycReviewPage() {
                           DigiLocker Direct
                         </span>
                       ) : (
-                        <span className="text-slate-600 bg-slate-100 font-medium px-2 py-0.5 rounded text-[10px]">
+                        <span className="text-muted bg-paper-deep font-medium px-2 py-0.5 rounded text-[10px]">
                           Manual Upload
                         </span>
                       )}
@@ -174,7 +164,7 @@ export default function AdminKycReviewPage() {
                       )}
                     </td>
 
-                    <td className="py-4 px-5 text-slate-500 text-[11px]">
+                    <td className="py-4 px-5 text-muted text-[11px]">
                       {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : 'N/A'}
                     </td>
 

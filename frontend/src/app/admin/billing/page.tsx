@@ -1,33 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  CreditCard,
-  TrendingUp,
-  Receipt,
-  Building2,
-  DollarSign,
-  Download,
-  Search,
-  Filter,
-  ArrowUpRight,
-  ShieldCheck,
-  RefreshCw,
-} from 'lucide-react';
-import { fetchAdminBillingOverview, fetchGstr1Report, fetchGstr2Report, getApiBaseUrl } from '@/lib/api';
+import { CreditCard, TrendingUp, Receipt, DollarSign, Download, Search, ArrowUpRight, ShieldCheck, RefreshCw } from 'lucide-react';
+import { fetchAdminBillingOverview, fetchGstr1Report, fetchGstr2Report, getApiBaseUrl, errorMessage } from '@/lib/api';
+import type { AdminBillingOverview, Gstr1Report, Gstr2Report, Gstr2Row, LedgerTransaction, TaxInvoice, OrgSummary } from '@/lib/types';
 
 export default function AdminBillingPage() {
-  const [data, setData] = useState<any>(null);
-  const [gstr1Data, setGstr1Data] = useState<any>(null);
-  const [gstr2Data, setGstr2Data] = useState<any>(null);
+  const [data, setData] = useState<AdminBillingOverview | null>(null);
+  const [gstr1Data, setGstr1Data] = useState<Gstr1Report | null>(null);
+  const [gstr2Data, setGstr2Data] = useState<Gstr2Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'transactions' | 'invoices' | 'escrow' | 'gstr1' | 'gstr2'>('transactions');
   const [searchTerm, setSearchTerm] = useState('');
 
   const loadData = async () => {
-    setLoading(true);
-    setError(null);
     try {
       const [res, g1, g2] = await Promise.all([
         fetchAdminBillingOverview(),
@@ -35,17 +22,18 @@ export default function AdminBillingPage() {
         fetchGstr2Report().catch(() => ({ data: null })),
       ]);
       setData(res.data);
+      setError(null);
       if (g1?.data) setGstr1Data(g1.data);
       if (g2?.data) setGstr2Data(g2.data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load billing ledger');
+    } catch (err) {
+      setError(errorMessage(err,'Failed to load billing ledger'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    void Promise.resolve().then(loadData);
   }, []);
 
   const summary = data?.summary || {
@@ -56,18 +44,18 @@ export default function AdminBillingPage() {
     activePayingTenants: 0,
   };
 
-  const filteredTransactions = (data?.transactions || []).filter((tx: any) =>
+  const filteredTransactions = (data?.transactions || []).filter((tx: LedgerTransaction) =>
     tx.organization?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tx.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tx.id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredInvoices = (data?.invoices || []).filter((inv: any) =>
+  const filteredInvoices = (data?.invoices || []).filter((inv: TaxInvoice) =>
     inv.organization?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredOrgs = (data?.organizations || []).filter((org: any) =>
+  const filteredOrgs = (data?.organizations || []).filter((org: OrgSummary) =>
     org.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     org.billingEmail?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -77,11 +65,11 @@ export default function AdminBillingPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-indigo-600" />
+          <h1 className="text-xl font-bold text-ink tracking-tight flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-accent" />
             <span>Platform Financials & Revenue Ledger</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Real-time gross revenue, prepaid wallet deposits, billable WebRTC deductions & statutory GST tax invoices.
           </p>
         </div>
@@ -89,7 +77,7 @@ export default function AdminBillingPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            className="px-3 py-1.5 bg-white border border-line hover:bg-paper text-ink text-xs font-semibold rounded-md flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh Ledger
@@ -98,21 +86,21 @@ export default function AdminBillingPage() {
       </div>
 
       {error && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
+        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-md">
           {error}
         </div>
       )}
 
       {/* KPI Financial Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gross Deposits</span>
-            <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider">Gross Deposits</span>
+            <div className="h-8 w-8 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">
+          <div className="text-2xl font-semibold text-ink mt-2">
             ₹{Number(summary.totalTopups).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
@@ -121,14 +109,14 @@ export default function AdminBillingPage() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">WebRTC Consumption</span>
-            <div className="h-8 w-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider">WebRTC Consumption</span>
+            <div className="h-8 w-8 rounded-md bg-accent/10 text-accent flex items-center justify-center">
               <DollarSign className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">
+          <div className="text-2xl font-semibold text-ink mt-2">
             ₹{Number(summary.totalUsageDeductions).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[11px] text-slate-400 font-medium mt-1">
@@ -136,14 +124,14 @@ export default function AdminBillingPage() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Custody Escrow</span>
-            <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider">Custody Escrow</span>
+            <div className="h-8 w-8 rounded-md bg-accent/10 text-accent flex items-center justify-center">
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">
+          <div className="text-2xl font-semibold text-ink mt-2">
             ₹{Number(summary.totalCustWalletEscrow).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[11px] text-slate-400 font-medium mt-1">
@@ -151,14 +139,14 @@ export default function AdminBillingPage() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Invoiced GST Billing</span>
-            <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider">Invoiced GST Billing</span>
+            <div className="h-8 w-8 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
               <Receipt className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">
+          <div className="text-2xl font-semibold text-ink mt-2">
             ₹{Number(summary.totalInvoiced).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[11px] text-slate-400 font-medium mt-1">
@@ -168,16 +156,16 @@ export default function AdminBillingPage() {
       </div>
 
       {/* Main Table Tabs and Content */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-line shadow-sm overflow-hidden">
         {/* Sub-Header with Navigation Tabs and Search */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+        <div className="p-4 border-b border-line flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-1 bg-paper-deep p-1 rounded-md">
             <button
               onClick={() => setActiveTab('transactions')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'transactions'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-ink shadow-sm'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               Transactions & Top-ups ({filteredTransactions.length})
@@ -186,8 +174,8 @@ export default function AdminBillingPage() {
               onClick={() => setActiveTab('invoices')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'invoices'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-ink shadow-sm'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               Tax Invoices ({filteredInvoices.length})
@@ -196,8 +184,8 @@ export default function AdminBillingPage() {
               onClick={() => setActiveTab('escrow')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'escrow'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-ink shadow-sm'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               Customer Escrow Balances ({filteredOrgs.length})
@@ -206,8 +194,8 @@ export default function AdminBillingPage() {
               onClick={() => setActiveTab('gstr1')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'gstr1'
-                  ? 'bg-white text-indigo-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-accent-deep shadow-sm'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               GSTR-1 Outward Return
@@ -216,8 +204,8 @@ export default function AdminBillingPage() {
               onClick={() => setActiveTab('gstr2')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'gstr2'
-                  ? 'bg-white text-indigo-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-accent-deep shadow-sm'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               GSTR-2 ITC Credit
@@ -230,7 +218,7 @@ export default function AdminBillingPage() {
               placeholder="Search tenant, ID or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs pl-8 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              className="w-full px-3 py-1.5 bg-paper border border-line rounded-md text-xs pl-8 focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-2.5" />
           </div>
@@ -240,7 +228,7 @@ export default function AdminBillingPage() {
         {activeTab === 'transactions' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-paper text-muted font-bold uppercase text-[10px] tracking-wider border-b border-line">
                 <tr>
                   <th className="py-3 px-4">Transaction Ref</th>
                   <th className="py-3 px-4">Organization</th>
@@ -250,7 +238,7 @@ export default function AdminBillingPage() {
                   <th className="py-3 px-4">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody className="divide-y divide-line font-medium text-ink">
                 {filteredTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-slate-400">
@@ -258,20 +246,20 @@ export default function AdminBillingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredTransactions.map((tx: any) => (
-                    <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
+                  filteredTransactions.map((tx: LedgerTransaction) => (
+                    <tr key={tx.id} className="hover:bg-paper/50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-[11px] text-muted">
                         {tx.gatewayPaymentId || tx.id.substring(0, 14)}
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
+                      <td className="py-3 px-4 font-bold text-ink">
                         {tx.organization?.name || 'Unknown Org'}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
                           {tx.type}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
+                      <td className="py-3 px-4 font-bold text-ink">
                         ₹{Number(tx.amount).toFixed(2)}
                       </td>
                       <td className="py-3 px-4">
@@ -298,7 +286,7 @@ export default function AdminBillingPage() {
         {activeTab === 'invoices' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-paper text-muted font-bold uppercase text-[10px] tracking-wider border-b border-line">
                 <tr>
                   <th className="py-3 px-4">Invoice #</th>
                   <th className="py-3 px-4">Organization</th>
@@ -309,7 +297,7 @@ export default function AdminBillingPage() {
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody className="divide-y divide-line font-medium text-ink">
                 {filteredInvoices.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-slate-400">
@@ -317,28 +305,28 @@ export default function AdminBillingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredInvoices.map((inv: any) => (
-                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-indigo-700">
+                  filteredInvoices.map((inv: TaxInvoice) => (
+                    <tr key={inv.id} className="hover:bg-paper/50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-accent-deep">
                         {inv.invoiceNumber}
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
+                      <td className="py-3 px-4 font-bold text-ink">
                         {inv.organization?.name || 'Enterprise'}
                       </td>
                       <td className="py-3 px-4 text-slate-400 text-[11px]">
                         {new Date(inv.periodStart).toLocaleDateString()} - {new Date(inv.periodEnd).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4">₹{Number(inv.subtotal).toFixed(2)}</td>
-                      <td className="py-3 px-4 text-slate-500">
+                      <td className="py-3 px-4 text-muted">
                         ₹{(Number(inv.cgstAmount || 0) + Number(inv.sgstAmount || 0) + Number(inv.igstAmount || 0)).toFixed(2)}
                       </td>
-                      <td className="py-3 px-4 font-black text-slate-900">
+                      <td className="py-3 px-4 font-semibold text-ink">
                         ₹{Number(inv.totalAmount).toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <button
                           onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/invoices/${inv.id}/print`, '_blank')}
-                          className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
+                          className="px-2.5 py-1 rounded-lg bg-accent/10 hover:bg-accent/15 text-accent-deep text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-accent/30"
                         >
                           <Download className="h-3 w-3" /> View / PDF
                         </button>
@@ -355,7 +343,7 @@ export default function AdminBillingPage() {
         {activeTab === 'escrow' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-paper text-muted font-bold uppercase text-[10px] tracking-wider border-b border-line">
                 <tr>
                   <th className="py-3 px-4">Organization Name</th>
                   <th className="py-3 px-4">Billing Email</th>
@@ -365,21 +353,21 @@ export default function AdminBillingPage() {
                   <th className="py-3 px-4 text-right">Direct Top-up</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {filteredOrgs.map((org: any) => (
-                  <tr key={org.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900">
+              <tbody className="divide-y divide-line font-medium text-ink">
+                {filteredOrgs.map((org: OrgSummary) => (
+                  <tr key={org.id} className="hover:bg-paper/50 transition-colors">
+                    <td className="py-3 px-4 font-bold text-ink">
                       {org.name}
                     </td>
-                    <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                    <td className="py-3 px-4 text-muted font-mono text-[11px]">
                       {org.billingEmail || 'N/A'}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
                         {org.planTier}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-black text-emerald-600 text-sm">
+                    <td className="py-3 px-4 font-semibold text-emerald-600 text-sm">
                       ₹{Number(org.walletBalance).toFixed(2)}
                     </td>
                     <td className="py-3 px-4">
@@ -392,7 +380,7 @@ export default function AdminBillingPage() {
                     <td className="py-3 px-4 text-right">
                       <a
                         href="/admin/organizations"
-                        className="text-xs text-indigo-600 hover:text-indigo-800 font-bold underline"
+                        className="text-xs text-accent hover:text-accent-deep font-bold underline"
                       >
                         Adjust Balance →
                       </a>
@@ -407,28 +395,28 @@ export default function AdminBillingPage() {
         {/* Tab 4: GSTR-1 Outward Tax Supplies */}
         {activeTab === 'gstr1' && (
           <div className="p-5 space-y-4">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div className="p-4 rounded-md bg-paper border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
               <div>
-                <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <div className="font-bold text-ink text-sm flex items-center gap-2">
                   <span>GSTR-1 Monthly Return Filing Summary</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     SAC 998314 Compliant
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
+                <div className="text-[11px] text-muted mt-0.5">
                   Filing Period: {gstr1Data?.filingPeriod || 'FY 2025-26'} • Cloud SFU Hosting & Audio/Video Infrastructure
                 </div>
               </div>
               <div className="flex items-center gap-4 text-right">
                 <div>
                   <div className="text-[10px] text-slate-400 font-bold uppercase">Total Taxable</div>
-                  <div className="text-sm font-black text-slate-900">
+                  <div className="text-sm font-semibold text-ink">
                     ₹{Number(gstr1Data?.summary?.totalTaxable || 0).toFixed(2)}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-400 font-bold uppercase">GST Output Liability</div>
-                  <div className="text-sm font-black text-indigo-700">
+                  <div className="text-sm font-semibold text-accent-deep">
                     ₹{Number(gstr1Data?.summary?.totalTaxCollected || 0).toFixed(2)}
                   </div>
                 </div>
@@ -437,7 +425,7 @@ export default function AdminBillingPage() {
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <thead className="bg-paper text-muted font-bold uppercase text-[10px] tracking-wider border-b border-line">
                   <tr>
                     <th className="py-3 px-4">Invoice #</th>
                     <th className="py-3 px-4">Recipient Customer</th>
@@ -450,7 +438,7 @@ export default function AdminBillingPage() {
                     <th className="py-3 px-4">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                <tbody className="divide-y divide-line font-medium text-ink">
                   {(!gstr1Data?.b2b || gstr1Data.b2b.length === 0) ? (
                     <tr>
                       <td colSpan={9} className="py-8 text-center text-slate-400">
@@ -458,16 +446,16 @@ export default function AdminBillingPage() {
                       </td>
                     </tr>
                   ) : (
-                    gstr1Data.b2b.map((inv: any, i: number) => (
-                      <tr key={i} className="hover:bg-slate-50/50">
-                        <td className="py-3 px-4 font-mono font-bold text-indigo-700">{inv.invoiceNumber}</td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{inv.customerName}</td>
-                        <td className="py-3 px-4 font-mono text-[11px] font-bold text-slate-700">{inv.customerGstin}</td>
-                        <td className="py-3 px-4 text-slate-500">{inv.placeOfSupply}</td>
+                    gstr1Data.b2b.map((inv: TaxInvoice, i: number) => (
+                      <tr key={i} className="hover:bg-paper/50">
+                        <td className="py-3 px-4 font-mono font-bold text-accent-deep">{inv.invoiceNumber}</td>
+                        <td className="py-3 px-4 font-bold text-ink">{inv.customerName}</td>
+                        <td className="py-3 px-4 font-mono text-[11px] font-bold text-ink">{inv.customerGstin}</td>
+                        <td className="py-3 px-4 text-muted">{inv.placeOfSupply}</td>
                         <td className="py-3 px-4 font-bold">₹{Number(inv.taxableValue).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-slate-500">₹{Number(inv.cgst).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-slate-500">₹{Number(inv.sgst).toFixed(2)}</td>
-                        <td className="py-3 px-4 font-black text-slate-900">₹{Number(inv.totalInvoiceValue).toFixed(2)}</td>
+                        <td className="py-3 px-4 text-muted">₹{Number(inv.cgst).toFixed(2)}</td>
+                        <td className="py-3 px-4 text-muted">₹{Number(inv.sgst).toFixed(2)}</td>
+                        <td className="py-3 px-4 font-semibold text-ink">₹{Number(inv.totalInvoiceValue).toFixed(2)}</td>
                         <td className="py-3 px-4">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             {inv.status}
@@ -485,21 +473,21 @@ export default function AdminBillingPage() {
         {/* Tab 5: GSTR-2 Inward Supplies & Input Tax Credit (ITC) */}
         {activeTab === 'gstr2' && (
           <div className="p-5 space-y-4">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div className="p-4 rounded-md bg-paper border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
               <div>
-                <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <div className="font-bold text-ink text-sm flex items-center gap-2">
                   <span>GSTR-2 Inward Supplies & Input Tax Credit (ITC)</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
                     Auto-Matched
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
+                <div className="text-[11px] text-muted mt-0.5">
                   Eligible ITC credit on upstream SFU cluster servers, GPU bare-metal & bandwidth transit providers.
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-[10px] text-slate-400 font-bold uppercase">Total Eligible ITC Credit</div>
-                <div className="text-lg font-black text-emerald-600">
+                <div className="text-lg font-semibold text-emerald-600">
                   ₹{Number(gstr2Data?.summary?.totalInputTaxCredit || 10890.0).toFixed(2)}
                 </div>
               </div>
@@ -507,7 +495,7 @@ export default function AdminBillingPage() {
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <thead className="bg-paper text-muted font-bold uppercase text-[10px] tracking-wider border-b border-line">
                   <tr>
                     <th className="py-3 px-4">Supplier / Vendor</th>
                     <th className="py-3 px-4">Supplier GSTIN</th>
@@ -518,16 +506,16 @@ export default function AdminBillingPage() {
                     <th className="py-3 px-4">Eligible ITC (18%)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {(gstr2Data?.itcEligible || []).map((row: any, i: number) => (
-                    <tr key={i} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-4 font-bold text-slate-900">{row.vendorName}</td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-700 font-bold">{row.vendorGstin}</td>
-                      <td className="py-3 px-4 font-mono text-indigo-700">{row.invoiceNo}</td>
-                      <td className="py-3 px-4 text-slate-600">{row.natureOfSupply}</td>
+                <tbody className="divide-y divide-line font-medium text-ink">
+                  {(gstr2Data?.itcEligible || []).map((row: Gstr2Row, i: number) => (
+                    <tr key={i} className="hover:bg-paper/50">
+                      <td className="py-3 px-4 font-bold text-ink">{row.vendorName}</td>
+                      <td className="py-3 px-4 font-mono text-[11px] text-ink font-bold">{row.vendorGstin}</td>
+                      <td className="py-3 px-4 font-mono text-accent-deep">{row.invoiceNo}</td>
+                      <td className="py-3 px-4 text-muted">{row.natureOfSupply}</td>
                       <td className="py-3 px-4 font-mono text-[11px]">{row.sacCode}</td>
                       <td className="py-3 px-4 font-bold">₹{Number(row.taxableValue).toFixed(2)}</td>
-                      <td className="py-3 px-4 font-black text-emerald-600">₹{Number(row.itcAvailable).toFixed(2)}</td>
+                      <td className="py-3 px-4 font-semibold text-emerald-600">₹{Number(row.itcAvailable).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>

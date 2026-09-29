@@ -5,6 +5,7 @@ describe('TokensController Race-Free Wallet Deduction', () => {
   let controller: TokensController;
   let mockLivekitService: any;
   let mockPrisma: any;
+  let mockPricing: any;
 
   beforeEach(() => {
     mockLivekitService = {
@@ -23,7 +24,11 @@ describe('TokensController Race-Free Wallet Deduction', () => {
       },
     };
 
-    controller = new TokensController(mockLivekitService as any, mockPrisma as any);
+    mockPricing = {
+      resolve: vi.fn().mockResolvedValue({ baseRatePerMinute: 0.0035, gstPercent: 18, ratePerMinuteWithGst: 0.0041 }),
+    };
+
+    controller = new TokensController(mockLivekitService as any, mockPrisma as any, mockPricing as any);
   });
 
   it('should atomically deduct balance and succeed if wallet has sufficient balance', async () => {
@@ -40,7 +45,7 @@ describe('TokensController Race-Free Wallet Deduction', () => {
       organization: {
         id: 'org_1',
         walletBalance: 100,
-        customMinuteRate: 0.0035,
+        planTier: 'STARTER',
       },
     };
 
@@ -84,7 +89,7 @@ describe('TokensController Race-Free Wallet Deduction', () => {
       organization: {
         id: 'org_1',
         walletBalance: 0,
-        customMinuteRate: 0.0035,
+        planTier: 'STARTER',
       },
     };
 
@@ -99,6 +104,45 @@ describe('TokensController Race-Free Wallet Deduction', () => {
       ),
     ).rejects.toThrow('Insufficient wallet balance');
 
+    expect(mockLivekitService.mintToken).not.toHaveBeenCalled();
+  });
+
+  it('bills an audio-only token at the AUDIO_CALL rate, looked up from the database', async () => {
+    mockPrisma.organization.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.usageLog.create.mockResolvedValue({ id: 'log_2' });
+
+    await controller.createToken(
+      {
+        roomName: 'hotline',
+        participantIdentity: 'agent-1',
+        grants: { canPublish: true, canPublishSources: ['microphone'] },
+      },
+      {
+        project: { id: 'proj_1', environment: 'PRODUCTION', maxTokenTtlSeconds: 1800 },
+        organization: { id: 'org_1', planTier: 'GROWTH', walletBalance: 100 },
+      },
+    );
+
+    expect(mockPricing.resolve).toHaveBeenCalledWith('org_1', 'GROWTH', 'AUDIO_CALL');
+    expect(mockPrisma.usageLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ roomType: 'AUDIO_CALL', ratePerMinute: 0.0041 }),
+    });
+  });
+
+  it('does not mint a token when no rate is configured', async () => {
+    mockPricing.resolve.mockRejectedValue(new Error('No VIDEO_CALL rate is configured'));
+
+    await expect(
+      controller.createToken(
+        { roomName: 'r', participantIdentity: 'u' },
+        {
+          project: { id: 'proj_1', environment: 'PRODUCTION', maxTokenTtlSeconds: 1800 },
+          organization: { id: 'org_1', planTier: 'STARTER', walletBalance: 100 },
+        },
+      ),
+    ).rejects.toThrow('No VIDEO_CALL rate');
+
+    expect(mockPrisma.organization.updateMany).not.toHaveBeenCalled();
     expect(mockLivekitService.mintToken).not.toHaveBeenCalled();
   });
 });

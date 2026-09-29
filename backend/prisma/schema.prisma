@@ -666,6 +666,14 @@ enum PlanTier {
   ENTERPRISE
 }
 
+// ---------- Site & Billing Settings ----------
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
 // ---------- Plan Rate Cards ----------
 
 model PlanRateCard {

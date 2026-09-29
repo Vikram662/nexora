@@ -3,35 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchOrganizationData, getApiBaseUrl, getLivekitWsUrl, Project } from '@/lib/api';
-import {
-  Code2,
-  Terminal,
-  Smartphone,
-  Globe,
-  Radio,
-  Video,
-  Mic,
-  MessageSquare,
-  Shield,
-  Layers,
-  HardDrive,
-  Copy,
-  Check,
-  ChevronRight,
-  ExternalLink,
-  Flame,
-  ArrowRight,
-  Search,
-  BookOpen,
-  Cloud,
-  CheckCircle2,
-  Cpu,
-  Sparkles,
-  PhoneCall,
-  Volume2,
-  Eye,
-  Sliders,
-} from 'lucide-react';
+import { Smartphone, Radio, Video, Mic, MessageSquare, Copy, Check, Cpu } from 'lucide-react';
 
 type SdkTab = 'android' | 'flutter' | 'ios' | 'web';
 type FeatureTab = 'video' | 'voice' | 'broadcast' | 'messaging';
@@ -40,15 +12,16 @@ export default function DocumentationPage() {
   const [activeSdk, setActiveSdk] = useState<SdkTab>('android');
   const [activeFeature, setActiveFeature] = useState<FeatureTab>('video');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [apiBaseUrl, setApiBaseUrl] = useState(() => getApiBaseUrl());
   const [livekitHost, setLivekitHost] = useState(() => getLivekitWsUrl());
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedApiKey, setSelectedApiKey] = useState('pk_live_your_project_key');
 
   useEffect(() => {
-    setApiBaseUrl(getApiBaseUrl());
-    setLivekitHost(getLivekitWsUrl());
+    void Promise.resolve().then(() => {
+      setApiBaseUrl(getApiBaseUrl());
+      setLivekitHost(getLivekitWsUrl());
+    });
 
     // Try to load developer's actual project credentials if logged in
     fetchOrganizationData()
@@ -921,66 +894,46 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-600 selection:text-white">
-      {/* Top Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                <Radio className="h-4 w-4 animate-pulse" />
-              </div>
-              <span className="font-extrabold text-xl tracking-tight text-slate-900">
-                Nexora <span className="text-blue-600">RTC</span>
-              </span>
+    <div className="min-h-screen bg-paper text-ink flex flex-col selection:bg-accent selection:text-white">
+      <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur border-b border-line px-6 h-16">
+        <nav aria-label="Docs" className="max-w-7xl mx-auto h-full flex items-center justify-between">
+          <div className="flex items-baseline gap-3">
+            <Link href="/" className="font-display text-xl font-semibold tracking-tight">
+              Nexora<span className="text-accent">.</span>rtc
             </Link>
-            <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              Developer Docs
-            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">Reference</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/user/sandbox"
-              className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
-            >
-              <Video className="h-3.5 w-3.5" /> Launch RTC Sandbox
+          <div className="flex items-center gap-2 text-sm">
+            <Link href="/user/sandbox" className="px-3 py-2 text-muted hover:text-ink transition-colors">
+              Sandbox
             </Link>
             <Link
               href="/user"
-              className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all flex items-center gap-1"
+              className="px-4 py-2 rounded-md bg-ink text-paper font-medium hover:bg-accent transition-colors active:scale-[0.98]"
             >
-              Developer Console <ArrowRight className="h-3.5 w-3.5" />
+              Console
             </Link>
           </div>
-        </div>
+        </nav>
       </header>
 
-      {/* Hero Banner */}
-      <div className="bg-slate-900 text-white py-12 px-6 border-b border-slate-800">
+      <div className="border-b border-line bg-paper-deep px-6 py-14">
         <div className="max-w-7xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-400 text-xs font-bold mb-3">
-            <BookOpen className="h-3.5 w-3.5" /> End-to-End Application Developer Guide
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-            Audio, Video, Broadcast, Chat & Recording API
+          <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight leading-tight max-w-3xl">
+            Calling, broadcast, messaging and recording API
           </h1>
-          <p className="mt-2 text-sm text-slate-300 max-w-3xl leading-relaxed">
-            Everything your mobile and web developers need to build high-concurrency 1:1 Video Calls, Voice hotlines, Sub-Second Live Broadcasts, and In-Room P2P Real-Time Data Messaging.
+          <p className="mt-4 text-muted max-w-2xl leading-relaxed">
+            Everything here is called from your backend with a project key and secret. Keys, storage buckets,
+            webhook endpoints and billing are managed in the console.
           </p>
 
-          <div className="flex flex-wrap gap-3 mt-6">
-            <a
-              href="#app-apis"
-              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-600/20"
-            >
-              <Cpu className="h-3.5 w-3.5" /> Core Calling, Broadcast & Chat APIs
+          <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium">
+            <a href="#app-apis" className="underline underline-offset-4 decoration-accent hover:text-accent transition-colors">
+              Server APIs
             </a>
-            <a
-              href="#sdks"
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 border border-slate-700"
-            >
-              <Smartphone className="h-3.5 w-3.5" /> Android, Flutter, iOS & Web Integration Guides
+            <a href="#sdks" className="underline underline-offset-4 decoration-accent hover:text-accent transition-colors">
+              Client integration guides
             </a>
           </div>
         </div>
@@ -991,25 +944,25 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
         {/* SECTION 1: CORE APPLICATION APIS (CALL, VIDEO, BROADCAST, CHAT) */}
         {/* ========================================================================= */}
         <section id="app-apis" className="space-y-6">
-          <div className="pb-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="pb-4 border-b border-line flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Cpu className="h-5 w-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                <Cpu className="h-5 w-5 text-accent" />
                 1. Application-Facing WebRTC & Messaging APIs
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 These are the core endpoints your product backend calls to orchestrate live sessions, enforce room participant permissions, and securely authenticate users.
               </p>
             </div>
 
             {/* Dynamic Environment & Credentials Switcher */}
-            <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-2 rounded-xl border border-slate-200 text-xs">
-              <span className="font-semibold text-slate-600">Active Key:</span>
+            <div className="flex flex-wrap items-center gap-2 bg-paper-deep p-2 rounded-md border border-line text-xs">
+              <span className="font-semibold text-muted">Active Key:</span>
               {projects.length > 0 ? (
                 <select
                   value={selectedApiKey}
                   onChange={(e) => setSelectedApiKey(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="bg-white border border-line rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-accent-deep focus:outline-none focus:ring-1 focus:ring-accent"
                 >
                   {projects.map((p) => (
                     <option key={p.id} value={p.apiKeyPrefix}>
@@ -1018,7 +971,7 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
                   ))}
                 </select>
               ) : (
-                <span className="font-mono bg-white px-2 py-1 rounded border border-slate-200 text-slate-700">
+                <span className="font-mono bg-white px-2 py-1 rounded border border-line text-ink">
                   {selectedApiKey} (Sandbox Demo)
                 </span>
               )}
@@ -1029,11 +982,11 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
             {APPLICATION_APIS.map((api, index) => (
               <div
                 key={api.title}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+                className="bg-white rounded-lg border border-line  overflow-hidden"
               >
-                <div className="bg-slate-900 p-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="bg-console p-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="h-7 w-7 rounded-lg bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center">
+                    <span className="h-7 w-7 rounded-lg bg-accent text-white font-extrabold text-xs flex items-center justify-center">
                       {index + 1}
                     </span>
                     <div>
@@ -1048,56 +1001,56 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
                       <div className="font-mono text-xs text-emerald-400 mt-0.5">{api.endpoint}</div>
                     </div>
                   </div>
-                  <span className="text-[11px] font-mono text-slate-400 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                  <span className="text-[11px] font-mono text-slate-400 bg-console-line px-3 py-1 rounded-lg border border-console-line">
                     Control Plane: {apiBaseUrl}
                   </span>
                 </div>
 
                 <div className="p-6 space-y-4">
-                  <div className="text-xs text-slate-600 leading-relaxed">
+                  <div className="text-xs text-muted leading-relaxed">
                     {api.desc}
                     {api.link && (
                       <span className="block mt-1">
-                        <Link href={api.link.href} className="font-semibold text-blue-600 hover:underline inline-flex items-center gap-1">
+                        <Link href={api.link.href} className="font-semibold text-accent hover:underline inline-flex items-center gap-1">
                           {api.link.label} &rarr;
                         </Link>
                       </span>
                     )}
                   </div>
 
-                  <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900">
-                    <span className="font-bold text-blue-800">Architecture Flow:</span> {api.flow}
+                  <div className="p-3 bg-paper-deep border border-line rounded-md text-xs text-ink">
+                    <span className="font-bold text-accent-deep">Architecture Flow:</span> {api.flow}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
                     {/* Request */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-sans font-bold text-slate-700">
+                      <div className="flex items-center justify-between text-[11px] font-sans font-bold text-ink">
                         <span>API Call Example (cURL / Backend Request)</span>
                         <button
                           onClick={() => copyToClipboard(api.request, `req-${index}`)}
-                          className="text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer"
+                          className="text-slate-400 hover:text-accent transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           {copiedKey === `req-${index}` ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                         </button>
                       </div>
-                      <pre className="p-3 bg-slate-950 text-slate-200 rounded-xl overflow-x-auto text-[11px] leading-relaxed max-h-56">
+                      <pre className="p-3 bg-console text-slate-200 rounded-md overflow-x-auto text-[11px] leading-relaxed max-h-56">
                         <code>{api.request}</code>
                       </pre>
                     </div>
 
                     {/* Response */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-sans font-bold text-slate-700">
+                      <div className="flex items-center justify-between text-[11px] font-sans font-bold text-ink">
                         <span>Response / Client Handler</span>
                         <button
                           onClick={() => copyToClipboard(api.response, `res-${index}`)}
-                          className="text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer"
+                          className="text-slate-400 hover:text-accent transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           {copiedKey === `res-${index}` ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                         </button>
                       </div>
-                      <pre className="p-3 bg-slate-950 text-emerald-400 rounded-xl overflow-x-auto text-[11px] leading-relaxed max-h-56">
+                      <pre className="p-3 bg-console text-emerald-400 rounded-md overflow-x-auto text-[11px] leading-relaxed max-h-56">
                         <code>{api.response}</code>
                       </pre>
                     </div>
@@ -1112,27 +1065,27 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
         {/* SECTION 2: NATIVE CLIENT SDK GUIDES (ANDROID, FLUTTER, IOS, WEB) */}
         {/* ========================================================================= */}
         <section id="sdks" className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-accent" />
                 2. Native Client SDK Quickstarts (Android, Flutter, iOS, Web)
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Complete copy-pasteable production implementations for your mobile & web development teams.
               </p>
             </div>
 
             {/* Platform Selector Buttons */}
-            <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-xl">
+            <div className="flex items-center gap-1.5 bg-line/70 p-1 rounded-md">
               {(['android', 'flutter', 'ios', 'web'] as SdkTab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveSdk(tab)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
                     activeSdk === tab
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white text-accent '
+                      : 'text-muted hover:text-ink'
                   }`}
                 >
                   {tab === 'ios' ? 'iOS (Swift)' : tab}
@@ -1154,10 +1107,10 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
                 <button
                   key={f.id}
                   onClick={() => setActiveFeature(f.id as FeatureTab)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border ${
+                  className={`px-3.5 py-2 rounded-md text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border ${
                     activeFeature === f.id
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-accent text-white border-accent '
+                      : 'bg-white text-ink border-line hover:bg-paper'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -1168,8 +1121,8 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
           </div>
 
           {/* SDK Code Snippet Box */}
-          <div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-            <div className="bg-slate-900 px-4 py-3 flex items-center justify-between border-b border-slate-800">
+          <div className="bg-console rounded-lg border border-console-line  overflow-hidden">
+            <div className="bg-console px-4 py-3 flex items-center justify-between border-b border-console-line">
               <span className="font-mono text-xs font-bold text-slate-300">
                 {SDK_GUIDES[activeSdk][activeFeature].title}
               </span>
@@ -1180,7 +1133,7 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
                     `sdk-${activeSdk}-${activeFeature}`,
                   )
                 }
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-console-line hover:bg-console-line text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 {copiedKey === `sdk-${activeSdk}-${activeFeature}` ? (
                   <>
@@ -1195,11 +1148,11 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
             </div>
 
             {/* Quick Setup Guide */}
-            <div className="p-4 bg-slate-900/60 border-b border-slate-800/80">
+            <div className="p-4 bg-console/60 border-b border-console-line/80">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                 Prerequisites & Setup
               </div>
-              <pre className="font-mono text-xs text-blue-400 overflow-x-auto whitespace-pre-wrap">
+              <pre className="font-mono text-xs text-teal-300 overflow-x-auto whitespace-pre-wrap">
                 <code>{SDK_GUIDES[activeSdk][activeFeature].guide}</code>
               </pre>
             </div>
@@ -1215,7 +1168,7 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
       </div>
 
       {/* Footer */}
-      <footer className="mt-12 bg-white border-t border-slate-200 py-6 px-6 text-center text-xs text-slate-500">
+      <footer className="mt-12 bg-white border-t border-line py-6 px-6 text-center text-xs text-muted">
         Nexora RTC Platform • Self-Hosted WebRTC Control Plane & Media Mesh • Developer Documentation v1.0.0
       </footer>
     </div>

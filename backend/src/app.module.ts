@@ -9,6 +9,7 @@ import { CryptoModule } from './crypto/crypto.module.js';
 import { LivekitModule } from './livekit/livekit.module.js';
 import { PortalModule } from './portal/portal.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AuthModule } from './auth/auth.module.js';
     PrismaModule,
     CryptoModule,
     AuthModule,
+    SettingsModule,
     LivekitModule,
     PortalModule,
   ],

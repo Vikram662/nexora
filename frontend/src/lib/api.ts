@@ -1,3 +1,9 @@
+import type { AdminSettingsData, BillingProfile, LedgerTransaction, TaxInvoice, UpdateSettingsPayload } from './types';
+
+export function errorMessage(err: unknown, fallback = 'Something went wrong'): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
 export function getApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
   if (typeof window !== 'undefined' && window.location) {
@@ -69,10 +75,10 @@ export interface OrganizationData {
   planTier: string;
   billingEmail: string;
   projects: Project[];
-  transactions: any[];
-  invoices?: any[];
+  transactions: LedgerTransaction[];
+  invoices?: TaxInvoice[];
   kycVerification?: KycVerificationData | null;
-  billingProfile?: any | null;
+  billingProfile?: BillingProfile | null;
 }
 
 // ==========================================
@@ -410,7 +416,7 @@ export async function updateProjectIpAllowlist(projectId: string, ipAllowlist: s
   return res.json();
 }
 
-export async function updateCustomerBillingProfile(profileData: any) {
+export async function updateCustomerBillingProfile(profileData: BillingProfile) {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/billing/profile`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -539,7 +545,7 @@ export async function toggleAdminOffer(id: string) {
   return res.json();
 }
 
-export async function fetchAdminSettings() {
+export async function fetchAdminSettings(): Promise<{ data: AdminSettingsData }> {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/settings`, {
     credentials: 'include',
   });
@@ -547,14 +553,18 @@ export async function fetchAdminSettings() {
   return res.json();
 }
 
-export async function updateAdminSettings(settings: any) {
+export async function updateAdminSettings(payload: UpdateSettingsPayload): Promise<{ data: AdminSettingsData }> {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/settings`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(settings),
+    body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error('Failed to save settings');
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+    const detail = Array.isArray(body.message) ? body.message.join('; ') : body.message;
+    throw new Error(detail || 'Failed to save settings');
+  }
   return res.json();
 }
 

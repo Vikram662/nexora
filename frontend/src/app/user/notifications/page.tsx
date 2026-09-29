@@ -17,13 +17,14 @@ import {
   Headphones,
   Webhook,
 } from 'lucide-react';
-import { fetchNotificationPreferences, updateNotificationPreferences } from '@/lib/api';
+import { fetchNotificationPreferences, updateNotificationPreferences, errorMessage } from '@/lib/api';
+import type { LucideIcon } from 'lucide-react';
 
 interface AlertConfig {
   key: string;
   title: string;
   category: string;
-  icon: any;
+  icon: LucideIcon;
   description: string;
   defaultEmail: boolean;
   defaultSms: boolean;
@@ -124,7 +125,7 @@ const ALL_ALERTS: AlertConfig[] = [
 ];
 
 export default function NotificationsPage() {
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [criticalOnlyViaSms, setCriticalOnlyViaSms] = useState(true);
@@ -172,38 +173,38 @@ export default function NotificationsPage() {
       });
       setSuccessAlert(true);
       setTimeout(() => setSuccessAlert(false), 4000);
-    } catch (err: any) {
-      alert(err.message || 'Failed to save notification preferences');
+    } catch (err) {
+      alert(errorMessage(err,'Failed to save notification preferences'));
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Header Info */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-4">
         <div>
-          <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-            <BellRing className="h-5 w-5 text-blue-600" />
+          <h2 className="font-bold text-ink text-lg flex items-center gap-2">
+            <BellRing className="h-5 w-5 text-accent" />
             Email & SMS Notification Routing
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Configure automated deliverability channels for wallet balance, security alerts, and engineering events.
           </p>
         </div>
 
         {/* CLARITY BANNER EXPLAINING SMS vs EMAIL ROUTING */}
-        <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 space-y-2">
-          <div className="font-bold flex items-center gap-1.5 text-blue-950">
-            <Info className="h-4 w-4 text-blue-600 shrink-0" />
+        <div className="p-4 rounded-md bg-accent/10 border border-accent/30 text-xs text-ink space-y-2">
+          <div className="font-bold flex items-center gap-1.5 text-ink">
+            <Info className="h-4 w-4 text-accent shrink-0" />
             Alerts Delivery Clarification:
           </div>
-          <p className="text-blue-800 leading-relaxed">
+          <p className="text-accent-deep leading-relaxed">
             <strong>Agar aap SMS Gateway ko Band (Off) karte hain:</strong> Tab bhi aapke sabhi zaroori alerts (Low Balance, Invoices, KYC, API Security) <strong>Email par 100% surakshit deliver honge</strong>. SMS band karne se alerts band nahi hote; ve bina kisi rukawat ke Email channel par chale jate hain.
           </p>
         </div>
 
         {successAlert && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+          <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             All notification alert routing preferences saved successfully!
           </div>
@@ -213,13 +214,13 @@ export default function NotificationsPage() {
           {/* Master Channel Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             {/* Master Email Toggle */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div className="p-4 rounded-md bg-paper border border-line flex items-center justify-between">
               <div>
-                <div className="font-bold text-slate-900 flex items-center gap-2 text-xs">
-                  <Mail className="h-4 w-4 text-blue-600" />
+                <div className="font-bold text-ink flex items-center gap-2 text-xs">
+                  <Mail className="h-4 w-4 text-accent" />
                   Master Email Channel (SMTP / Resend)
                 </div>
-                <p className="text-slate-500 text-[11px] mt-0.5">
+                <p className="text-muted text-[11px] mt-0.5">
                   Sends invoices, KYC updates, and system warnings.
                 </p>
               </div>
@@ -230,18 +231,18 @@ export default function NotificationsPage() {
                   onChange={(e) => setEmailEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-line peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-line after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
               </label>
             </div>
 
             {/* Master SMS Toggle */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div className="p-4 rounded-md bg-paper border border-line flex items-center justify-between">
               <div>
-                <div className="font-bold text-slate-900 flex items-center gap-2 text-xs">
+                <div className="font-bold text-ink flex items-center gap-2 text-xs">
                   <Smartphone className="h-4 w-4 text-emerald-600" />
                   Master SMS Gateway (MSG91 / Twilio)
                 </div>
-                <p className="text-slate-500 text-[11px] mt-0.5">
+                <p className="text-muted text-[11px] mt-0.5">
                   Instant mobile SMS to registered numbers for urgent triggers.
                 </p>
               </div>
@@ -252,7 +253,7 @@ export default function NotificationsPage() {
                   onChange={(e) => setSmsEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                <div className="w-11 h-6 bg-line peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-line after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
               </label>
             </div>
           </div>
@@ -260,17 +261,17 @@ export default function NotificationsPage() {
           {/* Granular Alert Event Matrix */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <span className="font-extrabold text-sm text-slate-900">
+              <span className="font-semibold text-sm text-ink">
                 Detailed Event Alert Matrix (Customizable per Event)
               </span>
-              <span className="text-[11px] text-slate-500 font-semibold">
+              <span className="text-[11px] text-muted font-semibold">
                 Select exactly which events send Email and SMS
               </span>
             </div>
 
-            <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 bg-white">
+            <div className="border border-line rounded-lg overflow-hidden divide-y divide-line bg-white">
               {/* Table Header */}
-              <div className="bg-slate-50 p-3.5 text-slate-600 text-[11px] font-bold uppercase tracking-wider flex items-center justify-between">
+              <div className="bg-paper p-3.5 text-muted text-[11px] font-bold uppercase tracking-wider flex items-center justify-between">
                 <span className="w-1/2">Event Name & Description</span>
                 <span className="w-1/4 text-center">Email Alert</span>
                 <span className="w-1/4 text-center">SMS Alert</span>
@@ -283,20 +284,20 @@ export default function NotificationsPage() {
                 const isSmsChecked = alertsState[alertItem.key]?.sms ?? false;
 
                 return (
-                  <div key={alertItem.key} className="p-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
+                  <div key={alertItem.key} className="p-4 flex items-center justify-between hover:bg-paper/60 transition-colors">
                     <div className="w-1/2 pr-4 space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                        <div className="h-6 w-6 rounded-lg bg-paper-deep text-ink flex items-center justify-center shrink-0">
                           <Icon className="h-3.5 w-3.5" />
                         </div>
-                        <span className="font-bold text-slate-900 text-xs">{alertItem.title}</span>
+                        <span className="font-bold text-ink text-xs">{alertItem.title}</span>
                         {alertItem.critical && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 font-bold uppercase border border-red-200">
                             Critical
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-500 pl-8">{alertItem.description}</p>
+                      <p className="text-[11px] text-muted pl-8">{alertItem.description}</p>
                     </div>
 
                     {/* Email Checkbox */}
@@ -307,9 +308,9 @@ export default function NotificationsPage() {
                           checked={emailEnabled && isEmailChecked}
                           disabled={!emailEnabled}
                           onChange={() => handleToggle(alertItem.key, 'email')}
-                          className="h-4 w-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
+                          className="h-4 w-4 rounded text-accent border-line focus:ring-accent"
                         />
-                        <span className={`text-[11px] font-semibold ${emailEnabled && isEmailChecked ? 'text-blue-700' : 'text-slate-400'}`}>
+                        <span className={`text-[11px] font-semibold ${emailEnabled && isEmailChecked ? 'text-accent-deep' : 'text-slate-400'}`}>
                           {emailEnabled && isEmailChecked ? 'Active' : 'Off'}
                         </span>
                       </label>
@@ -326,7 +327,7 @@ export default function NotificationsPage() {
                           checked={smsEnabled && isSmsChecked}
                           disabled={!smsEnabled}
                           onChange={() => handleToggle(alertItem.key, 'sms')}
-                          className="h-4 w-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500"
+                          className="h-4 w-4 rounded text-emerald-600 border-line focus:ring-emerald-500"
                         />
                         <span className={`text-[11px] font-semibold ${smsEnabled && isSmsChecked ? 'text-emerald-700' : 'text-slate-400'}`}>
                           {smsEnabled && isSmsChecked ? 'Active' : 'Off'}
@@ -345,7 +346,7 @@ export default function NotificationsPage() {
           <div className="pt-2">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
+              className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer"
             >
               Save All Notification Preferences
             </button>

@@ -17,6 +17,8 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CryptoService } from '../crypto/crypto.service.js';
 import { KycGatewayService } from './kyc-gateway.service.js';
+import { SiteSettingsService } from '../settings/site-settings.service.js';
+import { UpdateSiteSettingsDto } from '../settings/site-settings.dto.js';
 import { PaymentService } from './payment.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard, Roles, RequireStaff } from '../auth/roles.guard.js';
@@ -45,6 +47,7 @@ export class PortalController {
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
     private readonly kycGateway: KycGatewayService,
+    private readonly siteSettings: SiteSettingsService,
     private readonly paymentService: PaymentService,
   ) {}
 
@@ -1086,45 +1089,40 @@ export class PortalController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireStaff()
   async getAdminSettings() {
+    const { contact, brand, social, billing, plans, rates } = await this.siteSettings.getSnapshot();
     return {
       status: 'success',
       data: {
-        platformName: 'Nexora RTC Enterprise',
-        companyLegalName: process.env.COMPANY_LEGAL_NAME || 'Nexora Cloud Infrastructure Private Limited',
-        companyGstin: process.env.COMPANY_GSTIN ? '••••••••' + process.env.COMPANY_GSTIN.slice(-4) : 'CONFIGURED',
-        companyPan: process.env.COMPANY_PAN ? '••••••••' : 'CONFIGURED',
-        companyAddress: 'Enterprise Cloud Center',
-        companyCity: 'Mumbai',
-        companyState: '27 - Maharashtra',
-        companyPincode: '400051',
-        defaultMinuteRate: 0.0035,
-        defaultCurrency: 'INR',
-        sacCode: '998314',
-        defaultGstPercent: 18,
+        contact,
+        brand,
+        social,
+        billing,
+        plans,
+        rates,
+
+        companyLegalName: process.env.COMPANY_LEGAL_NAME || '',
         livekitHost: process.env.LIVEKIT_URL || '',
         coturnHost: process.env.COTURN_HOST || '',
         mfaEnforcedForStaff: true,
         maxRoomsPerOrg: 50,
 
-        // Payment Gateway: never expose raw secrets
-        razorpayKeyId: process.env.RAZORPAY_KEY_ID ? '••••••••' : 'UNSET',
+        // Payment gateway: never expose raw secrets
+        razorpayKeyIdSet: Boolean(process.env.RAZORPAY_KEY_ID),
         razorpayKeySecretSet: Boolean(process.env.RAZORPAY_KEY_SECRET),
         razorpayWebhookSecretSet: Boolean(process.env.RAZORPAY_WEBHOOK_SECRET),
-        razorpayAutoCapture: true,
 
-        // Email Dispatch: never expose SMTP passwords
+        // Email dispatch: never expose SMTP passwords
         emailProvider: process.env.EMAIL_PROVIDER || 'SMTP',
-        smtpHost: process.env.SMTP_HOST || 'smtp.sendgrid.net',
+        smtpHost: process.env.SMTP_HOST || '',
         smtpPort: Number(process.env.SMTP_PORT) || 587,
         smtpUserSet: Boolean(process.env.SMTP_USER),
         smtpPasswordSet: Boolean(process.env.SMTP_PASSWORD),
-        emailFromAddress: process.env.EMAIL_FROM || 'billing@nexora.io',
+        emailFromAddress: process.env.EMAIL_FROM || '',
 
-        // SMS Dispatch
-        smsProvider: process.env.SMS_PROVIDER || 'FAST2SMS',
+        // SMS dispatch
+        smsProvider: process.env.SMS_PROVIDER || '',
         smsApiKeySet: Boolean(process.env.SMS_API_KEY),
-        smsSenderId: process.env.SMS_SENDER_ID || 'NEXORA',
-        smsCriticalOnly: true,
+        smsSenderId: process.env.SMS_SENDER_ID || '',
       },
     };
   }
@@ -1132,11 +1130,18 @@ export class PortalController {
   @Post('admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireStaff()
-  async updateAdminSettings(@Body() body: any) {
-    return {
-      status: 'success',
-      message: 'Platform settings saved successfully',
-    };
+  async updateAdminSettings(@Body() body: UpdateSiteSettingsDto, @Req() req: Request) {
+    const data = await this.siteSettings.update(body);
+    await this.prisma.adminActionLog.create({
+      data: {
+        staffUserId: req.user!.userId,
+        action: 'UPDATE_SITE_SETTINGS',
+        targetType: 'SiteSetting',
+        targetId: Object.keys(body).join(',') || 'none',
+        ipAddress: req.ip,
+      },
+    });
+    return { status: 'success', message: 'Settings saved', data };
   }
 
   @Get('admin/billing/gstr-1')

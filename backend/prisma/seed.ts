@@ -458,6 +458,22 @@ async function seed() {
   });
 
   console.log('\n======================================================');
+  // Starting rates per minute; edit later in Admin Settings (each change adds a new effective-dated row).
+  if ((await prisma.planRateCard.count()) === 0) {
+    const startingRates: Record<string, { AUDIO_CALL: number; VIDEO_CALL: number; LIVE_BROADCAST: number }> = {
+      STARTER: { AUDIO_CALL: 0.0025, VIDEO_CALL: 0.0035, LIVE_BROADCAST: 0.0015 },
+      GROWTH: { AUDIO_CALL: 0.002, VIDEO_CALL: 0.003, LIVE_BROADCAST: 0.001 },
+      ENTERPRISE: { AUDIO_CALL: 0.0015, VIDEO_CALL: 0.0025, LIVE_BROADCAST: 0.0008 },
+    };
+    for (const [planTier, byType] of Object.entries(startingRates)) {
+      for (const [roomType, ratePerMinute] of Object.entries(byType)) {
+        await prisma.planRateCard.create({
+          data: { planTier: planTier as never, roomType: roomType as never, ratePerMinute },
+        });
+      }
+    }
+  }
+
   console.log('🎉 COMPREHENSIVE PRODUCTION DB SEED COMPLETE!');
   console.log('======================================================');
   console.log(`✓ Organizations : 3 (Enterprise, Growth, Starter)`);

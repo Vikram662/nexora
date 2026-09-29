@@ -33,6 +33,7 @@ describe('PortalController Tenant Isolation & Redaction', () => {
       mockPrisma as any,
       mockCrypto as any,
       mockKycGateway as any,
+      {} as any,
       mockPaymentService as any,
     );
   });

@@ -8,8 +8,10 @@ import { RoomsController } from './rooms.controller.js';
 import { OutboundWebhookService } from './outbound-webhook.service.js';
 import { LivekitWebhookController } from './livekit-webhook.controller.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SettingsModule } from '../settings/settings.module.js';
 
 @Module({
+  imports: [SettingsModule],
   controllers: [
     TokensController,
     RoomsController,

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { HardDrive, CheckCircle2 } from 'lucide-react';
-import { fetchOrganizationData, saveStorage, OrganizationData } from '@/lib/api';
+import { fetchOrganizationData, saveStorage, OrganizationData, errorMessage, type StorageConfig } from '@/lib/api';
+import type {  } from '@/lib/types';
 
 export default function UserStoragePage() {
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
@@ -45,37 +46,37 @@ export default function UserStoragePage() {
       setStorageSuccess(true);
       setTimeout(() => setStorageSuccess(false), 3000);
       fetchOrganizationData().then((d) => setOrgData(d));
-    } catch (err: any) {
-      alert(err.message || 'Failed to save storage');
+    } catch (err) {
+      alert(errorMessage(err,'Failed to save storage'));
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
         <div>
-          <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-            <HardDrive className="h-5 w-5 text-blue-600" />
+          <h2 className="font-bold text-ink text-lg flex items-center gap-2">
+            <HardDrive className="h-5 w-5 text-accent" />
             Bring Your Own Storage (BYOS)
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Recordings are encrypted in-transit and streamed directly to your cloud bucket. Nexora never stores your customer audio/video files at rest.
           </p>
         </div>
 
         {storageSuccess && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+          <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4" /> Storage credentials encrypted and verified successfully!
           </div>
         )}
 
         <form onSubmit={handleSaveStorage} className="space-y-4 max-w-xl text-xs">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Target Project</label>
+            <label className="block font-semibold text-ink mb-1">Target Project</label>
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+              className="w-full px-3 py-2 bg-paper border border-line rounded-md"
             >
               {orgData?.projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -86,11 +87,11 @@ export default function UserStoragePage() {
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Storage Provider</label>
+            <label className="block font-semibold text-ink mb-1">Storage Provider</label>
             <select
               value={storageProvider}
-              onChange={(e) => setStorageProvider(e.target.value as any)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              onChange={(e) => setStorageProvider(e.target.value as typeof storageProvider)}
+              className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
             >
               <option value="GOOGLE_CLOUD">Google Cloud Storage (GCS Bucket)</option>
               <option value="AWS_S3">Amazon Web Services (AWS S3)</option>
@@ -99,20 +100,20 @@ export default function UserStoragePage() {
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Bucket Name</label>
+            <label className="block font-semibold text-ink mb-1">Bucket Name</label>
             <input
               type="text"
               placeholder="e.g. nexora-recordings-prod"
               value={bucketName}
               onChange={(e) => setBucketName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+              className="w-full px-3 py-2 bg-paper border border-line rounded-md"
               required
             />
           </div>
 
           {storageProvider === 'GOOGLE_CLOUD' ? (
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">
+              <label className="block font-semibold text-ink mb-1">
                 GCS Service Account JSON Key (gcs-key.json)
               </label>
               <textarea
@@ -120,7 +121,7 @@ export default function UserStoragePage() {
                 placeholder='{"type": "service_account", "project_id": "...", "private_key": "..."}'
                 value={gcsServiceAccountJson}
                 onChange={(e) => setGcsServiceAccountJson(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
+                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono text-[11px]"
                 required
               />
               <span className="text-[10px] text-slate-400">
@@ -130,26 +131,26 @@ export default function UserStoragePage() {
           ) : (
             <>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Region</label>
+                <label className="block font-semibold text-ink mb-1">Region</label>
                 <input
                   type="text"
                   placeholder="ap-south-1"
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md"
                   required
                 />
               </div>
 
               {storageProvider === 'CLOUDFLARE_R2' && (
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Custom S3 Endpoint URL</label>
+                  <label className="block font-semibold text-ink mb-1">Custom S3 Endpoint URL</label>
                   <input
                     type="url"
                     placeholder="https://<accountid>.r2.cloudflarestorage.com"
                     value={endpoint}
                     onChange={(e) => setEndpoint(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="w-full px-3 py-2 bg-paper border border-line rounded-md"
                     required
                   />
                 </div>
@@ -157,22 +158,22 @@ export default function UserStoragePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Access Key ID</label>
+                  <label className="block font-semibold text-ink mb-1">Access Key ID</label>
                   <input
                     type="text"
                     value={accessKey}
                     onChange={(e) => setAccessKey(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                    className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Secret Access Key</label>
+                  <label className="block font-semibold text-ink mb-1">Secret Access Key</label>
                   <input
                     type="password"
                     value={secretKey}
                     onChange={(e) => setSecretKey(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                    className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono"
                     required
                   />
                 </div>
@@ -182,29 +183,29 @@ export default function UserStoragePage() {
 
           <button
             type="submit"
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
+            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer"
           >
             Verify & Save {storageProvider === 'GOOGLE_CLOUD' ? 'GCS Bucket' : 'Storage'}
           </button>
         </form>
 
         {/* Dynamic Configured BYOS Buckets from DB */}
-        <div className="pt-6 border-t border-slate-100 space-y-3">
-          <span className="font-bold text-xs text-slate-900">Active Configured Storage Buckets (BYOS)</span>
+        <div className="pt-6 border-t border-line space-y-3">
+          <span className="font-bold text-xs text-ink">Active Configured Storage Buckets (BYOS)</span>
           <div className="space-y-2">
             {orgData?.projects.flatMap((p) => p.storageConfigs || []).length === 0 ? (
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 text-xs text-center">
+              <div className="p-4 rounded-md bg-paper border border-line text-slate-400 text-xs text-center">
                 No BYOS buckets configured yet. Save a bucket above to enable direct egress recording uploads.
               </div>
             ) : (
-              orgData?.projects.flatMap((p) => p.storageConfigs || []).map((cfg: any) => (
-                <div key={cfg.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs">
+              orgData?.projects.flatMap((p) => p.storageConfigs || []).map((cfg: StorageConfig) => (
+                <div key={cfg.id} className="p-3.5 rounded-md border border-line bg-paper/50 flex items-center justify-between text-xs">
                   <div>
-                    <div className="font-bold text-slate-900 flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    <div className="font-bold text-ink flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
                         {cfg.provider}
                       </span>
-                      <span className="font-mono text-slate-800">{cfg.bucketName}</span>
+                      <span className="font-mono text-ink">{cfg.bucketName}</span>
                     </div>
                     <div className="text-[11px] text-slate-400 mt-1">
                       Region: {cfg.region || 'global'} • Encryption: AES-256-GCM

@@ -1,459 +1,332 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  Settings,
-  Server,
-  DollarSign,
-  ShieldCheck,
-  Save,
-  CheckCircle2,
-  RefreshCw,
-  HardDrive,
-  Cpu,
-  Radio,
-  CreditCard,
-  Mail,
-  MessageSquare,
-} from 'lucide-react';
-import { fetchAdminSettings, updateAdminSettings, getLivekitWsUrl } from '@/lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Save, Globe, Phone, Share2, Megaphone, IndianRupee, LayoutList, Server } from 'lucide-react';
+import { fetchAdminSettings, updateAdminSettings, errorMessage } from '@/lib/api';
+import type {
+  AdminSettingsData,
+  PlanDisplay,
+  PlanTier,
+  RateRoomType,
+  RateUpdate,
+  UpdateSettingsPayload,
+} from '@/lib/types';
+
+const PLAN_TIERS: PlanTier[] = ['STARTER', 'GROWTH', 'ENTERPRISE'];
+const RATE_TYPES: { type: RateRoomType; label: string }[] = [
+  { type: 'AUDIO_CALL', label: 'Audio' },
+  { type: 'VIDEO_CALL', label: 'Video' },
+  { type: 'LIVE_BROADCAST', label: 'Broadcast' },
+];
+
+type RateInputs = Record<PlanTier, Record<RateRoomType, string>>;
+
+function toRateInputs(rates: AdminSettingsData['rates']): RateInputs {
+  const out = {} as RateInputs;
+  for (const tier of PLAN_TIERS) {
+    out[tier] = {} as Record<RateRoomType, string>;
+    for (const { type } of RATE_TYPES) {
+      const value = rates[tier]?.[type];
+      out[tier][type] = value === undefined ? '' : String(value);
+    }
+  }
+  return out;
+}
+
+function changedRates(original: RateInputs, next: RateInputs): RateUpdate[] {
+  const updates: RateUpdate[] = [];
+  for (const tier of PLAN_TIERS) {
+    for (const { type } of RATE_TYPES) {
+      const raw = next[tier][type].trim();
+      if (raw === '' || raw === original[tier][type]) continue;
+      updates.push({ planTier: tier, roomType: type, ratePerMinute: Number(raw) });
+    }
+  }
+  return updates;
+}
+
+interface FieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  hint?: string;
+  type?: 'text' | 'email' | 'tel' | 'url' | 'number';
+  step?: string;
+  multiline?: boolean;
+}
+
+function Field({ label, value, onChange, hint, type = 'text', step, multiline }: FieldProps) {
+  const inputClass =
+    'w-full px-3 py-2 bg-white border border-line rounded-md text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent';
+  return (
+    <label className="block text-xs">
+      <span className="block font-semibold text-ink mb-1">{label}</span>
+      {multiline ? (
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={2} className={inputClass} />
+      ) : (
+        <input type={type} step={step} value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} />
+      )}
+      {hint && <span className="block text-muted mt-1">{hint}</span>}
+    </label>
+  );
+}
+
+function Panel({ icon: Icon, title, children }: { icon: typeof Globe; title: string; children: React.ReactNode }) {
+  return (
+    <section className="bg-white p-6 rounded-lg border border-line space-y-4">
+      <h2 className="text-sm font-bold text-ink flex items-center gap-2 border-b border-line pb-3">
+        <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function StatusRow({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <div className="flex items-center justify-between text-xs py-1.5 border-b border-line last:border-0">
+      <span className="text-ink">{label}</span>
+      <span className={ok ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold'}>{ok ? 'Configured' : 'Not set'}</span>
+    </div>
+  );
+}
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState<any>({
-    platformName: 'Nexora RTC Enterprise',
-    defaultMinuteRate: 0.0035,
-    defaultCurrency: 'INR',
-    sacCode: '998314',
-    defaultGstPercent: 18,
-    livekitHost: getLivekitWsUrl(),
-    coturnHost: process.env.NEXT_PUBLIC_COTURN_HOST || '',
-    mfaEnforcedForStaff: true,
-    maxRoomsPerOrg: 50,
-  });
-
-  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState<AdminSettingsData | null>(null);
+  const [form, setForm] = useState<AdminSettingsData | null>(null);
+  const [rateInputs, setRateInputs] = useState<RateInputs | null>(null);
+  const [originalRates, setOriginalRates] = useState<RateInputs | null>(null);
   const [saving, setSaving] = useState(false);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchAdminSettings();
-      if (res.data) setSettings(res.data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load settings');
-    } finally {
-      setLoading(false);
-    }
+  const applyLoaded = (data: AdminSettingsData) => {
+    const inputs = toRateInputs(data.rates);
+    setLoaded(data);
+    setForm(data);
+    setRateInputs(inputs);
+    setOriginalRates(inputs);
   };
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    fetchAdminSettings()
+      .then((res) => {
+        if (!cancelled) applyLoaded(res.data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(errorMessage(err, 'Failed to load settings'));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const pendingRates = useMemo(
+    () => (originalRates && rateInputs ? changedRates(originalRates, rateInputs) : []),
+    [originalRates, rateInputs],
+  );
+
+  if (!form || !rateInputs || !loaded) {
+    return <p className="text-sm text-muted">{error ?? 'Loading settings…'}</p>;
+  }
+
+  const patch = <K extends 'contact' | 'brand' | 'social' | 'billing'>(section: K, key: keyof AdminSettingsData[K], value: string) =>
+    setForm({ ...form, [section]: { ...form[section], [key]: value } });
+
+  const patchPlan = (tier: PlanTier, key: keyof PlanDisplay, value: string) =>
+    setForm({ ...form, plans: form.plans.map((p) => (p.tier === tier ? { ...p, [key]: value } : p)) });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError(null);
+    const payload: UpdateSettingsPayload = {
+      contact: form.contact,
+      brand: form.brand,
+      social: form.social,
+      billing: { gstPercent: Number(form.billing.gstPercent), sacCode: form.billing.sacCode },
+      plans: form.plans,
+      rates: pendingRates,
+    };
     try {
-      await updateAdminSettings(settings);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
-    } catch (err: any) {
-      alert(err.message || 'Failed to save settings');
+      const res = await updateAdminSettings(payload);
+      applyLoaded(res.data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to save settings'));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      {/* Top Header */}
+    <form onSubmit={handleSave} className="space-y-6 max-w-5xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Settings className="h-5 w-5 text-indigo-600" />
-            <span>Platform & Cluster Settings</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Configure default billing parameters, statutory GST compliance rules, SFU nodes, and security policies.
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Website, pricing and billing settings</h1>
+          <p className="text-xs text-muted mt-1">
+            Everything here is stored in the database. The public site and per-minute billing read it directly.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Reset
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? 'Saving...' : 'Save Platform Rules'}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-4 py-2 bg-ink text-paper text-sm font-medium rounded-md flex items-center gap-1.5 hover:bg-accent transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          <Save className="h-4 w-4" aria-hidden="true" />
+          {saving ? 'Saving…' : 'Save settings'}
+        </button>
       </div>
 
-      {savedSuccess && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <span>Platform cluster settings and GST billing configurations updated successfully!</span>
+      {saved && (
+        <div role="status" className="p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Settings saved. The website picks them up within a minute.
         </div>
       )}
-
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+        <div role="alert" className="p-3 rounded-md bg-red-50 border border-red-200 text-red-800 text-xs font-semibold">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Section 1: GST & Financial Rules */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-            <span>Platform Legal Entity & Statutory GST Profile</span>
-          </h2>
+      <div className="grid md:grid-cols-2 gap-6">
+        <Panel icon={Globe} title="Brand and logo">
+          <Field label="Site name" value={form.brand.siteName} onChange={(v) => patch('brand', 'siteName', v)} />
+          <Field label="Tagline" value={form.brand.tagline} onChange={(v) => patch('brand', 'tagline', v)} />
+          <Field
+            label="Logo URL"
+            type="url"
+            value={form.brand.logoUrl}
+            onChange={(v) => patch('brand', 'logoUrl', v)}
+            hint="Public https link to a PNG or SVG. Leave empty to show the text wordmark."
+          />
+          {form.brand.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={form.brand.logoUrl} alt="Logo preview" className="h-10 w-auto border border-line rounded p-1 bg-paper" />
+          )}
+        </Panel>
 
-          <div className="space-y-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Company Legal Registered Name</label>
-              <input
-                type="text"
-                value={settings.companyLegalName || ''}
-                onChange={(e) => setSettings({ ...settings, companyLegalName: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                required
-              />
-            </div>
+        <Panel icon={Megaphone} title="Announcement bar">
+          <Field
+            label="Message"
+            multiline
+            value={form.brand.announcement}
+            onChange={(v) => patch('brand', 'announcement', v)}
+            hint="Shown at the very top of the website. Leave empty to hide it."
+          />
+        </Panel>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Company GSTIN</label>
-                <input
-                  type="text"
-                  maxLength={15}
-                  value={settings.companyGstin || ''}
-                  onChange={(e) => setSettings({ ...settings, companyGstin: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Permanent PAN</label>
-                <input
-                  type="text"
-                  maxLength={10}
-                  value={settings.companyPan || ''}
-                  onChange={(e) => setSettings({ ...settings, companyPan: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold"
-                  required
-                />
-              </div>
-            </div>
+        <Panel icon={Phone} title="Contact details">
+          <Field label="Company name" value={form.contact.companyName} onChange={(v) => patch('contact', 'companyName', v)} />
+          <Field label="Email" type="email" value={form.contact.email} onChange={(v) => patch('contact', 'email', v)} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Phone" type="tel" value={form.contact.phone} onChange={(v) => patch('contact', 'phone', v)} />
+            <Field label="WhatsApp" type="tel" value={form.contact.whatsapp} onChange={(v) => patch('contact', 'whatsapp', v)} />
+          </div>
+          <Field label="Address" multiline value={form.contact.address} onChange={(v) => patch('contact', 'address', v)} />
+          <Field label="Support hours" value={form.contact.supportHours} onChange={(v) => patch('contact', 'supportHours', v)} hint="For example: Mon-Sat, 10:00-19:00 IST" />
+        </Panel>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Registered State (POS)</label>
-                <input
-                  type="text"
-                  value={settings.companyState || ''}
-                  onChange={(e) => setSettings({ ...settings, companyState: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Pincode</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={settings.companyPincode || ''}
-                  onChange={(e) => setSettings({ ...settings, companyPincode: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                  required
-                />
-              </div>
-            </div>
+        <Panel icon={Share2} title="Social links">
+          <Field label="LinkedIn" type="url" value={form.social.linkedin} onChange={(v) => patch('social', 'linkedin', v)} />
+          <Field label="X / Twitter" type="url" value={form.social.twitter} onChange={(v) => patch('social', 'twitter', v)} />
+          <Field label="GitHub" type="url" value={form.social.github} onChange={(v) => patch('social', 'github', v)} />
+          <Field label="YouTube" type="url" value={form.social.youtube} onChange={(v) => patch('social', 'youtube', v)} />
+        </Panel>
+      </div>
 
-            <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-100">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">SAC Code</label>
-                <input
-                  type="text"
-                  value={settings.sacCode}
-                  onChange={(e) => setSettings({ ...settings, sacCode: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold"
-                  required
-                />
+      <Panel icon={IndianRupee} title="Per-minute rates (before GST)">
+        <p className="text-xs text-muted">
+          Billing charges these rates. Saving a changed value adds a new effective-dated rate, so earlier usage keeps its old price.
+          An organization-specific override still wins over the plan rate.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-muted border-b border-line">
+                <th scope="col" className="py-2 pr-4 font-medium">Plan</th>
+                {RATE_TYPES.map(({ type, label }) => (
+                  <th key={type} scope="col" className="py-2 pr-4 font-medium">
+                    {label} (₹/min)
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {PLAN_TIERS.map((tier) => (
+                <tr key={tier} className="border-b border-line last:border-0">
+                  <th scope="row" className="py-2 pr-4 text-left font-semibold">{tier}</th>
+                  {RATE_TYPES.map(({ type, label }) => (
+                    <td key={type} className="py-2 pr-4">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.0001"
+                        aria-label={`${tier} ${label} rate per minute`}
+                        value={rateInputs[tier][type]}
+                        onChange={(e) =>
+                          setRateInputs({ ...rateInputs, [tier]: { ...rateInputs[tier], [type]: e.target.value } })
+                        }
+                        className="w-28 px-2 py-1.5 bg-white border border-line rounded-md tabular-nums focus:outline-none focus:border-accent"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="grid grid-cols-2 gap-3 max-w-sm">
+          <Field label="GST %" type="number" step="0.01" value={String(form.billing.gstPercent)} onChange={(v) => patch('billing', 'gstPercent', v)} />
+          <Field label="SAC code" value={form.billing.sacCode} onChange={(v) => patch('billing', 'sacCode', v)} />
+        </div>
+        {pendingRates.length > 0 && (
+          <p className="text-xs text-amber-800">{pendingRates.length} rate change(s) will take effect when you save.</p>
+        )}
+      </Panel>
+
+      <Panel icon={LayoutList} title="Plans shown on the website">
+        <p className="text-xs text-muted">
+          The per-minute figure on the pricing table comes from the Video rate above, so it always matches billing.
+        </p>
+        <div className="space-y-5">
+          {form.plans.map((plan) => (
+            <fieldset key={plan.tier} className="border border-line rounded-md p-4 space-y-3">
+              <legend className="px-1 text-xs font-bold">{plan.tier}</legend>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <Field label="Display name" value={plan.name} onChange={(v) => patchPlan(plan.tier, 'name', v)} />
+                <Field label="Platform fee text" value={plan.platformFee} onChange={(v) => patchPlan(plan.tier, 'platformFee', v)} />
+                <Field label="Concurrent rooms" value={plan.maxRooms} onChange={(v) => patchPlan(plan.tier, 'maxRooms', v)} />
+                <Field label="People per room" value={plan.maxParticipants} onChange={(v) => patchPlan(plan.tier, 'maxParticipants', v)} />
               </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">GST Rate (%)</label>
-                <input
-                  type="number"
-                  value={settings.defaultGstPercent}
-                  onChange={(e) => setSettings({ ...settings, defaultGstPercent: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Rate / Min (₹)</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  value={settings.defaultMinuteRate}
-                  onChange={(e) => setSettings({ ...settings, defaultMinuteRate: parseFloat(e.target.value) })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold"
-                  required
-                />
-              </div>
-            </div>
+              <Field label="Includes" value={plan.includes} onChange={(v) => patchPlan(plan.tier, 'includes', v)} />
+            </fieldset>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel icon={Server} title="Server configuration (read-only, set in environment)">
+        <div className="grid md:grid-cols-2 gap-x-8">
+          <div>
+            <StatusRow label="LiveKit URL" ok={Boolean(loaded.livekitHost)} />
+            <StatusRow label="TURN host" ok={Boolean(loaded.coturnHost)} />
+            <StatusRow label="Razorpay key id" ok={loaded.razorpayKeyIdSet} />
+            <StatusRow label="Razorpay key secret" ok={loaded.razorpayKeySecretSet} />
+            <StatusRow label="Razorpay webhook secret" ok={loaded.razorpayWebhookSecretSet} />
+          </div>
+          <div>
+            <StatusRow label={`SMTP host${loaded.smtpHost ? ` (${loaded.smtpHost})` : ''}`} ok={Boolean(loaded.smtpHost)} />
+            <StatusRow label="SMTP user" ok={loaded.smtpUserSet} />
+            <StatusRow label="SMTP password" ok={loaded.smtpPasswordSet} />
+            <StatusRow label="Email from address" ok={Boolean(loaded.emailFromAddress)} />
+            <StatusRow label={`SMS provider${loaded.smsProvider ? ` (${loaded.smsProvider})` : ''}`} ok={loaded.smsApiKeySet} />
           </div>
         </div>
-
-        {/* Section 2: SFU Cluster & Gateway Hosts */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Server className="h-4 w-4 text-indigo-600" />
-            <span>WebRTC SFU & Coturn Cluster</span>
-          </h2>
-
-          <div className="space-y-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                LiveKit SFU Server URL
-              </label>
-              <input
-                type="text"
-                value={settings.livekitHost}
-                onChange={(e) => setSettings({ ...settings, livekitHost: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Coturn STUN / TURN Host:Port
-              </label>
-              <input
-                type="text"
-                value={settings.coturnHost}
-                onChange={(e) => setSettings({ ...settings, coturnHost: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Default Max Rooms per Organization
-              </label>
-              <input
-                type="number"
-                value={settings.maxRoomsPerOrg}
-                onChange={(e) => setSettings({ ...settings, maxRoomsPerOrg: parseInt(e.target.value) })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Razorpay Payment Gateway */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <CreditCard className="h-4 w-4 text-indigo-600" />
-            <span>Razorpay Payment Gateway Integration</span>
-          </h2>
-
-          <div className="space-y-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Razorpay Key ID</label>
-              <input
-                type="text"
-                value={settings.razorpayKeyId || ''}
-                onChange={(e) => setSettings({ ...settings, razorpayKeyId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                placeholder="rzp_live_... or rzp_test_..."
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Razorpay Key Secret</label>
-              <input
-                type="password"
-                value={settings.razorpayKeySecret || ''}
-                onChange={(e) => setSettings({ ...settings, razorpayKeySecret: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                placeholder="Key Secret from Razorpay Dashboard"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Webhook Secret (payment.captured)</label>
-              <input
-                type="text"
-                value={settings.razorpayWebhookSecret || ''}
-                onChange={(e) => setSettings({ ...settings, razorpayWebhookSecret: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
-                placeholder="whsec_..."
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4: Email SMTP / Transactional Dispatch */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Mail className="h-4 w-4 text-blue-600" />
-            <span>Email Dispatch (Invoices & Low Balance Alerts)</span>
-          </h2>
-
-          <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">SMTP Host</label>
-                <input
-                  type="text"
-                  value={settings.smtpHost || ''}
-                  onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                  placeholder="smtp.sendgrid.net"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">SMTP Port</label>
-                <input
-                  type="number"
-                  value={settings.smtpPort || 587}
-                  onChange={(e) => setSettings({ ...settings, smtpPort: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">SMTP Username</label>
-                <input
-                  type="text"
-                  value={settings.smtpUser || ''}
-                  onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                  placeholder="apikey / username"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">SMTP Password</label>
-                <input
-                  type="password"
-                  value={settings.smtpPassword || ''}
-                  onChange={(e) => setSettings({ ...settings, smtpPassword: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                  placeholder="Password or API Key"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Sender Email From Address</label>
-              <input
-                type="email"
-                value={settings.emailFromAddress || ''}
-                onChange={(e) => setSettings({ ...settings, emailFromAddress: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
-                placeholder="billing@nexora.io"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 5: SMS Gateway (Fast2SMS / Twilio / Msg91) */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 md:col-span-2">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <MessageSquare className="h-4 w-4 text-emerald-600" />
-            <span>SMS Gateway Integration (Critical Alerts & OTPs)</span>
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">SMS Provider</label>
-              <select
-                value={settings.smsProvider || 'FAST2SMS'}
-                onChange={(e) => setSettings({ ...settings, smsProvider: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-              >
-                <option value="FAST2SMS">Fast2SMS (India DLT Compliant)</option>
-                <option value="TWILIO">Twilio SMS Global</option>
-                <option value="MSG91">MSG91 India</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Sender ID (DLT Header)</label>
-              <input
-                type="text"
-                maxLength={6}
-                value={settings.smsSenderId || ''}
-                onChange={(e) => setSettings({ ...settings, smsSenderId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold"
-                placeholder="NEXORA"
-                required
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">SMS Gateway API Key / Auth Token</label>
-              <input
-                type="password"
-                value={settings.smsApiKey || ''}
-                onChange={(e) => setSettings({ ...settings, smsApiKey: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                placeholder="API Key from SMS provider dashboard"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 6: Staff Security Policies */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 md:col-span-2">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <ShieldCheck className="h-4 w-4 text-blue-600" />
-            <span>Staff Administration Security Policy</span>
-          </h2>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <div>
-              <div className="text-xs font-bold text-slate-900">Enforce Mandatory 2FA for Staff Logins</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                Staff accounts with role ADMIN must verify 6-digit TOTP token to enter the master console.
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.mfaEnforcedForStaff}
-                onChange={(e) => setSettings({ ...settings, mfaEnforcedForStaff: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-        </div>
-      </form>
-    </div>
+        <p className="text-xs text-muted">Secrets are never shown here; change them in the backend .env and restart.</p>
+      </Panel>
+    </form>
   );
 }

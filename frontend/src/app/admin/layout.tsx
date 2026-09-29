@@ -1,22 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import {
-  ShieldCheck,
-  Users2,
-  BadgeCheck,
-  HelpCircle,
-  Activity,
-  CreditCard,
-  Building2,
-  Radio,
-  LogOut,
-  ExternalLink,
-  ShieldAlert,
-  Settings,
-} from 'lucide-react';
+import { ShieldCheck, BadgeCheck, HelpCircle, Activity, CreditCard, Building2, Radio, ExternalLink, ShieldAlert, Settings } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api';
 
 const ADMIN_NAV = [
@@ -32,7 +19,6 @@ const ADMIN_NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   // Double Lock: Verify authentic staff session from backend /v1/auth/me
@@ -60,9 +46,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isAuthorized === false) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-center text-white">
+      <div className="min-h-screen bg-console flex flex-col items-center justify-center p-4 text-center text-white">
         <ShieldAlert className="h-16 w-16 text-red-500 mb-4 animate-bounce" />
-        <h1 className="text-xl font-extrabold text-white">403 Forbidden - Access Denied</h1>
+        <h1 className="text-xl font-semibold text-white">403 Forbidden - Access Denied</h1>
         <p className="text-xs text-slate-400 mt-2 max-w-sm">
           You do not have staff permissions to access the Nexora Operations Center. Redirecting to Developer Console...
         </p>
@@ -72,30 +58,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isAuthorized === null) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="h-6 w-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex text-slate-800 font-sans">
+    <div className="min-h-screen bg-paper flex text-ink font-sans">
       {/* Admin Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen">
+      <aside className="w-64 bg-console text-white flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen">
         <div className="flex flex-col min-h-0">
-          <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-            <Link href="/admin" className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md shadow-red-600/30">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <div>
-                <span className="font-extrabold text-lg text-white tracking-tight">Nexora Ops</span>
-                <div className="text-[10px] text-red-400 font-bold uppercase tracking-wider">SuperAdmin Panel</div>
-              </div>
+          <div className="p-6 border-b border-console-line flex items-center justify-between">
+            <Link href="/admin" className="block">
+              <span className="font-display text-xl font-semibold tracking-tight text-paper">
+                Nexora<span className="text-accent">.</span>ops
+              </span>
+              <div className="font-mono text-[10px] text-red-400 uppercase tracking-[0.14em]">Staff only</div>
             </Link>
           </div>
 
-          <div className="p-3 mx-4 mt-4 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300">
+          <div className="p-3 mx-4 mt-4 rounded-md bg-console-line/60 border border-console-line/60 text-xs text-slate-300">
             <span className="text-[10px] text-slate-400 uppercase font-bold block">Staff Role</span>
             <span className="font-bold text-white">SuperAdmin (Full Permissions)</span>
           </div>
@@ -111,10 +94,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold transition-all ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md font-semibold transition-all ${
                     isActive
                       ? 'bg-red-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      : 'text-slate-400 hover:bg-console-line hover:text-white'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -125,12 +108,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
         </div>
 
-        <div className="p-4 border-t border-slate-800 flex items-center justify-between">
+        <div className="p-4 border-t border-console-line flex items-center justify-between">
           <div className="text-xs">
             <div className="font-bold text-white">superadmin@nexora.io</div>
             <div className="text-[10px] text-slate-400">Master Operator</div>
           </div>
-          <Link href="/user" title="Switch to User Console" className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+          <Link href="/user" title="Switch to User Console" className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-console-line">
             <ExternalLink className="h-4 w-4" />
           </Link>
         </div>
@@ -138,9 +121,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30">
+        <header className="h-16 bg-white border-b border-line px-6 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
-            <h1 className="font-extrabold text-base text-slate-900">
+            <h1 className="font-semibold text-base text-ink">
               Nexora Infrastructure Operations Center
             </h1>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-bold border border-red-200 uppercase">
@@ -148,7 +131,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <Link href="/user" className="text-blue-600 font-semibold hover:underline">
+            <Link href="/user" className="text-accent font-semibold hover:underline">
               Switch to User View →
             </Link>
           </div>

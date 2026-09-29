@@ -1,17 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { HelpCircle, CheckCircle2, MessageSquare } from 'lucide-react';
-import { fetchSupportTickets, createSupportTicket } from '@/lib/api';
+import { HelpCircle, CheckCircle2 } from 'lucide-react';
+import { fetchSupportTickets, createSupportTicket, errorMessage } from '@/lib/api';
+import type { SupportTicket } from '@/lib/types';
 
 export default function UserTicketsPage() {
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketCategory, setTicketCategory] = useState<'MEDIA_QUALITY' | 'RECORDING_EGRESS' | 'BILLING_WALLET' | 'API_INTEGRATION'>('API_INTEGRATION');
   const [ticketPriority, setTicketPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('MEDIUM');
   const [ticketMessage, setTicketMessage] = useState('');
   const [ticketSuccess, setTicketSuccess] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   const loadTickets = async () => {
     try {
@@ -25,7 +26,7 @@ export default function UserTicketsPage() {
   };
 
   useEffect(() => {
-    loadTickets();
+    void Promise.resolve().then(loadTickets);
   }, []);
 
   const handleTicketSubmit = async (e: React.FormEvent) => {
@@ -42,53 +43,53 @@ export default function UserTicketsPage() {
       setTicketMessage('');
       setTimeout(() => setTicketSuccess(false), 4000);
       loadTickets();
-    } catch (err: any) {
-      alert(err.message || 'Failed to submit ticket');
+    } catch (err) {
+      alert(errorMessage(err,'Failed to submit ticket'));
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
         <div>
-          <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-indigo-600" />
+          <h2 className="font-bold text-ink text-lg flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-accent" />
             Developer Support & Technical Helpdesk
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Open a direct support inquiry with our WebRTC infrastructure engineers.
           </p>
         </div>
 
         {ticketSuccess && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+          <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             Support ticket submitted successfully! Our on-call engineers are reviewing.
           </div>
         )}
 
         {/* Create Ticket Form */}
-        <form onSubmit={handleTicketSubmit} className="space-y-4 max-w-2xl text-xs bg-slate-50 p-5 rounded-xl border border-slate-200">
-          <div className="font-bold text-slate-900">Open a New Ticket</div>
+        <form onSubmit={handleTicketSubmit} className="space-y-4 max-w-2xl text-xs bg-paper p-5 rounded-md border border-line">
+          <div className="font-bold text-ink">Open a New Ticket</div>
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Subject</label>
+            <label className="block font-semibold text-ink mb-1">Subject</label>
             <input
               type="text"
               placeholder="e.g. BYOS Cloudflare R2 recording upload timeout"
               value={ticketSubject}
               onChange={(e) => setTicketSubject(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900"
+              className="w-full px-3 py-2 bg-white border border-line rounded-md text-ink"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Category</label>
+              <label className="block font-semibold text-ink mb-1">Category</label>
               <select
                 value={ticketCategory}
-                onChange={(e) => setTicketCategory(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900"
+                onChange={(e) => setTicketCategory(e.target.value as typeof ticketCategory)}
+                className="w-full px-3 py-2 bg-white border border-line rounded-md font-semibold text-ink"
               >
                 <option value="API_INTEGRATION">API & Token Integration</option>
                 <option value="MEDIA_QUALITY">WebRTC SFU Quality / Latency</option>
@@ -98,11 +99,11 @@ export default function UserTicketsPage() {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Priority</label>
+              <label className="block font-semibold text-ink mb-1">Priority</label>
               <select
                 value={ticketPriority}
-                onChange={(e) => setTicketPriority(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900"
+                onChange={(e) => setTicketPriority(e.target.value as typeof ticketPriority)}
+                className="w-full px-3 py-2 bg-white border border-line rounded-md font-semibold text-ink"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
@@ -113,20 +114,20 @@ export default function UserTicketsPage() {
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Message / Logs</label>
+            <label className="block font-semibold text-ink mb-1">Message / Logs</label>
             <textarea
               rows={4}
               placeholder="Describe the issue, include roomName, participant identity, and error logs..."
               value={ticketMessage}
               onChange={(e) => setTicketMessage(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900"
+              className="w-full px-3 py-2 bg-white border border-line rounded-md text-ink"
               required
             />
           </div>
 
           <button
             type="submit"
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
+            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer"
           >
             Submit Ticket
           </button>
@@ -134,9 +135,9 @@ export default function UserTicketsPage() {
 
         {/* Tickets List */}
         <div className="space-y-3">
-          <div className="font-bold text-xs text-slate-900">Your Support Tickets</div>
-          <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 text-xs">
-            <div className="p-3 bg-slate-50 font-semibold text-slate-500 flex justify-between uppercase text-[10px]">
+          <div className="font-bold text-xs text-ink">Your Support Tickets</div>
+          <div className="border border-line rounded-md overflow-hidden divide-y divide-line text-xs">
+            <div className="p-3 bg-paper font-semibold text-muted flex justify-between uppercase text-[10px]">
               <span>Ticket # / Subject</span>
               <span>Category</span>
               <span>Status</span>
@@ -144,17 +145,17 @@ export default function UserTicketsPage() {
 
             {tickets.length > 0 ? (
               tickets.map((tk) => (
-                <div key={tk.id} className="p-3.5 flex justify-between items-center hover:bg-slate-50/50">
+                <div key={tk.id} className="p-3.5 flex justify-between items-center hover:bg-paper/50">
                   <div>
-                    <div className="font-bold text-slate-900 flex items-center gap-2">
-                      <span className="font-mono text-blue-600">{tk.ticketNumber}</span>
+                    <div className="font-bold text-ink flex items-center gap-2">
+                      <span className="font-mono text-accent">{tk.ticketNumber}</span>
                       <span>{tk.subject}</span>
                     </div>
                     <span className="text-[10px] text-slate-400 block mt-0.5">
-                      Priority: <strong className="text-slate-700">{tk.priority}</strong> • {new Date(tk.createdAt).toLocaleString()}
+                      Priority: <strong className="text-ink">{tk.priority}</strong> • {new Date(tk.createdAt).toLocaleString()}
                     </span>
                   </div>
-                  <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full font-medium text-[10px]">
+                  <span className="px-2.5 py-0.5 bg-paper-deep text-ink rounded-full font-medium text-[10px]">
                     {tk.category}
                   </span>
                   <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-bold text-[10px]">

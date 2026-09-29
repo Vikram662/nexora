@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { Video, Terminal, Activity, Zap, Radio } from 'lucide-react';
 
-import { fetchOrganizationData, mintRtcToken, OrganizationData, getLivekitWsUrl } from '@/lib/api';
+import { fetchOrganizationData, mintRtcToken, OrganizationData, getLivekitWsUrl, errorMessage as toMessage } from '@/lib/api';
 import ActiveCallRoom from '@/components/ActiveCallRoom';
+import type {  } from '@/lib/types';
 
 export default function UserSandboxPage() {
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
@@ -38,7 +39,7 @@ export default function UserSandboxPage() {
   const [showSecret, setShowSecret] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleMintToken = async (e?: any) => {
+  const handleMintToken = async (e?: React.SyntheticEvent) => {
     if (e && e.preventDefault) {
       e.preventDefault();
       e.stopPropagation();
@@ -69,9 +70,9 @@ export default function UserSandboxPage() {
       } else {
         throw new Error('Token not returned from server');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Mint token error:', err);
-      const msg = err?.message || 'Token generation failed. Check API secret or network.';
+      const msg = toMessage(err,'Token generation failed. Check API secret or network.');
       setErrorMessage(msg);
     } finally {
       setMintLoading(false);
@@ -109,19 +110,19 @@ export default function UserSandboxPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Token Issue Form */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+          <div className="lg:col-span-5 bg-white p-6 rounded-lg border border-line shadow-sm space-y-5">
             <div>
-              <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                <Video className="h-5 w-5 text-blue-600" />
+              <h2 className="font-bold text-ink text-base flex items-center gap-2">
+                <Video className="h-5 w-5 text-accent" />
                 LiveKit Room Generator
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Issue authentic WebRTC tokens and start an in-browser audio/video call.
               </p>
             </div>
 
             {errorMessage && (
-              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2">
+              <div className="p-3.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2">
                 <span className="h-2 w-2 rounded-full bg-red-500 mt-1 shrink-0"></span>
                 <span>{errorMessage}</span>
               </div>
@@ -129,11 +130,11 @@ export default function UserSandboxPage() {
 
             <form onSubmit={handleMintToken} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Target Project</label>
+                <label className="block font-semibold text-ink mb-1">Target Project</label>
                 <select
                   value={selectedProjectId || orgData?.projects?.[0]?.id || 'seed_project'}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
                 >
                   {orgData?.projects && orgData.projects.length > 0 ? (
                     orgData.projects.map((p) => (
@@ -149,15 +150,15 @@ export default function UserSandboxPage() {
 
               {/* Call Type Mode (Video vs Audio Call vs Live Broadcasting) */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">WebRTC Streaming Mode</label>
+                <label className="block font-semibold text-ink mb-1">WebRTC Streaming Mode</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setCallMode('video')}
-                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                    className={`py-2 px-2 rounded-md border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       callMode === 'video'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-accent text-white border-accent shadow-sm'
+                        : 'bg-paper text-muted border-line hover:bg-paper-deep'
                     }`}
                   >
                     <Video className="h-3.5 w-3.5" />
@@ -166,10 +167,10 @@ export default function UserSandboxPage() {
                   <button
                     type="button"
                     onClick={() => setCallMode('audio')}
-                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                    className={`py-2 px-2 rounded-md border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       callMode === 'audio'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-accent text-white border-accent shadow-sm'
+                        : 'bg-paper text-muted border-line hover:bg-paper-deep'
                     }`}
                   >
                     <Activity className="h-3.5 w-3.5" />
@@ -178,10 +179,10 @@ export default function UserSandboxPage() {
                   <button
                     type="button"
                     onClick={() => setCallMode('broadcast')}
-                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                    className={`py-2 px-2 rounded-md border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       callMode === 'broadcast'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-accent text-white border-accent shadow-sm'
+                        : 'bg-paper text-muted border-line hover:bg-paper-deep'
                     }`}
                   >
                     <Radio className="h-3.5 w-3.5 animate-pulse" />
@@ -190,8 +191,8 @@ export default function UserSandboxPage() {
                 </div>
 
                 {callMode === 'broadcast' && (
-                  <div className="mt-2 p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 space-y-1.5">
-                    <div className="text-[11px] font-bold text-indigo-950 flex items-center justify-between">
+                  <div className="mt-2 p-2.5 rounded-md bg-accent/10 border border-accent/30 space-y-1.5">
+                    <div className="text-[11px] font-bold text-ink flex items-center justify-between">
                       <span>Broadcast Role:</span>
                       <div className="flex items-center gap-1">
                         <button
@@ -199,8 +200,8 @@ export default function UserSandboxPage() {
                           onClick={() => setBroadcastRole('host')}
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             broadcastRole === 'host'
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-white text-indigo-700 border border-indigo-200'
+                              ? 'bg-accent text-white'
+                              : 'bg-white text-accent-deep border border-accent/30'
                           }`}
                         >
                           Host (Streamer)
@@ -210,15 +211,15 @@ export default function UserSandboxPage() {
                           onClick={() => setBroadcastRole('audience')}
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             broadcastRole === 'audience'
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-white text-indigo-700 border border-indigo-200'
+                              ? 'bg-accent text-white'
+                              : 'bg-white text-accent-deep border border-accent/30'
                           }`}
                         >
                           Audience (Viewer)
                         </button>
                       </div>
                     </div>
-                    <p className="text-[10px] text-indigo-800">
+                    <p className="text-[10px] text-accent-deep">
                       {broadcastRole === 'host'
                         ? 'Host transmits HD video & audio to unlimited concurrent viewers.'
                         : 'Audience receives ultra-low latency (<200ms) live stream without sharing camera/mic.'}
@@ -231,11 +232,11 @@ export default function UserSandboxPage() {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="font-semibold text-slate-700">Project API Secret</label>
+                  <label className="font-semibold text-ink">Project API Secret</label>
                   <button
                     type="button"
                     onClick={() => setShowSecret(!showSecret)}
-                    className="text-[11px] text-blue-600 hover:underline font-semibold"
+                    className="text-[11px] text-accent hover:underline font-semibold"
                   >
                     {showSecret ? 'Hide' : 'Show'}
                   </button>
@@ -245,7 +246,7 @@ export default function UserSandboxPage() {
                   value={apiSecret}
                   onChange={(e) => setApiSecret(e.target.value)}
                   placeholder="sk_live_..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono text-[11px]"
                   required
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -254,23 +255,23 @@ export default function UserSandboxPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Room Name</label>
+                <label className="block font-semibold text-ink mb-1">Room Name</label>
                 <input
                   type="text"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Participant Identity</label>
+                <label className="block font-semibold text-ink mb-1">Participant Identity</label>
                 <input
                   type="text"
                   value={identity}
                   onChange={(e) => setIdentity(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
                   required
                 />
               </div>
@@ -279,7 +280,7 @@ export default function UserSandboxPage() {
                 type="button"
                 onClick={(e) => handleMintToken(e)}
                 disabled={mintLoading}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {mintLoading ? 'Generating WebRTC Token...' : 'Generate Room Token'}
               </button>
@@ -289,10 +290,10 @@ export default function UserSandboxPage() {
 
 
           {/* Sandbox Live Tester View */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-7 bg-white p-6 rounded-lg border border-line shadow-sm flex flex-col justify-between space-y-4">
             <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <div className="flex items-center justify-between pb-3 border-b border-line">
+                <span className="font-bold text-ink text-sm flex items-center gap-2">
                   <Terminal className="h-4 w-4 text-emerald-600" />
                   Live Testing Console
                 </span>
@@ -301,28 +302,28 @@ export default function UserSandboxPage() {
 
               {mintedToken ? (
                 <div className="mt-4 space-y-4">
-                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
+                  <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 space-y-2">
                     <div className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                       <Zap className="h-4 w-4 text-emerald-600 fill-emerald-600" />
                       LiveKit JWT Token Generated & Ready!
                     </div>
-                    <div className="p-2.5 bg-white rounded-lg border border-emerald-200 font-mono text-[10px] break-all text-slate-700 max-h-24 overflow-y-auto">
+                    <div className="p-2.5 bg-white rounded-lg border border-emerald-200 font-mono text-[10px] break-all text-ink max-h-24 overflow-y-auto">
                       {mintedToken}
                     </div>
                   </div>
 
                   <button
                     onClick={() => setInCall(true)}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md text-xs shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Video className="h-4 w-4" />
                     Enter Live Interactive Call Room
                   </button>
                 </div>
               ) : (
-                <div className="h-48 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-200 rounded-xl mt-4">
+                <div className="h-48 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-line rounded-md mt-4">
                   <Video className="h-8 w-8 text-slate-300 mb-2" />
-                  <div className="text-xs font-bold text-slate-600">No Active Token Generated</div>
+                  <div className="text-xs font-bold text-muted">No Active Token Generated</div>
                   <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
                     Fill the form on the left to mint an authentic signed LiveKit token and test WebRTC video calling.
                   </p>
@@ -330,7 +331,7 @@ export default function UserSandboxPage() {
               )}
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500">
+            <div className="p-3 bg-paper rounded-md border border-line text-[11px] text-muted">
               💡 <strong>Developer Tip:</strong> Multiple browser tabs can join the same Room Name to test multi-party audio, video, broadcast streaming, and <strong>in-room real-time text chat (P2P Data Channel)</strong> simultaneously!
             </div>
           </div>

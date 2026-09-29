@@ -12,6 +12,7 @@ import { ApiKeyGuard } from '../auth/api-key.guard.js';
 import { LivekitTokenService } from './livekit-token.service.js';
 import type { TokenGrants } from './livekit-token.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { PricingService, type BillableRoomType } from '../settings/pricing.service.js';
 import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsObject } from 'class-validator';
 
 export class CreateTokenDto {
@@ -43,6 +44,7 @@ export class TokensController {
   constructor(
     private readonly livekitTokenService: LivekitTokenService,
     private readonly prisma: PrismaService,
+    private readonly pricing: PricingService,
   ) {}
 
   @Post()
@@ -52,18 +54,30 @@ export class TokensController {
     const project = req.project;
     const organization = req.organization;
 
-    // Strict GST-Inclusive Safety Rule:
-    // If Production, deduct participant session fee including 18% GST atomically
+    // Production sessions are prepaid: rate and GST come from the database, deducted atomically.
     if (project.environment === 'PRODUCTION' && organization) {
-      const baseRate = Number(organization.customMinuteRate || 0.0035);
-      const gstRatePercent = 18;
-      const gstMultiplier = 1 + gstRatePercent / 100; // 1.18
-      const effectiveRateWithGst = baseRate * gstMultiplier;
+      // Room type is derived from the grants, never from client input, so callers cannot pick a cheaper tariff.
+      let effectiveRoomType: BillableRoomType = 'VIDEO_CALL';
+      if (body.grants?.canPublish === false) {
+        effectiveRoomType = 'LIVE_BROADCAST';
+      } else if (
+        Array.isArray(body.grants?.canPublishSources) &&
+        body.grants.canPublishSources.length > 0 &&
+        !body.grants.canPublishSources.map((s) => String(s).toLowerCase()).includes('camera')
+      ) {
+        effectiveRoomType = 'AUDIO_CALL';
+      }
+
+      const { ratePerMinuteWithGst, gstPercent } = await this.pricing.resolve(
+        organization.id,
+        organization.planTier,
+        effectiveRoomType,
+      );
 
       // Estimate initial session block with GST
       const sessionSeconds = Math.min(body.ttlSeconds || 600, 600);
       const sessionMinutes = sessionSeconds / 60;
-      const totalDeductionWithGst = Number((sessionMinutes * effectiveRateWithGst).toFixed(4));
+      const totalDeductionWithGst = Number((sessionMinutes * ratePerMinuteWithGst).toFixed(4));
 
       // Atomic conditional update to eliminate race condition:
       // Decrement wallet balance ONLY if current balance >= totalDeductionWithGst
@@ -83,26 +97,8 @@ export class TokensController {
 
       if (updateResult.count === 0) {
         throw new BadRequestException(
-          `Insufficient wallet balance. Minimum ₹${totalDeductionWithGst.toFixed(2)} required (incl. 18% GST). Please recharge your wallet.`,
+          `Insufficient wallet balance. Minimum ₹${totalDeductionWithGst.toFixed(2)} required (incl. ${gstPercent}% GST). Please recharge your wallet.`,
         );
-      }
-
-      // Determine effective room type server-side based on actual token grants
-      // SECURITY: Do not trust client-supplied body.roomType to prevent tariff spoofing.
-      // If the participant has permission to publish video/camera, bill as VIDEO_CALL.
-      // If publishing is disabled completely (viewer/listener), classify as LIVE_BROADCAST.
-      // If publishing is explicitly restricted to audio/microphone, classify as AUDIO_CALL.
-      let effectiveRoomType: 'AUDIO_CALL' | 'VIDEO_CALL' | 'LIVE_BROADCAST' = 'VIDEO_CALL';
-      if (body.grants?.canPublish === false) {
-        effectiveRoomType = 'LIVE_BROADCAST';
-      } else if (
-        Array.isArray(body.grants?.canPublishSources) &&
-        body.grants.canPublishSources.length > 0 &&
-        !body.grants.canPublishSources.map(s => String(s).toLowerCase()).includes('camera')
-      ) {
-        effectiveRoomType = 'AUDIO_CALL';
-      } else {
-        effectiveRoomType = 'VIDEO_CALL';
       }
 
       // Record UsageLog for session auditing with customer's logical roomName
@@ -114,7 +110,7 @@ export class TokensController {
           participantIdentity: body.participantIdentity,
           startedAt: new Date(),
           billableSeconds: sessionSeconds,
-          ratePerMinute: effectiveRateWithGst,
+          ratePerMinute: ratePerMinuteWithGst,
           amountDeducted: totalDeductionWithGst,
         },
       });
