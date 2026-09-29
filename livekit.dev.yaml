@@ -2,9 +2,7 @@ port: 7880
 bind_addresses:
   - ""
 
-# API keys used by Nexora Control Plane (backend)
-keys:
-  devkey: ${LIVEKIT_API_SECRET:-dev_insecure_local_key_replace_before_prod}
+# API keys come from the LIVEKIT_KEYS environment variable (set by start-livekit-windows.ps1).
 
 logging:
   json: false

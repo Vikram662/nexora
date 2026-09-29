@@ -59,11 +59,9 @@ services:
     container_name: nexora-coturn
     restart: unless-stopped
     network_mode: host
-    environment:
-      - TURN_STATIC_AUTH_SECRET=${TURN_STATIC_AUTH_SECRET}
     volumes:
       - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
-    command: -c /etc/coturn/turnserver.conf
+    command: -c /etc/coturn/turnserver.conf --static-auth-secret=${TURN_STATIC_AUTH_SECRET}
 
   # -------------------------------------------------------------
   # 4. LiveKit Egress Worker (Headless Chromium + FFmpeg transcoding)

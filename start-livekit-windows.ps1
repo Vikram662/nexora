@@ -54,4 +54,26 @@ Write-Host "    WebRTC TCP Port: 7881 | UDP Port Range: 50000-60000" -Foreground
 Write-Host "    Control Plane: http://localhost:7880" -ForegroundColor Gray
 Write-Host ""
 
+# LiveKit reads its API key pair from LIVEKIT_KEYS. Take it from the environment or backend\.env so both sides always match.
+function Get-DotEnvValue($name) {
+    $envFile = "$PSScriptRootackend\.env"
+    if (!(Test-Path $envFile)) { return $null }
+    $line = Get-Content $envFile | Where-Object { $_ -match "^\s*$name\s*=" } | Select-Object -First 1
+    if (-not $line) { return $null }
+    return ($line -replace "^\s*$name\s*=\s*", "").Trim().Trim('"')
+}
+
+$apiKey = if ($env:LIVEKIT_API_KEY) { $env:LIVEKIT_API_KEY } else { Get-DotEnvValue "LIVEKIT_API_KEY" }
+$apiSecret = if ($env:LIVEKIT_API_SECRET) { $env:LIVEKIT_API_SECRET } else { Get-DotEnvValue "LIVEKIT_API_SECRET" }
+
+if (-not $apiKey -or -not $apiSecret) {
+    Write-Host "[ERROR] Set LIVEKIT_API_KEY and LIVEKIT_API_SECRET in backend\.env (or the environment) first." -ForegroundColor Red
+    exit 1
+}
+if ($apiSecret.Length -lt 32) {
+    Write-Host "[ERROR] LIVEKIT_API_SECRET must be at least 32 characters." -ForegroundColor Red
+    exit 1
+}
+
+$env:LIVEKIT_KEYS = "${apiKey}: ${apiSecret}"
 & "$exePath" --config "$PSScriptRoot\livekit.dev.yaml"

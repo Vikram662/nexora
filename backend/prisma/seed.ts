@@ -109,7 +109,12 @@ async function seed() {
 
   // 4. Create Users, Staff & Memberships
   console.log('Creating Users, Staff & Roles...');
-  const staffPasswordHash = await bcrypt.hash('StaffMaster2026!Pass', salt);
+  // Never ship a known staff password: use SEED_STAFF_PASSWORD, or generate one and print it once.
+  const seededStaffPassword = process.env.SEED_STAFF_PASSWORD || crypto.randomBytes(12).toString('base64url');
+  if (!process.env.SEED_STAFF_PASSWORD) {
+    console.log(`Generated staff password for superadmin@nexora.io / admin@nexora.io: ${seededStaffPassword}`);
+  }
+  const staffPasswordHash = await bcrypt.hash(seededStaffPassword, salt);
   await prisma.staffUser.upsert({
     where: { email: 'superadmin@nexora.io' },
     update: { passwordHash: staffPasswordHash, isActive: true },

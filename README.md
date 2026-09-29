@@ -97,26 +97,96 @@ cd ..
 ```
 
 ### 2. Configure Environment
-Generate a secure 32-byte hexadecimal master encryption key:
+
+Three env files, one per component. Each has a matching `.env.example` with demo values you can copy for local development.
+
+| File | Copy from | Used by |
+| :--- | :--- | :--- |
+| `backend/.env` | `backend/.env.example` | NestJS control plane |
+| `frontend/.env.local` | `frontend/.env.example` | Next.js website and console |
+| `docker/.env` | `docker/.env.example` | Docker Compose (LiveKit, Redis, Coturn, egress) |
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+cp docker/.env.example docker/.env      # only if you run the Docker stack
+```
+
+The demo values are fine on your own machine. For anything else, generate real secrets:
+
 ```bash
 openssl rand -hex 32
 ```
 
-Create `backend/.env` using `backend/.env.example` as a template, setting your database connection and generated key. Also create `frontend/.env.local` using `frontend/.env.example`.
+**Values that must match across files**
 
-### 3. Database Migration & Seed
+| Backend (`backend/.env`) | Must equal | Why |
+| :--- | :--- | :--- |
+| `JWT_SECRET` | `JWT_SECRET` in `frontend/.env.local` | The frontend verifies the session cookie the backend signs. A mismatch redirects every `/user` and `/admin` request to login. |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Same names in `docker/.env` (or the values `start-livekit-windows.ps1` reads from `backend/.env`) | The backend signs tokens and calls LiveKit with this pair; LiveKit must know it. |
+| `LIVEKIT_URL` | `NEXT_PUBLIC_LIVEKIT_URL` in the frontend | Where clients connect. |
+
+#### Backend (`backend/.env`)
+
+| Variable | Required | Demo value | Notes |
+| :--- | :--- | :--- | :--- |
+| `DATABASE_URL` | Yes | `mysql://root:@localhost:3306/nexora_rtc` | MySQL connection string. |
+| `ENCRYPTION_MASTER_KEY` | Yes | 64 hex characters | AES-256-GCM key for stored bucket and Firebase credentials. The server refuses to start without it or with the wrong length. |
+| `JWT_SECRET` | Yes | any 32+ character string | Signs console session cookies. |
+| `LIVEKIT_URL` | Yes | `ws://localhost:7880` | Use `wss://` in production. |
+| `LIVEKIT_API_KEY` | Yes | `devkey` | |
+| `LIVEKIT_API_SECRET` | Yes | any 32+ character string | |
+| `PORT` | No | `4000` | |
+| `NODE_ENV` | No | `development` | Cookies get the `Secure` flag when this is `production`. |
+| `CORS_ORIGIN` | No | `http://localhost:3000` | Comma-separated browser origins allowed to call the API. |
+| `STAFF_OPS_ORG_ID` | No | `org_nexora_master_ops` | Organisation staff sessions are bound to. The seed creates it. |
+| `MFA_ISSUER_NAME` | No | `Nexora RTC` | Label in authenticator apps. |
+| `COMPANY_LEGAL_NAME` | No | | Shown in Admin Settings. |
+| `COTURN_HOST` | No | `localhost:3478` | Shown read-only in Admin Settings. |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | For payments | `rzp_test_...` | Without them wallet top-ups fail. Point the Razorpay webhook at `POST /v1/portal/payments/webhook` with the same webhook secret. |
+| `EMAIL_PROVIDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Optional | | Notification email. |
+| `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER_ID` | Optional | | Notification SMS. |
+| `KYC_PROVIDER`, `KYC_ENV`, `KYC_API_TOKEN` | Optional | `MOCK`, `SANDBOX` | `MOCK` only checks document format. Use `SUREPASS` with a token for real verification. |
+| `SEED_STAFF_PASSWORD` | Seed only | | Password for the seeded staff accounts. If unset the seed generates one and prints it once. |
+
+#### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Demo value | Notes |
+| :--- | :--- | :--- | :--- |
+| `JWT_SECRET` | Yes | same as backend | Server-only. Never give it a `NEXT_PUBLIC_` prefix. |
+| `NEXT_PUBLIC_API_URL` | Production | `http://localhost:4000` | Public backend URL. Required when the API is on a different domain. |
+| `API_INTERNAL_URL` | Recommended | `http://127.0.0.1:4000` | Server-side URL for the public pages (brand, contact, pricing). Without it those pages fall back to defaults and pricing shows "on request". |
+| `NEXT_PUBLIC_LIVEKIT_URL` | Recommended | `ws://localhost:7880` | LiveKit URL used by the sandbox. |
+| `NEXT_PUBLIC_SITE_URL` | Production | `http://localhost:3000` | Public origin for canonical URLs, `sitemap.xml`, `robots.txt` and social previews. |
+
+#### Docker stack (`docker/.env`)
+
+| Variable | Demo value | Notes |
+| :--- | :--- | :--- |
+| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | `devkey` / 32+ characters | Same as the backend. |
+| `REDIS_HOST` / `REDIS_PASSWORD` | `127.0.0.1` / any password | Shared by LiveKit and the egress worker. |
+| `TURN_STATIC_AUTH_SECRET` | any secret | Coturn credential secret. |
+| `BACKEND_INTERNAL_WEBHOOK_URL` | `http://127.0.0.1:4000/v1/webhooks/livekit` | Where LiveKit posts room and recording events. |
+
+Run it with `cd docker && docker compose up -d`.
+
+### 3. Database Migration & First Settings
+
 ```bash
 cd backend
-npx prisma db push
-npm run prisma:seed
+npx prisma db push          # creates or updates the tables, including SiteSetting
 cd ..
 ```
+
+Then sign in as staff and open **Admin, Settings** to fill in what the public website and billing read from the database: brand and logo, contact details, social links, the announcement bar, plan text, and the per-minute rates for every plan. Production tokens are refused until a rate exists for the plan, so set the rates before going live.
+
+> **Demo data:** `npx prisma db seed` fills the database with sample organisations, staff accounts and starting rates, but it **deletes existing data first**. Run it only on an empty development database. Staff accounts use `SEED_STAFF_PASSWORD`, or a random password printed once.
 
 ### 4. Running the Platform
 
 #### Development Mode:
 ```bash
-# Terminal 1: LiveKit SFU (Windows native with checksum verification)
+# Terminal 1: LiveKit SFU (Windows native; reads the API key pair from backend\.env)
 ./start-livekit-windows.ps1
 
 # Terminal 2: Backend Control Plane (Port 4000)
