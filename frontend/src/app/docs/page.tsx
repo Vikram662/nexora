@@ -69,8 +69,19 @@ export default function DocumentationPage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+interface ApiDocItem {
+  title: string;
+  endpoint: string;
+  badge?: string;
+  desc: string;
+  link?: { href: string; label: string };
+  flow: string;
+  request: string;
+  response: string;
+}
+
   // FULL APPLICATION-FACING APIS FOR CALL, VIDEO, BROADCAST, AND CHAT
-  const APPLICATION_APIS = [
+  const APPLICATION_APIS: ApiDocItem[] = [
     {
       title: '1. Video Call Token Minting (1:1 & Multi-Party Mesh)',
       endpoint: 'POST /v1/tokens',
@@ -177,7 +188,131 @@ curl -X POST "${apiBaseUrl}/v1/tokens" \\
 }`,
     },
     {
-      title: '4. Real-time In-Room Text Chat & Data Messaging (P2P SCTP DataChannel)',
+      title: '4. Room Management API (Create, Inspect, List & Close Rooms)',
+      endpoint: 'POST /v1/rooms | GET /v1/rooms | GET /v1/rooms/{room} | DELETE /v1/rooms/{room}',
+      desc: 'Server-side room lifecycle controls. Pre-create structured rooms with participant limits and empty timeouts, retrieve real-time participant counts, or explicitly close rooms.',
+      flow: `Your Backend -> POST /v1/rooms -> Nexora provisions room configuration. DELETE /v1/rooms/{room} terminates room and immediately disconnects all peers.`,
+      request: `// A. Explicitly Create or Configure a Room
+curl -X POST "${apiBaseUrl}/v1/rooms" \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
+  -d '{
+    "roomName": "dr-sharma-consultation-991",
+    "emptyTimeout": 300,
+    "maxParticipants": 10,
+    "metadata": "{\\"specialty\\":\\"Cardiology\\"}"
+  }'
+
+// B. Get Room Status & Active State
+curl -X GET "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"
+
+// C. List Active Rooms for Project
+curl -X GET "${apiBaseUrl}/v1/rooms" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"
+
+// D. Delete Room and Disconnect Everyone
+curl -X DELETE "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"`,
+      response: `// Response from GET /v1/rooms/{room}:
+{
+  "status": "success",
+  "data": {
+    "roomName": "dr-sharma-consultation-991",
+    "sid": "RM_99182a17f",
+    "isActive": true,
+    "participantCount": 2,
+    "isRecording": false,
+    "creationTime": "2026-09-29T10:00:00.000Z",
+    "maxParticipants": 10
+  }
+}`,
+    },
+    {
+      title: '5. Participant Control & Moderation API (List, Kick, Mute, Permissions)',
+      endpoint: 'GET .../participants | DELETE .../participants/{id} | POST .../mute | PATCH .../permissions',
+      desc: 'In-call server-side moderation. Inspect active publishing tracks, kick unruly participants, remotely mute microphones/cameras, or toggle publish/subscribe grants.',
+      flow: `Your Backend -> DELETE /v1/rooms/{room}/participants/{id} disconnects participant. POST .../mute mutes their specific track.`,
+      request: `// A. List Connected Participants in Room
+curl -X GET "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/participants" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"
+
+// B. Mute Participant Audio or Video Track
+curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/participants/patient_101/mute" \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
+  -d '{
+    "trackSid": "TR_AM1092a",
+    "muted": true
+  }'
+
+// C. Update Permissions (Promote to Speaker or Revoke Publishing)
+curl -X PATCH "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/participants/patient_101/permissions" \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
+  -d '{
+    "canPublish": false,
+    "canSubscribe": true,
+    "canPublishData": true
+  }'
+
+// D. Kick Participant
+curl -X DELETE "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/participants/patient_101" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"`,
+      response: `// Response from GET /v1/rooms/{room}/participants:
+{
+  "status": "success",
+  "data": {
+    "roomName": "dr-sharma-consultation-991",
+    "participants": [
+      {
+        "identity": "patient_101",
+        "name": "Rohan Gupta",
+        "state": "ACTIVE",
+        "joinedAt": "2026-09-29T10:05:00.000Z",
+        "isPublishingAudio": true,
+        "isPublishingVideo": true,
+        "tracks": [
+          { "sid": "TR_AM1092a", "type": "AUDIO", "muted": false },
+          { "sid": "TR_VM1092b", "type": "VIDEO", "muted": false }
+        ]
+      }
+    ]
+  }
+}`,
+    },
+    {
+      title: '6. Server-to-Client WebRTC Messaging (DataChannel Broadcast)',
+      endpoint: 'POST /v1/rooms/{room}/messages',
+      desc: 'Inject reliable server-side signals, alerts, polls, or live actions directly into connected participant WebRTC clients via DataChannels without establishing WebSocket connections.',
+      flow: `Your Backend -> POST /v1/rooms/{room}/messages -> Nexora SFU pushes payload over SCTP DataChannel -> Clients trigger on(RoomEvent.DataReceived).`,
+      request: `curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/messages" \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
+  -d '{
+    "message": { "action": "POLL_START", "question": "Rate consultation" },
+    "topic": "system-broadcast"
+  }'`,
+      response: `{
+  "status": "success",
+  "data": {
+    "roomName": "dr-sharma-consultation-991",
+    "sent": true,
+    "recipientsCount": "all"
+  }
+}`,
+    },
+    {
+      title: '7. Real-time In-Room Text Chat (Client P2P DataChannel)',
       endpoint: 'WebRTC P2P DataChannel Protocol',
       desc: 'Direct sub-10ms peer-to-peer data channel packet delivery. Requires zero separate chat server or database! Messages are delivered over established encrypted SCTP channels.',
       flow: 'Sender client calls localParticipant.publishData(payload, { reliable: true }) -> LiveKit SFU relays payload -> All connected room participants trigger on(RoomEvent.DataReceived).',
@@ -198,13 +333,12 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
 });`,
     },
     {
-      title: '5. Server-to-Server Recording & Egress API (Planned)',
-      endpoint: 'POST /v1/rooms/{room}/recording/start',
-      badge: 'Planned (Next Release)',
+      title: '8. Server-to-Server Recording & Egress API (Start, Stop & Status)',
+      endpoint: 'POST /v1/rooms/{room}/recording/start | POST .../stop | GET .../status',
       desc: 'Server-side room compositing and track egress. Recordings are saved to the bucket connected in User Panel → Storage. Files stream directly to your private AWS S3, Cloudflare R2, or Google Cloud Storage.',
       link: { href: '/user/storage', label: 'Configure storage bucket in User Panel → Storage' },
-      flow: `Your Backend -> POST ${apiBaseUrl}/v1/rooms/{room}/recording/start -> Nexora Egress Controller streams directly into your private connected bucket.`,
-      request: `// Start Room Recording (Server-to-Server)
+      flow: `Your Backend -> POST ${apiBaseUrl}/v1/rooms/{room}/recording/start -> Nexora Egress Controller streams directly into your private connected bucket. Check room state with GET .../status (returns isRecording: true/false).`,
+      request: `// A. Start Room Recording (Server-to-Server)
 curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/start" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${selectedApiKey}" \\
@@ -213,8 +347,19 @@ curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/start"
     "audioOnly": false,
     "layout": "speaker-dark",
     "customOutputFilename": "consultations/2026/09/session-991.mp4"
-  }'`,
-      response: `{
+  }'
+
+// B. Check Active Recording Status (Returns isRecording flag)
+curl -X GET "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/status" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"
+
+// C. Stop Room Recording
+curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/stop" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"`,
+      response: `// A. Response from /recording/start:
+{
   "status": "success",
   "data": {
     "recordingId": "rec_livekit_egress_99182",
@@ -223,6 +368,48 @@ curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/start"
     "storageProvider": "CLOUDFLARE_R2",
     "bucketName": "your-nexora-recordings-bucket",
     "destinationKey": "consultations/2026/09/session-991.mp4"
+  }
+}
+
+// B. Response from /recording/status:
+{
+  "status": "success",
+  "data": {
+    "roomName": "dr-sharma-consultation-991",
+    "isRecording": true,
+    "activeRecording": {
+      "recordingId": "rec_livekit_egress_99182",
+      "status": "PROCESSING",
+      "startedAt": "2026-09-29T10:30:00.000Z"
+    }
+  }
+}`,
+    },
+    {
+      title: '9. Project Recording Archive & Audit API',
+      endpoint: 'GET /v1/recordings',
+      desc: 'Retrieve paginated recording history, bucket object keys, transcoding status, and duration metrics for your project.',
+      flow: `Your Backend -> GET ${apiBaseUrl}/v1/recordings -> Returns list of completed and active room recordings.`,
+      request: `curl -X GET "${apiBaseUrl}/v1/recordings" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret"`,
+      response: `{
+  "status": "success",
+  "data": {
+    "recordings": [
+      {
+        "id": "rec_livekit_egress_99182",
+        "roomName": "dr-sharma-consultation-991",
+        "storageProvider": "CLOUDFLARE_R2",
+        "bucketName": "your-nexora-recordings-bucket",
+        "objectKey": "consultations/2026/09/session-991.mp4",
+        "durationSeconds": 1845,
+        "fileSizeBytes": "48291040",
+        "status": "COMPLETED",
+        "startedAt": "2026-09-29T10:30:00.000Z",
+        "completedAt": "2026-09-29T11:00:45.000Z"
+      }
+    ]
   }
 }`,
     },

@@ -105,7 +105,7 @@ export class TokensController {
         effectiveRoomType = 'VIDEO_CALL';
       }
 
-      // Record UsageLog for session auditing
+      // Record UsageLog for session auditing with customer's logical roomName
       await this.prisma.usageLog.create({
         data: {
           projectId: project.id,
@@ -120,9 +120,14 @@ export class TokensController {
       });
     }
 
+    // MULTI-TENANT ISOLATION:
+    // LiveKit SFU room names are globally flat across all tenants.
+    // Prefix internal room name with projectId so Project A cannot join or spy on Project B's rooms.
+    const namespacedLivekitRoom = `${project.id}__${body.roomName}`;
+
     const result = await this.livekitTokenService.mintToken({
       projectId: project.id,
-      roomName: body.roomName,
+      roomName: namespacedLivekitRoom,
       participantIdentity: body.participantIdentity,
       participantName: body.participantName,
       grants: body.grants,

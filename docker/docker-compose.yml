@@ -10,8 +10,11 @@ services:
     restart: unless-stopped
     network_mode: host
     environment:
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - LIVEKIT_KEYS=${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET}
+      - LIVEKIT_REDIS_ADDRESS=${REDIS_HOST:-127.0.0.1}:6379
+      - LIVEKIT_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - LIVEKIT_WEBHOOK_URLS=${BACKEND_INTERNAL_WEBHOOK_URL:-http://127.0.0.1:4000/v1/webhooks/livekit}
+      - LIVEKIT_WEBHOOK_API_KEY=${LIVEKIT_API_KEY:-devkey}
     volumes:
       - ./livekit.prod.yaml:/etc/livekit.yaml:ro
     command: --config /etc/livekit.yaml
@@ -44,6 +47,30 @@ services:
     volumes:
       - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
     command: -c /etc/coturn/turnserver.conf
+
+  # -------------------------------------------------------------
+  # 4. LiveKit Egress Worker (Headless Chromium + FFmpeg transcoding)
+  # -------------------------------------------------------------
+  egress:
+    image: livekit/egress:v1.8.8
+    container_name: nexora-egress
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    cap_add:
+      - SYS_ADMIN
+    environment:
+      - EGRESS_CONFIG_FILE=/etc/egress.yaml
+      - EGRESS_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - EGRESS_API_SECRET=${LIVEKIT_API_SECRET}
+      - EGRESS_REDIS_HOST=${REDIS_HOST:-127.0.0.1}
+      - EGRESS_REDIS_PORT=6379
+      - EGRESS_REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - ./egress.yaml:/etc/egress.yaml:ro
+    depends_on:
+      - livekit
+      - redis
 
 volumes:
   redis-data:

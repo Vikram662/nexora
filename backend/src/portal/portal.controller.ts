@@ -238,34 +238,76 @@ export class PortalController {
     });
     if (!project) throw new BadRequestException('Project not found or unauthorized');
 
-    let encAccess: { ciphertext: string; iv: string; authTag: string };
-    let encSecret: { ciphertext: string; iv: string; authTag: string };
-
-    if (body.provider === 'GOOGLE_CLOUD') {
-      encAccess = this.crypto.encrypt('GCS_SERVICE_ACCOUNT');
-      encSecret = this.crypto.encrypt(body.gcsServiceAccountJson || '');
-    } else {
-      encAccess = this.crypto.encrypt(body.accessKey || '');
-      encSecret = this.crypto.encrypt(body.secretKey || '');
+    // Cloudflare R2 requires a specific S3-compatible API endpoint (including Cloudflare account ID)
+    if (body.provider === 'CLOUDFLARE_R2' && !body.endpoint?.trim()) {
+      throw new BadRequestException(
+        'Cloudflare R2 requires an endpoint URL (e.g. https://<ACCOUNT_ID>.r2.cloudflarestorage.com).'
+      );
     }
+
+    // Unified credentials payload so single AES-GCM IV and AuthTag verify both keys atomically
+    let credentialsPayload: { accessKey: string; secretKey: string };
+    if (body.provider === 'GOOGLE_CLOUD') {
+      const gcsJson = (body.gcsServiceAccountJson || body.secretKey || '').trim();
+      if (!gcsJson) {
+        throw new BadRequestException('Google Cloud Storage requires Service Account JSON credentials.');
+      }
+      credentialsPayload = {
+        accessKey: 'GCS_SERVICE_ACCOUNT',
+        secretKey: gcsJson,
+      };
+    } else {
+      if (!body.accessKey?.trim() || !body.secretKey?.trim()) {
+        throw new BadRequestException('Access Key and Secret Key are required.');
+      }
+      credentialsPayload = {
+        accessKey: body.accessKey.trim(),
+        secretKey: body.secretKey.trim(),
+      };
+    }
+
+    const encryptedCredentials = this.crypto.encrypt(JSON.stringify(credentialsPayload));
+
+    // Demote any existing default configs for this project to maintain strict single-default invariant
+    await this.prisma.storageConfig.updateMany({
+      where: { projectId, isDefault: true },
+      data: { isDefault: false },
+    });
 
     const config = await this.prisma.storageConfig.create({
       data: {
         projectId,
         provider: body.provider,
-        label: `${body.provider.toLowerCase()}-primary`,
-        bucketName: body.bucketName,
-        region: body.region,
-        endpoint: body.endpoint,
-        encryptedAccessKey: encAccess.ciphertext,
-        encryptedSecretKey: encSecret.ciphertext,
-        encryptionIv: encAccess.iv,
-        encryptionAuthTag: encAccess.authTag,
+        label: `${body.provider.toLowerCase()}-primary-${Date.now().toString(36)}`,
+        bucketName: body.bucketName.trim(),
+        region: body.region?.trim(),
+        endpoint: body.endpoint?.trim(),
+        encryptedAccessKey: encryptedCredentials.ciphertext,
+        encryptedSecretKey: encryptedCredentials.ciphertext,
+        encryptionIv: encryptedCredentials.iv,
+        encryptionAuthTag: encryptedCredentials.authTag,
+        isDefault: true,
         lastVerifiedAt: new Date(),
+      },
+      select: {
+        id: true,
+        projectId: true,
+        provider: true,
+        label: true,
+        bucketName: true,
+        region: true,
+        endpoint: true,
+        isDefault: true,
+        lastVerifiedAt: true,
+        createdAt: true,
       },
     });
 
-    return { status: 'success', data: config };
+    return {
+      status: 'success',
+      message: 'Storage configuration saved successfully',
+      data: config,
+    };
   }
 
   // Save BYOF Firebase Config for Call Signaling Push
