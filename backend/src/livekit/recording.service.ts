@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EgressClient, EncodedFileOutput, S3Upload, GCPUpload } from 'livekit-server-sdk';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -13,9 +13,10 @@ export interface StartRecordingOptions {
 }
 
 @Injectable()
-export class RecordingService implements OnModuleInit {
+export class RecordingService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RecordingService.name);
   private egressClient!: EgressClient;
+  private reconciliationTimer?: NodeJS.Timeout;
 
   constructor(
     private readonly configService: ConfigService,
@@ -38,6 +39,22 @@ export class RecordingService implements OnModuleInit {
     // Convert wss/ws protocol to https/http for LiveKit Twirp RPC calls
     const httpHost = rawUrl.replace(/^wss:\/\//i, 'https://').replace(/^ws:\/\//i, 'http://');
     this.egressClient = new EgressClient(httpHost, apiKey, apiSecret);
+
+    // Schedule automatic stale recording reconciliation every 10 minutes (600,000ms)
+    this.reconciliationTimer = setInterval(() => {
+      this.reconcileStaleRecordings().catch((err) => {
+        this.logger.error(`Periodic stale recording reconciliation failed: ${err.message}`, err.stack);
+      });
+    }, 10 * 60 * 1000);
+    // Unref timer so it does not block Node.js process shutdown
+    this.reconciliationTimer.unref();
+  }
+
+  onModuleDestroy() {
+    if (this.reconciliationTimer) {
+      clearInterval(this.reconciliationTimer);
+      this.reconciliationTimer = undefined;
+    }
   }
 
   async startRecording(options: StartRecordingOptions) {
@@ -247,17 +264,10 @@ export class RecordingService implements OnModuleInit {
       throw new BadRequestException(`Failed to stop recording on LiveKit Egress worker: ${err.message}`);
     }
 
-    const updated = await this.prisma.recording.update({
-      where: { id: recording.id },
-      data: {
-        completedAt: new Date(),
-      },
-    });
-
     return {
-      recordingId: updated.id,
-      egressId: updated.livekitEgressId,
-      roomName: updated.roomName,
+      recordingId: recording.id,
+      egressId: recording.livekitEgressId,
+      roomName: recording.roomName,
       status: 'STOPPING',
       message: 'Recording stop signal sent. File transcoding and bucket upload in progress.',
     };
