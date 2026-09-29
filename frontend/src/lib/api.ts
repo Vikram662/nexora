@@ -1,10 +1,25 @@
 export function getApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
   if (typeof window !== 'undefined' && window.location) {
     const protocol = window.location.protocol;
-    return `${protocol}//${window.location.hostname}:4000`;
+    const hostname = window.location.hostname;
+    // In production or custom domains without explicit API URL, default to api subdomain or same host
+    const port = window.location.port ? ':4000' : '';
+    return `${protocol}//${hostname}${port}`;
   }
-  return 'http://127.0.0.1:4000';
+  return '';
+}
+
+export function getLivekitWsUrl(): string {
+  if (process.env.NEXT_PUBLIC_LIVEKIT_URL) return process.env.NEXT_PUBLIC_LIVEKIT_URL;
+  if (typeof window !== 'undefined' && window.location) {
+    const isHttps = window.location.protocol === 'https:';
+    const protocol = isHttps ? 'wss:' : 'ws:';
+    const hostname = window.location.hostname;
+    const port = window.location.port ? ':7880' : '';
+    return `${protocol}//${hostname}${port}`;
+  }
+  return '';
 }
 
 function getAuthHeaders(): HeadersInit {

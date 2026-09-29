@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Video, Terminal, Activity, Zap, Radio } from 'lucide-react';
 
-import { fetchOrganizationData, mintRtcToken, OrganizationData } from '@/lib/api';
+import { fetchOrganizationData, mintRtcToken, OrganizationData, getLivekitWsUrl } from '@/lib/api';
 import ActiveCallRoom from '@/components/ActiveCallRoom';
 
 export default function UserSandboxPage() {
@@ -13,7 +13,7 @@ export default function UserSandboxPage() {
   const [identity, setIdentity] = useState(() => `user-${Math.floor(100 + Math.random() * 900)}`);
   const [mintLoading, setMintLoading] = useState(false);
   const [mintedToken, setMintedToken] = useState<string | null>(null);
-  const [livekitUrl, setLivekitUrl] = useState(() => process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880');
+  const [livekitUrl, setLivekitUrl] = useState(() => getLivekitWsUrl());
   const [inCall, setInCall] = useState(false);
   const [callMode, setCallMode] = useState<'video' | 'audio' | 'broadcast'>('video');
   const [broadcastRole, setBroadcastRole] = useState<'host' | 'audience'>('host');
@@ -34,7 +34,7 @@ export default function UserSandboxPage() {
 
   const selectedProject = orgData?.projects.find((p) => p.id === selectedProjectId) || orgData?.projects[0];
 
-  const [apiSecret, setApiSecret] = useState('sk_live_supersecret123');
+  const [apiSecret, setApiSecret] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -43,22 +43,28 @@ export default function UserSandboxPage() {
       e.preventDefault();
       e.stopPropagation();
     }
-    const apiKeyToUse = selectedProject?.apiKeyPrefix || 'pk_live_nexora_test';
+    if (!apiSecret.trim()) {
+      setErrorMessage('Please enter your Project API Secret to mint a LiveKit token.');
+      return;
+    }
+    const apiKeyToUse = selectedProject?.apiKeyPrefix || '';
+    if (!apiKeyToUse) {
+      setErrorMessage('No project selected. Please select a project or create one first.');
+      return;
+    }
     setErrorMessage(null);
     setMintLoading(true);
     try {
       const res = await mintRtcToken({
         apiKey: apiKeyToUse,
-
-        apiSecret: (apiSecret || 'sk_live_supersecret123').trim(),
+        apiSecret: apiSecret.trim(),
         roomName: (roomName || 'demo-room-alpha').trim(),
         participantIdentity: (identity || 'user-tester').trim(),
       });
 
       if (res && res.data && res.data.token) {
         setMintedToken(res.data.token);
-        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
-        const serverUrl = `ws://${currentHost}:7880`;
+        const serverUrl = res.data.livekitUrl || getLivekitWsUrl();
         setLivekitUrl(serverUrl);
       } else {
         throw new Error('Token not returned from server');
@@ -243,7 +249,7 @@ export default function UserSandboxPage() {
                   required
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
-                  Seed key: <code className="text-slate-600 font-mono">sk_live_supersecret123</code>
+                  Copy the secret generated when creating the project in Developer Console
                 </span>
               </div>
 

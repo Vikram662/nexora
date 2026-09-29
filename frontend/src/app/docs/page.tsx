@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { fetchOrganizationData, getApiBaseUrl, getLivekitWsUrl, Project } from '@/lib/api';
 import {
   Code2,
   Terminal,
@@ -34,94 +35,38 @@ import {
 
 type SdkTab = 'android' | 'flutter' | 'ios' | 'web';
 type FeatureTab = 'video' | 'voice' | 'broadcast' | 'messaging';
-type StorageTab = 's3' | 'r2' | 'gcs';
 
 export default function DocumentationPage() {
   const [activeSdk, setActiveSdk] = useState<SdkTab>('android');
   const [activeFeature, setActiveFeature] = useState<FeatureTab>('video');
-  const [activeStorage, setActiveStorage] = useState<StorageTab>('s3');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => getApiBaseUrl());
+  const [livekitHost, setLivekitHost] = useState(() => getLivekitWsUrl());
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedApiKey, setSelectedApiKey] = useState('pk_live_your_project_key');
+
+  useEffect(() => {
+    setApiBaseUrl(getApiBaseUrl());
+    setLivekitHost(getLivekitWsUrl());
+
+    // Try to load developer's actual project credentials if logged in
+    fetchOrganizationData()
+      .then((org) => {
+        if (org?.projects && org.projects.length > 0) {
+          setProjects(org.projects);
+          setSelectedApiKey(org.projects[0].apiKeyPrefix);
+        }
+      })
+      .catch(() => {
+        // Unauthenticated visitor view: keeps clean dynamic host
+      });
+  }, []);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
-  };
-
-  // FULL PRODUCTION BYOS CONFIGURATIONS (AWS S3, CLOUDFLARE R2, GOOGLE CLOUD STORAGE)
-  const STORAGE_GUIDES = {
-    s3: {
-      provider: 'AWS_S3',
-      name: 'Amazon Web Services S3 (AP-South-1 / US-East-1)',
-      desc: 'Stores recordings in your AWS account. Nexora media nodes stream directly via AWS SigV4 signed egress without keeping any copies on our platform.',
-      iamPolicy: `{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:ListBucket",
-        "s3:PutObjectAcl"
-      ],
-      "Resource": [
-        "arn:aws:s3:::your-telehealth-recordings-bucket",
-        "arn:aws:s3:::your-telehealth-recordings-bucket/*"
-      ]
-    }
-  ]
-}`,
-      curlExample: `curl -X POST "http://localhost:4000/v1/portal/projects/{YOUR_PROJECT_ID}/storage" \\
-  -H "Content-Type: application/json" \\
-  -H "x-api-key: pk_live_..." \\
-  -H "x-api-secret: sk_live_..." \\
-  -d '{
-    "provider": "AWS_S3",
-    "bucketName": "your-telehealth-recordings-bucket",
-    "region": "ap-south-1",
-    "accessKey": "AKIAIOSFODNN7EXAMPLE",
-    "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-  }'`,
-    },
-    r2: {
-      provider: 'CLOUDFLARE_R2',
-      name: 'Cloudflare R2 (Zero Egress Bandwidth Fees)',
-      desc: '100% S3-compatible object storage with $0 egress fees. Uses your Cloudflare Account ID and S3-compatible R2 API token credentials.',
-      iamPolicy: `// In Cloudflare Dashboard -> R2 -> Manage R2 API Tokens:
-// Permissions: Object Read & Write
-// Scope: Apply to bucket 'your-nexora-recordings-bucket'`,
-      curlExample: `curl -X POST "http://localhost:4000/v1/portal/projects/{YOUR_PROJECT_ID}/storage" \\
-  -H "Content-Type: application/json" \\
-  -H "x-api-key: pk_live_..." \\
-  -H "x-api-secret: sk_live_..." \\
-  -d '{
-    "provider": "CLOUDFLARE_R2",
-    "bucketName": "your-nexora-recordings-bucket",
-    "endpoint": "https://{ACCOUNT_ID}.r2.cloudflarestorage.com",
-    "region": "auto",
-    "accessKey": "9d901f481c039abEXAMPLE",
-    "secretKey": "3f9821a7c00e12d4EXAMPLEKEY882910"
-  }'`,
-    },
-    gcs: {
-      provider: 'GOOGLE_CLOUD',
-      name: 'Google Cloud Storage (GCS Service Account)',
-      desc: 'Enterprise GCP integration using JSON Service Account key with Storage Object Admin roles. Fully encrypted using AES-256-GCM in Nexora database.',
-      iamPolicy: `// In Google Cloud Console -> IAM & Admin -> Service Accounts:
-// Roles: "Storage Object Admin" (roles/storage.objectAdmin)
-// Keys: Add Key -> Create new key -> Type: JSON`,
-      curlExample: `curl -X POST "http://localhost:4000/v1/portal/projects/{YOUR_PROJECT_ID}/storage" \\
-  -H "Content-Type: application/json" \\
-  -H "x-api-key: pk_live_..." \\
-  -H "x-api-secret: sk_live_..." \\
-  -d '{
-    "provider": "GOOGLE_CLOUD",
-    "bucketName": "your-gcp-call-recordings",
-    "gcsServiceAccountJson": "{\\"type\\":\\"service_account\\",\\"project_id\\":\\"my-telemed\\",\\"private_key_id\\":\\"481f...\\",\\"private_key\\":\\"-----BEGIN PRIVATE KEY-----\\\\n...\\\\n-----END PRIVATE KEY-----\\\\n\\",\\"client_email\\":\\"nexora-egress@my-telemed.iam.gserviceaccount.com\\"}"
-  }'`,
-    },
   };
 
   // FULL APPLICATION-FACING APIS FOR CALL, VIDEO, BROADCAST, AND CHAT
@@ -131,10 +76,10 @@ export default function DocumentationPage() {
       endpoint: 'POST /v1/tokens',
       desc: 'Your mobile/web backend calls this to generate an authentic room access token for a video participant. Grants camera, mic, and screen sharing permissions.',
       flow: 'Client App -> Your Backend -> Nexora /v1/tokens -> Returns Signed JWT -> Client connects to LiveKit SFU',
-      request: `curl -X POST "http://localhost:4000/v1/tokens" \\
+      request: `curl -X POST "${apiBaseUrl}/v1/tokens" \\
   -H "Content-Type: application/json" \\
-  -H "x-api-key: pk_live_telehealth_99" \\
-  -H "x-api-secret: sk_live_8849201940192830" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
   -d '{
     "roomName": "dr-sharma-consultation-991",
     "participantIdentity": "patient_mumbai_101",
@@ -151,7 +96,7 @@ export default function DocumentationPage() {
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "ttlSeconds": 1800,
-    "livekitUrl": "ws://rtc.yourdomain.com:7880",
+    "livekitUrl": "${livekitHost}",
     "environment": "PRODUCTION"
   }
 }`,
@@ -159,12 +104,12 @@ export default function DocumentationPage() {
     {
       title: '2. Low-Latency Voice / Audio Call Token',
       endpoint: 'POST /v1/tokens',
-      desc: 'Optimized for high-fidelity audio calls, customer support hotline, or walkie-talkie mode. Bandwidth is throttled to 32kbps Opus codec with auto hardware echo cancellation.',
-      flow: 'Microphone track only. Video camera publish is blocked on token level for maximum security & minimal battery usage.',
-      request: `curl -X POST "http://localhost:4000/v1/tokens" \\
+      desc: 'Optimized for high-fidelity audio calls, customer support hotline, or walkie-talkie mode. Bandwidth is streamlined with adaptive Opus codec and hardware echo cancellation.',
+      flow: 'Microphone track only. Video camera publishing is strictly blocked on token level via canPublishSources: ["microphone"] for maximum security & battery efficiency.',
+      request: `curl -X POST "${apiBaseUrl}/v1/tokens" \\
   -H "Content-Type: application/json" \\
-  -H "x-api-key: pk_live_telehealth_99" \\
-  -H "x-api-secret: sk_live_8849201940192830" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
   -d '{
     "roomName": "voice-support-hotline-204",
     "participantIdentity": "agent_rahul_04",
@@ -172,6 +117,7 @@ export default function DocumentationPage() {
     "ttlSeconds": 3600,
     "grants": {
       "canPublish": true,
+      "canPublishSources": ["microphone"],
       "canSubscribe": true,
       "canPublishData": true
     }
@@ -181,7 +127,7 @@ export default function DocumentationPage() {
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.audio_grant...",
     "ttlSeconds": 3600,
-    "livekitUrl": "ws://rtc.yourdomain.com:7880",
+    "livekitUrl": "${livekitHost}",
     "environment": "PRODUCTION"
   }
 }`,
@@ -192,10 +138,10 @@ export default function DocumentationPage() {
       desc: 'Sub-second interactive live stream. Host gets publishing grants (video/mic) while audience members receive subscriber-only tokens (canPublish: false) with unlimited scalability.',
       flow: 'Host broadcasts 1080p/720p stream -> SFU edge relays -> Millions of audience members watch with <300ms sub-second latency.',
       request: `// A. HOST TOKEN (Can publish live video and mic)
-curl -X POST "http://localhost:4000/v1/tokens" \\
+curl -X POST "${apiBaseUrl}/v1/tokens" \\
   -H "Content-Type: application/json" \\
-  -H "x-api-key: pk_live_telehealth_99" \\
-  -H "x-api-secret: sk_live_8849201940192830" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
   -d '{
     "roomName": "masterclass-live-stage-01",
     "participantIdentity": "teacher_host_dr_sharma",
@@ -208,10 +154,10 @@ curl -X POST "http://localhost:4000/v1/tokens" \\
   }'
 
 // B. AUDIENCE / VIEWER TOKEN (Watch only - No camera/mic permissions)
-curl -X POST "http://localhost:4000/v1/tokens" \\
+curl -X POST "${apiBaseUrl}/v1/tokens" \\
   -H "Content-Type: application/json" \\
-  -H "x-api-key: pk_live_telehealth_99" \\
-  -H "x-api-secret: sk_live_8849201940192830" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
   -d '{
     "roomName": "masterclass-live-stage-01",
     "participantIdentity": "viewer_student_8829",
@@ -226,7 +172,7 @@ curl -X POST "http://localhost:4000/v1/tokens" \\
   "status": "success",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.viewer_grant...",
-    "livekitUrl": "ws://rtc.yourdomain.com:7880"
+    "livekitUrl": "${livekitHost}"
   }
 }`,
     },
@@ -252,40 +198,31 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
 });`,
     },
     {
-      title: '5. Razorpay & Payment Gateway Webhook (Auto-Credit & Idempotency)',
-      endpoint: 'POST /v1/portal/payments/webhook',
-      desc: 'Listens for asynchronous payment confirmations from Razorpay. Validates cryptographic HMAC-SHA256 signature, prevents duplicate double-spending (idempotency), and credits wallet instantly.',
-      flow: 'Customer completes UPI / NetBanking / Card payment -> Razorpay sends webhook to Nexora /v1/portal/payments/webhook -> Nexora verifies x-razorpay-signature -> Wallet credited & Transaction status SUCCESS.',
-      request: `// Webhook Payload received from Razorpay (or your payment gateway)
-// Header: x-razorpay-signature: 884a29f8723bb7...
-curl -X POST "http://localhost:4000/v1/portal/payments/webhook" \\
+      title: '5. Server-to-Server Recording & Egress API (Planned)',
+      endpoint: 'POST /v1/rooms/{room}/recording/start',
+      badge: 'Planned (Next Release)',
+      desc: 'Server-side room compositing and track egress. Recordings are saved to the bucket connected in User Panel → Storage. Files stream directly to your private AWS S3, Cloudflare R2, or Google Cloud Storage.',
+      link: { href: '/user/storage', label: 'Configure storage bucket in User Panel → Storage' },
+      flow: `Your Backend -> POST ${apiBaseUrl}/v1/rooms/{room}/recording/start -> Nexora Egress Controller streams directly into your private connected bucket.`,
+      request: `// Start Room Recording (Server-to-Server)
+curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/start" \\
   -H "Content-Type: application/json" \\
-  -H "x-razorpay-signature: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" \\
+  -H "x-api-key: ${selectedApiKey}" \\
+  -H "x-api-secret: sk_live_your_project_secret" \\
   -d '{
-    "event": "payment.captured",
-    "payload": {
-      "payment": {
-        "entity": {
-          "id": "pay_rzp_live_9921820491",
-          "order_id": "order_EKfLvuafAUqlSu",
-          "amount": 50000,
-          "currency": "INR",
-          "status": "captured",
-          "notes": {
-            "organizationId": "org_acme_cloud_101"
-          }
-        }
-      }
-    }
+    "audioOnly": false,
+    "layout": "speaker-dark",
+    "customOutputFilename": "consultations/2026/09/session-991.mp4"
   }'`,
       response: `{
   "status": "success",
-  "event": "payment.captured",
-  "message": "Wallet credited with ₹500.00 via webhook",
   "data": {
-    "organizationId": "org_acme_cloud_101",
-    "newBalance": "8950.0000",
-    "transactionId": "tx_rzp_992182"
+    "recordingId": "rec_livekit_egress_99182",
+    "roomName": "dr-sharma-consultation-991",
+    "status": "PROCESSING",
+    "storageProvider": "CLOUDFLARE_R2",
+    "bucketName": "your-nexora-recordings-bucket",
+    "destinationKey": "consultations/2026/09/session-991.mp4"
   }
 }`,
     },
@@ -726,8 +663,8 @@ async function startVideoCall(token: string, remoteContainer: HTMLElement, local
     remoteContainer.appendChild(el);
   });
 
-  // 3. Connect to Nexora LiveKit Media Node
-  await room.connect('ws://rtc.yourdomain.com:7880', token);
+  // 3. Connect to Nexora LiveKit Media Node (livekitUrl received dynamically from /v1/tokens)
+  await room.connect('${livekitHost}', token);
 
   // 4. Publish local Camera and Microphone
   await room.localParticipant.enableCameraAndMicrophone();
@@ -745,7 +682,7 @@ async function startVideoCall(token: string, remoteContainer: HTMLElement, local
         title: 'Web (JS / TS) — Voice Calling',
         guide: `Audio-only WebRTC setup with auto-play handling.`,
         code: `const room = new Room();
-await room.connect('ws://rtc.yourdomain.com:7880', token);
+await room.connect('${livekitHost}', token);
 
 // Audio only: Enable microphone
 await room.localParticipant.setMicrophoneEnabled(true);
@@ -761,7 +698,7 @@ room.on(RoomEvent.TrackSubscribed, (track) => {
         title: 'Web (JS / TS) — Sub-Second Live Stream Player',
         guide: `Sub-200ms latency stream player. Replaces HLS/DASH delays.`,
         code: `const room = new Room();
-await room.connect('ws://rtc.yourdomain.com:7880', viewerToken);
+await room.connect('${livekitHost}', viewerToken);
 
 room.on(RoomEvent.TrackSubscribed, (track) => {
   if (track.kind === 'video') {
@@ -839,10 +776,10 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
             <BookOpen className="h-3.5 w-3.5" /> End-to-End Application Developer Guide
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-            Live Calling, Broadcast, Chat & Cloud BYOS Documentation
+            Audio, Video, Broadcast, Chat & Recording API
           </h1>
           <p className="mt-2 text-sm text-slate-300 max-w-3xl leading-relaxed">
-            Everything your mobile and web developers need to build production Video Calls, Voice hotlines, Sub-Second Live Streams, In-Room P2P Chat, and Zero-Storage BYOS (AWS S3, Cloudflare R2, Google Cloud) integration.
+            Everything your mobile and web developers need to build high-concurrency 1:1 Video Calls, Voice hotlines, Sub-Second Live Broadcasts, and In-Room P2P Real-Time Data Messaging.
           </p>
 
           <div className="flex flex-wrap gap-3 mt-6">
@@ -850,19 +787,13 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
               href="#app-apis"
               className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-600/20"
             >
-              <Cpu className="h-3.5 w-3.5" /> Core Calling & Chat APIs
+              <Cpu className="h-3.5 w-3.5" /> Core Calling, Broadcast & Chat APIs
             </a>
             <a
               href="#sdks"
               className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 border border-slate-700"
             >
-              <Smartphone className="h-3.5 w-3.5" /> Android, Flutter, iOS & Web SDKs
-            </a>
-            <a
-              href="#byos-storage"
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 border border-slate-700"
-            >
-              <HardDrive className="h-3.5 w-3.5" /> AWS S3, Cloudflare R2 & GCS BYOS
+              <Smartphone className="h-3.5 w-3.5" /> Android, Flutter, iOS & Web Integration Guides
             </a>
           </div>
         </div>
@@ -873,14 +804,38 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
         {/* SECTION 1: CORE APPLICATION APIS (CALL, VIDEO, BROADCAST, CHAT) */}
         {/* ========================================================================= */}
         <section id="app-apis" className="space-y-6">
-          <div className="pb-4 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-blue-600" />
-              1. Application-Facing WebRTC & Messaging APIs
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              These are the core endpoints your product backend calls to orchestrate live sessions, enforce room participant permissions, and securely authenticate users.
-            </p>
+          <div className="pb-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Cpu className="h-5 w-5 text-blue-600" />
+                1. Application-Facing WebRTC & Messaging APIs
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                These are the core endpoints your product backend calls to orchestrate live sessions, enforce room participant permissions, and securely authenticate users.
+              </p>
+            </div>
+
+            {/* Dynamic Environment & Credentials Switcher */}
+            <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-2 rounded-xl border border-slate-200 text-xs">
+              <span className="font-semibold text-slate-600">Active Key:</span>
+              {projects.length > 0 ? (
+                <select
+                  value={selectedApiKey}
+                  onChange={(e) => setSelectedApiKey(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.apiKeyPrefix}>
+                      {p.name} ({p.environment}) — {p.apiKeyPrefix}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-mono bg-white px-2 py-1 rounded border border-slate-200 text-slate-700">
+                  {selectedApiKey} (Sandbox Demo)
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="space-y-6">
@@ -895,17 +850,33 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
                       {index + 1}
                     </span>
                     <div>
-                      <h3 className="font-bold text-sm text-white">{api.title}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-sm text-white">{api.title}</h3>
+                        {api.badge && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            {api.badge}
+                          </span>
+                        )}
+                      </div>
                       <div className="font-mono text-xs text-emerald-400 mt-0.5">{api.endpoint}</div>
                     </div>
                   </div>
                   <span className="text-[11px] font-mono text-slate-400 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
-                    Control Plane: http://localhost:4000
+                    Control Plane: {apiBaseUrl}
                   </span>
                 </div>
 
                 <div className="p-6 space-y-4">
-                  <p className="text-xs text-slate-600 leading-relaxed">{api.desc}</p>
+                  <div className="text-xs text-slate-600 leading-relaxed">
+                    {api.desc}
+                    {api.link && (
+                      <span className="block mt-1">
+                        <Link href={api.link.href} className="font-semibold text-blue-600 hover:underline inline-flex items-center gap-1">
+                          {api.link.label} &rarr;
+                        </Link>
+                      </span>
+                    )}
+                  </div>
 
                   <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900">
                     <span className="font-bold text-blue-800">Architecture Flow:</span> {api.flow}
@@ -951,105 +922,14 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
         </section>
 
         {/* ========================================================================= */}
-        {/* SECTION 2: BRING YOUR OWN STORAGE (AWS S3, CLOUDFLARE R2, GOOGLE CLOUD) */}
-        {/* ========================================================================= */}
-        <section id="byos-storage" className="space-y-6">
-          <div className="pb-4 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <HardDrive className="h-5 w-5 text-indigo-600" />
-              2. Bring Your Own Storage (BYOS) — AWS S3, Cloudflare R2, Google Cloud
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Nexora operates on a <strong>Zero-Storage Architecture</strong>. Audio and video recordings are transcoded on media nodes and streamed directly into your private cloud bucket. Compare how each cloud provider is configured:
-            </p>
-          </div>
-
-          {/* Cloud Provider Tabs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { id: 's3', name: 'Amazon AWS S3', icon: Cloud, badge: 'Standard Cloud' },
-              { id: 'r2', name: 'Cloudflare R2', icon: Sparkles, badge: '$0 Egress Fees' },
-              { id: 'gcs', name: 'Google Cloud Storage', icon: Layers, badge: 'GCP Service Account' },
-            ].map((p) => {
-              const Icon = p.icon;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setActiveStorage(p.id as StorageTab)}
-                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
-                    activeStorage === p.id
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
-                      : 'bg-white text-slate-800 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <Icon className="h-5 w-5" />
-                    <span
-                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        activeStorage === p.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {p.badge}
-                    </span>
-                  </div>
-                  <div className="font-bold text-sm">{p.name}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Active Cloud Guide Details */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-            <div>
-              <h3 className="font-bold text-base text-slate-900">{STORAGE_GUIDES[activeStorage].name}</h3>
-              <p className="text-xs text-slate-600 mt-1">{STORAGE_GUIDES[activeStorage].desc}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* IAM Policy or Service Account Instructions */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                  <span>Required Cloud IAM Policy / Role</span>
-                  <button
-                    onClick={() => copyToClipboard(STORAGE_GUIDES[activeStorage].iamPolicy, `iam-${activeStorage}`)}
-                    className="text-slate-400 hover:text-blue-600 transition-colors"
-                  >
-                    {copiedKey === `iam-${activeStorage}` ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                  </button>
-                </div>
-                <pre className="p-3.5 bg-slate-950 text-slate-200 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-56">
-                  <code>{STORAGE_GUIDES[activeStorage].iamPolicy}</code>
-                </pre>
-              </div>
-
-              {/* API Configuration Request */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                  <span>API Attach Endpoint Request</span>
-                  <button
-                    onClick={() => copyToClipboard(STORAGE_GUIDES[activeStorage].curlExample, `curl-${activeStorage}`)}
-                    className="text-slate-400 hover:text-blue-600 transition-colors"
-                  >
-                    {copiedKey === `curl-${activeStorage}` ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                  </button>
-                </div>
-                <pre className="p-3.5 bg-slate-950 text-emerald-400 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-56">
-                  <code>{STORAGE_GUIDES[activeStorage].curlExample}</code>
-                </pre>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================================= */}
-        {/* SECTION 3: NATIVE CLIENT SDK GUIDES (ANDROID, FLUTTER, IOS, WEB) */}
+        {/* SECTION 2: NATIVE CLIENT SDK GUIDES (ANDROID, FLUTTER, IOS, WEB) */}
         {/* ========================================================================= */}
         <section id="sdks" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
             <div>
               <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 <Smartphone className="h-5 w-5 text-blue-600" />
-                3. Native Client SDK Quickstarts (Android, Flutter, iOS, Web)
+                2. Native Client SDK Quickstarts (Android, Flutter, iOS, Web)
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Complete copy-pasteable production implementations for your mobile & web development teams.

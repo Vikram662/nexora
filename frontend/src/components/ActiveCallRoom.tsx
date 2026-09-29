@@ -271,9 +271,9 @@ export default function ActiveCallRoom({
         }
         console.error('Failed to connect to LiveKit SFU:', err);
         setStatus('disconnected');
-        const detailedError = err?.message || 'Could not connect to LiveKit node (ws://127.0.0.1:7880)';
+        const detailedError = err?.message || `Could not connect to LiveKit media node (${livekitUrl})`;
         if (onError) {
-          onError(`Connection Error: ${detailedError}. Check if LiveKit server is running on port 7880.`);
+          onError(`Connection Error: ${detailedError}. Please verify that the LiveKit RTC service is reachable.`);
         }
         onLeave();
       }

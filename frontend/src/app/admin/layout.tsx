@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   Settings,
 } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/api';
 
 const ADMIN_NAV = [
   { href: '/admin', label: 'Admin Overview', icon: Activity, exact: true },
@@ -36,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Double Lock: Verify authentic staff session from backend /v1/auth/me
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/v1/auth/me`, {
+    fetch(`${getApiBaseUrl()}/v1/auth/me`, {
       credentials: 'include',
     })
       .then((res) => {

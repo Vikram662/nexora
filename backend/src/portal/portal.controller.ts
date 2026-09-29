@@ -1059,8 +1059,8 @@ export class PortalController {
         defaultCurrency: 'INR',
         sacCode: '998314',
         defaultGstPercent: 18,
-        livekitHost: process.env.LIVEKIT_URL || 'http://localhost:7880',
-        coturnHost: process.env.COTURN_HOST || 'localhost:3478',
+        livekitHost: process.env.LIVEKIT_URL || '',
+        coturnHost: process.env.COTURN_HOST || '',
         mfaEnforcedForStaff: true,
         maxRoomsPerOrg: 50,
 

@@ -16,7 +16,7 @@ import {
   Mail,
   MessageSquare,
 } from 'lucide-react';
-import { fetchAdminSettings, updateAdminSettings } from '@/lib/api';
+import { fetchAdminSettings, updateAdminSettings, getLivekitWsUrl } from '@/lib/api';
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<any>({
@@ -25,8 +25,8 @@ export default function AdminSettingsPage() {
     defaultCurrency: 'INR',
     sacCode: '998314',
     defaultGstPercent: 18,
-    livekitHost: process.env.NEXT_PUBLIC_LIVEKIT_URL || 'http://localhost:7880',
-    coturnHost: process.env.NEXT_PUBLIC_COTURN_HOST || 'localhost:3478',
+    livekitHost: getLivekitWsUrl(),
+    coturnHost: process.env.NEXT_PUBLIC_COTURN_HOST || '',
     mfaEnforcedForStaff: true,
     maxRoomsPerOrg: 50,
   });

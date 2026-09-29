@@ -61,8 +61,9 @@ Nexora is a self-hosted private Real-Time Communication (RTC) Platform-as-a-Serv
 | **Indian GST Compliance (SAC 998314)** | ✅ Implemented | 18% CGST/SGST/IGST breakdown and GSTR reporting |
 | **Interactive RTC Sandbox** | ✅ Implemented | Live in-browser multi-party WebRTC room testing |
 | **DigiLocker KYC Compliance** | 🟡 Sandbox Mode | Format regex verified; live gateway requires Surepass credentials |
+| **Server-to-Server Recording API** | ⏳ Planned | LiveKit Egress container service with automatic BYOS cloud upload |
 | **BullMQ Asynchronous Billing** | ⏳ Planned | Blueprint architectural pattern for high-scale room events |
-| **Native Mobile SDKs** | ⏳ Planned | Guides provided in docs; client SDKs under active roadmap |
+| **Native Mobile SDKs** | ⏳ Planned | Copy-pasteable quickstart guides provided in docs; client SDK wrappers on roadmap |
 
 ---
 

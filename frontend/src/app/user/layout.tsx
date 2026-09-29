@@ -22,7 +22,7 @@ import {
   ExternalLink,
   BookOpen,
 } from 'lucide-react';
-import { fetchOrganizationData, OrganizationData } from '@/lib/api';
+import { fetchOrganizationData, OrganizationData, getApiBaseUrl } from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/user', label: 'Overview & Metrics', icon: Activity, exact: true },
@@ -139,7 +139,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
           <button
             onClick={async () => {
               try {
-                await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/v1/auth/logout`, {
+                await fetch(`${getApiBaseUrl()}/v1/auth/logout`, {
                   method: 'POST',
                   credentials: 'include',
                 });

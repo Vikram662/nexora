@@ -1,12 +1,14 @@
 import { Injectable, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, TrackSource, type VideoGrant } from 'livekit-server-sdk';
 
 export interface TokenGrants {
   canPublish?: boolean;
+  canPublishSources?: (string | TrackSource)[];
   canSubscribe?: boolean;
   canPublishData?: boolean;
   roomAdmin?: boolean;
+  roomRecord?: boolean;
   recorder?: boolean;
   hidden?: boolean;
 }
@@ -19,6 +21,26 @@ export interface MintTokenOptions {
   grants?: TokenGrants;
   ttlSeconds?: number;
   maxTtlSeconds?: number;
+}
+
+// Convert user-supplied source strings ('camera', 'microphone', etc.) to LiveKit TrackSource enum
+function toTrackSource(source: string | TrackSource): TrackSource {
+  if (typeof source === 'number') return source;
+  const normalized = String(source).toLowerCase().trim();
+  switch (normalized) {
+    case 'camera':
+      return TrackSource.CAMERA;
+    case 'microphone':
+    case 'mic':
+      return TrackSource.MICROPHONE;
+    case 'screen_share':
+    case 'screenshare':
+      return TrackSource.SCREEN_SHARE;
+    case 'screen_share_audio':
+      return TrackSource.SCREEN_SHARE_AUDIO;
+    default:
+      return TrackSource.UNKNOWN;
+  }
 }
 
 @Injectable()
@@ -74,16 +96,25 @@ export class LivekitTokenService implements OnModuleInit {
       }),
     });
 
-    at.addGrant({
+    // Map source filters to strongly typed TrackSource enum instances
+    const canPublishSources: TrackSource[] | undefined = grants.canPublishSources?.length
+      ? grants.canPublishSources.map(toTrackSource).filter((s) => s !== TrackSource.UNKNOWN)
+      : undefined;
+
+    const videoGrant: VideoGrant = {
       room: roomName,
       roomJoin: true,
       canPublish: grants.canPublish ?? true,
+      canPublishSources,
       canSubscribe: grants.canSubscribe ?? true,
       canPublishData: grants.canPublishData ?? true,
       roomAdmin: grants.roomAdmin ?? false,
-      roomRecord: grants.recorder ?? false,
+      roomRecord: grants.roomRecord ?? false,
+      recorder: grants.recorder ?? false,
       hidden: grants.hidden ?? false,
-    });
+    };
+
+    at.addGrant(videoGrant);
 
     const token = await at.toJwt();
 

@@ -87,12 +87,30 @@ export class TokensController {
         );
       }
 
+      // Determine effective room type server-side based on actual token grants
+      // SECURITY: Do not trust client-supplied body.roomType to prevent tariff spoofing.
+      // If the participant has permission to publish video/camera, bill as VIDEO_CALL.
+      // If publishing is disabled completely (viewer/listener), classify as LIVE_BROADCAST.
+      // If publishing is explicitly restricted to audio/microphone, classify as AUDIO_CALL.
+      let effectiveRoomType: 'AUDIO_CALL' | 'VIDEO_CALL' | 'LIVE_BROADCAST' = 'VIDEO_CALL';
+      if (body.grants?.canPublish === false) {
+        effectiveRoomType = 'LIVE_BROADCAST';
+      } else if (
+        Array.isArray(body.grants?.canPublishSources) &&
+        body.grants.canPublishSources.length > 0 &&
+        !body.grants.canPublishSources.map(s => String(s).toLowerCase()).includes('camera')
+      ) {
+        effectiveRoomType = 'AUDIO_CALL';
+      } else {
+        effectiveRoomType = 'VIDEO_CALL';
+      }
+
       // Record UsageLog for session auditing
       await this.prisma.usageLog.create({
         data: {
           projectId: project.id,
           roomName: body.roomName,
-          roomType: 'AUDIO_CALL',
+          roomType: effectiveRoomType,
           participantIdentity: body.participantIdentity,
           startedAt: new Date(),
           billableSeconds: sessionSeconds,
@@ -112,12 +130,19 @@ export class TokensController {
       maxTtlSeconds: project.maxTokenTtlSeconds,
     });
 
+    // Dynamically resolve LiveKit SFU URL: Environment variable takes priority;
+    // otherwise derives dynamically from the incoming request hostname without hardcoded strings
+    const hostHeader = req.get ? req.get('host') : (req.headers && req.headers.host);
+    const hostName = hostHeader ? hostHeader.split(':')[0] : '127.0.0.1';
+    const isTls = req.secure || (req.headers && req.headers['x-forwarded-proto'] === 'https');
+    const dynamicLivekitUrl = process.env.LIVEKIT_URL || `${isTls ? 'wss:' : 'ws:'}//${hostName}:7880`;
+
     return {
       status: 'success',
       data: {
         token: result.token,
         ttlSeconds: result.ttl,
-        livekitUrl: process.env.LIVEKIT_URL || 'ws://localhost:7880',
+        livekitUrl: dynamicLivekitUrl,
         environment: project.environment,
       },
     };

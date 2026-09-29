@@ -179,7 +179,8 @@ export default function LandingPage() {
                 <span className="font-semibold text-slate-200">1. Server-side (Node / Next.js)</span>
                 <span className="text-[11px] text-blue-400">POST /v1/tokens</span>
               </div>
-              <pre className="text-blue-300 overflow-x-auto leading-relaxed">{`const res = await fetch('http://localhost:4000/v1/tokens', {
+              <pre className="text-blue-300 overflow-x-auto leading-relaxed">{`const API_BASE = process.env.NEXORA_API_URL || 'https://api.yourdomain.com';
+const res = await fetch(\`\${API_BASE}/v1/tokens\`, {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_...',
