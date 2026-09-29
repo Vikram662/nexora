@@ -34,19 +34,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
-  // Client-Side Double Lock: Verify role cookie immediately
+  // Double Lock: Verify authentic staff session from backend /v1/auth/me
   useEffect(() => {
-    const cookies = document.cookie.split(';').map((c) => c.trim());
-    const roleCookie = cookies.find((c) => c.startsWith('nexora_user_role='));
-    const role = roleCookie ? roleCookie.split('=')[1] : null;
-
-    if (role !== 'admin') {
-      setIsAuthorized(false);
-      // Kick immediately out to user console
-      window.location.href = '/user';
-    } else {
-      setIsAuthorized(true);
-    }
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/v1/auth/me`, {
+      credentials: 'include',
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Unauthenticated');
+        return res.json();
+      })
+      .then((json) => {
+        if (json.data?.isStaff || json.data?.role === 'SUPER_ADMIN' || json.data?.role === 'STAFF') {
+          setIsAuthorized(true);
+        } else {
+          setIsAuthorized(false);
+          window.location.href = '/user';
+        }
+      })
+      .catch(() => {
+        setIsAuthorized(false);
+        window.location.href = '/login';
+      });
   }, [pathname]);
 
   if (isAuthorized === false) {

@@ -4,22 +4,75 @@ Nexora is a self-hosted private Real-Time Communication (RTC) Platform-as-a-Serv
 
 ---
 
-## 🌟 Key Capabilities
+## 🏗️ Architecture & System Topology
 
-- **1:1 & Group Video Calling**: Adaptive bitrate mesh and SFU scaling.
-- **Crystal-Clear Voice Hotlines**: 32kbps Opus codec with hardware acoustic echo cancellation (AEC) and noise suppression.
-- **Sub-Second Live Interactive Broadcasting**: Ultra-low-latency (<300ms) with distinct Host (Publisher) and Audience (Viewer-only) token controls.
-- **In-Room Real-Time Data Messaging**: P2P SCTP DataChannel messaging with sub-10ms delivery, slide-over chat drawer, and unread counters.
-- **Zero-Storage BYOS (Bring Your Own Storage)**:
-  - **AWS S3**: AP-South-1 / US-East-1 direct signed egress.
-  - **Cloudflare R2**: 100% S3-compatible object storage with $0 egress bandwidth fees.
-  - **Google Cloud Storage (GCS)**: Service account JSON credentials with AES-256-GCM encryption.
-- **Indian GST Billing & Razorpay Webhooks**:
-  - SAC 998314 tax invoices with 18% CGST/SGST/IGST breakdown.
-  - Idempotent Razorpay webhook handling (`POST /v1/portal/payments/webhook`) with HMAC-SHA256 signature verification.
-  - Pre-session GST-inclusive wallet balance protection.
-- **DigiLocker KYC Compliance**: PAN, Aadhaar OTP, MCA CIN, and GSTIN verification flows.
-- **Native Client SDKs**: Drop-in guides and complete reference apps for **Android (Kotlin)**, **Flutter (Dart)**, **iOS (Swift / SwiftUI)**, and **Web (React / TypeScript)**.
+```
+┌─────────────────────────┐               ┌──────────────────────────────┐
+│  Developer Client App   │               │     Developer Backend        │
+│ (Web / React / Mobile)  │◄─────────────►│    (Client-Side Caller)      │
+└────────────┬────────────┘               └──────────────┬───────────────┘
+             │                                           │ x-api-key / x-api-secret
+             │                                           ▼
+             │                             ┌─────────────────────────────┐
+             │ WSS (LiveKit WebRTC)        │   NEXORA CONTROL PLANE      │
+             │                             │   (NestJS Gateway :4000)    │
+             ▼                             │  • JWT Auth & Tenant Scoping│
+┌─────────────────────────────┐            │  • Atomic Wallet Protection │
+│      NEXORA MEDIA PLANE     │            │  • HMAC Webhook Ingestion   │
+│  ┌────────────────────────┐ │            │  • AES-256-GCM BYOS Vault   │
+│  │ LiveKit SFU (:7880)    │ │            └──────────────┬──────────────┘
+│  │ Coturn STUN/TURN (:3478│ │                           │
+│  │ Redis Cluster (:6379)  │ │                           ▼
+│  └───────────┬────────────┘ │            ┌─────────────────────────────┐
+└──────────────┼──────────────┘            │ MySQL Database & GST Ledger │
+               ▼                           │ (Port 3306)                 │
+┌─────────────────────────────┐            └─────────────────────────────┘
+│    DEVELOPER'S OWN CLOUD    │
+│  AWS S3 / R2 / GCS (BYOS)   │
+└─────────────────────────────┘
+```
+
+---
+
+## 🔌 Default Port Allocations
+
+| Service / Component | Default Port | Protocol | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Frontend Portal** | `3000` | HTTP / HTTPS | Next.js Developer Console & Admin Ops Center |
+| **Control Plane API** | `4000` | HTTP / HTTPS | NestJS Gateway, Token Minting, Billing & Auth |
+| **LiveKit SFU Signal** | `7880` | HTTP / WSS | WebRTC Signaling, Room Lifecycle & Token Auth |
+| **LiveKit SFU RTC TCP**| `7881` | TCP | WebRTC Fallback Transport for restrictive NATs |
+| **LiveKit SFU RTC UDP**| `50000–60000`| UDP | Real-Time Audio & Video RTP/SRTP Packet Streams |
+| **Coturn STUN / TURN** | `3478` / `5349`| UDP / TCP | STUN NAT Discovery & TLS Encrypted TURN Media Relay |
+| **MySQL Database** | `3306` | TCP | Relational DB: Tenancy, GST Invoices, Ledger |
+| **Redis Cache** | `6379` | TCP (127.0.0.1) | LiveKit Cluster State & Session Cache |
+
+---
+
+## 🚦 Implementation Status
+
+| Feature / Primitive | Status | Notes |
+| :--- | :--- | :--- |
+| **JWT Authentication & RBAC** | ✅ Implemented | HttpOnly signed cookie session, edge middleware verification |
+| **Strict Multi-Tenant Isolation** | ✅ Implemented | Scoped strictly to authenticated user's organization |
+| **Atomic Wallet Billing** | ✅ Implemented | Race-free conditional decrement (`updateMany`) with GST |
+| **HMAC-SHA256 Webhooks** | ✅ Implemented | Timing-safe verification over raw request buffers |
+| **Zero-Storage BYOS Encryption**| ✅ Implemented | AES-256-GCM with strict 32-byte key enforcement |
+| **Indian GST Compliance (SAC 998314)** | ✅ Implemented | 18% CGST/SGST/IGST breakdown and GSTR reporting |
+| **Interactive RTC Sandbox** | ✅ Implemented | Live in-browser multi-party WebRTC room testing |
+| **DigiLocker KYC Compliance** | 🟡 Sandbox Mode | Format regex verified; live gateway requires Surepass credentials |
+| **BullMQ Asynchronous Billing** | ⏳ Planned | Blueprint architectural pattern for high-scale room events |
+| **Native Mobile SDKs** | ⏳ Planned | Guides provided in docs; client SDKs under active roadmap |
+
+---
+
+## 🔒 Security & Hardening Guardrails
+
+- **Zero Hardcoded Secrets**: `CryptoService` halts boot if `ENCRYPTION_MASTER_KEY` is missing or invalid.
+- **Timing-Attack Resistance**: Razorpay signatures and API authentication compare hashes in constant time via `crypto.timingSafeEqual`.
+- **Secret Redaction**: API secret hashes, SMTP credentials, and encryption keys are strictly omitted from frontend API responses.
+- **Rate-Limiting**: `@nestjs/throttler` protects all public endpoints; `ApiKeyGuard` provides fast 60s in-memory caching and lockout against CPU DoS attacks.
+- **Loopback Isolation**: Redis binds strictly to `127.0.0.1`, shielded from public interfaces.
 
 ---
 
@@ -31,7 +84,7 @@ Nexora is a self-hosted private Real-Time Communication (RTC) Platform-as-a-Serv
 - LiveKit SFU Server (Port 7880)
 
 ### 1. Install Dependencies
-\`\`\`bash
+```bash
 # Backend
 cd backend
 npm install
@@ -40,35 +93,29 @@ npm install
 cd ../frontend
 npm install
 cd ..
-\`\`\`
+```
 
 ### 2. Configure Environment
-Create `.env` in `backend/` with database and encryption master keys:
-\`\`\`env
-DATABASE_URL="mysql://root:@localhost:3306/nexora_rtc"
-ENCRYPTION_MASTER_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-LIVEKIT_API_KEY="devkey"
-LIVEKIT_API_SECRET="secret"
-RAZORPAY_KEY_ID="rzp_test_..."
-RAZORPAY_KEY_SECRET="..."
-RAZORPAY_WEBHOOK_SECRET="whsec_..."
-\`\`\`
+Generate a secure 32-byte hexadecimal master encryption key:
+```bash
+openssl rand -hex 32
+```
+
+Create `backend/.env` using `backend/.env.example` as a template, setting your database connection and generated key. Also create `frontend/.env.local` using `frontend/.env.example`.
 
 ### 3. Database Migration & Seed
-\`\`\`bash
+```bash
 cd backend
 npx prisma db push
-npx prisma db seed
+npm run prisma:seed
 cd ..
-\`\`\`
+```
 
 ### 4. Running the Platform
-\`\`\`bash
-# Option A: PM2 Process Manager (Recommended for Production)
-pm2 start ecosystem.config.cjs
 
-# Option B: Development Mode
-# Terminal 1: LiveKit Server
+#### Development Mode:
+```bash
+# Terminal 1: LiveKit SFU (Windows native with checksum verification)
 ./start-livekit-windows.ps1
 
 # Terminal 2: Backend Control Plane (Port 4000)
@@ -76,15 +123,22 @@ cd backend && npm run start:dev
 
 # Terminal 3: Frontend Developer Console (Port 3000)
 cd frontend && npm run dev
-\`\`\`
+```
+
+#### Production (PM2):
+*Note: Always run `npm run build` in both `backend` and `frontend` before starting PM2.*
+```bash
+cd backend && npm run build && cd ../frontend && npm run build && cd ..
+pm2 start ecosystem.config.cjs
+```
 
 ---
 
 ## 📖 Documentation
 Interactive documentation and API specifications:
-- **Developer Documentation**: \`http://localhost:3000/docs\`
-- **Interactive WebRTC Sandbox**: \`http://localhost:3000/user/sandbox\`
-- **Master Admin Portal**: \`http://localhost:3000/admin\`
+- **Developer Documentation**: `http://localhost:3000/docs`
+- **Interactive WebRTC Sandbox**: `http://localhost:3000/user/sandbox`
+- **Master Operations Portal**: `http://localhost:3000/admin`
 
 ---
 

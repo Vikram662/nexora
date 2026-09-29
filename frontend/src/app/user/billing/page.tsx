@@ -6,9 +6,9 @@ import {
   fetchOrganizationData,
   createPaymentOrder,
   verifyPayment,
-  topupWalletBalance,
   updateCustomerBillingProfile,
   OrganizationData,
+  getApiBaseUrl,
 } from '@/lib/api';
 
 export default function UserBillingPage() {
@@ -102,7 +102,6 @@ export default function UserBillingPage() {
                 razorpayOrderId: response.razorpay_order_id || order.orderId,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
-                amount: order.amount,
               });
               setPaymentSuccessAlert(true);
               setTimeout(() => setPaymentSuccessAlert(false), 4000);
@@ -276,7 +275,7 @@ export default function UserBillingPage() {
 
             <div className="divide-y divide-slate-100 font-medium">
               {orgData?.invoices && orgData.invoices.length > 0 ? (
-                orgData.invoices.map((inv) => (
+                orgData.invoices.map((inv: any) => (
                   <div key={inv.id} className="p-3 flex justify-between items-center hover:bg-slate-50/50">
                     <span className="font-mono font-bold text-indigo-700">{inv.invoiceNumber}</span>
                     <span className="text-slate-500 text-[11px]">
@@ -284,7 +283,7 @@ export default function UserBillingPage() {
                     </span>
                     <span className="font-bold text-slate-900">₹{Number(inv.totalAmount).toFixed(2)}</span>
                     <button
-                      onClick={() => window.open(`http://localhost:4000/v1/portal/admin/invoices/${inv.id}/print`, '_blank')}
+                      onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/invoices/${inv.id}/print`, '_blank')}
                       className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
                     >
                       <Download className="h-3 w-3" /> View / Print PDF
@@ -297,7 +296,7 @@ export default function UserBillingPage() {
                   <span className="text-slate-500 text-[11px]">Current Monthly Billing Period</span>
                   <span className="font-bold text-slate-900">₹2,950.00</span>
                   <button
-                    onClick={() => window.open('http://localhost:4000/v1/portal/admin/invoices/latest/print', '_blank')}
+                    onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/invoices/latest/print`, '_blank')}
                     className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
                   >
                     <Download className="h-3 w-3" /> View / Print PDF

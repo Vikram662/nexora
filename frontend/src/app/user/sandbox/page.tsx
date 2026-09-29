@@ -13,7 +13,7 @@ export default function UserSandboxPage() {
   const [identity, setIdentity] = useState(() => `user-${Math.floor(100 + Math.random() * 900)}`);
   const [mintLoading, setMintLoading] = useState(false);
   const [mintedToken, setMintedToken] = useState<string | null>(null);
-  const [livekitUrl, setLivekitUrl] = useState('ws://localhost:7880');
+  const [livekitUrl, setLivekitUrl] = useState(() => process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880');
   const [inCall, setInCall] = useState(false);
   const [callMode, setCallMode] = useState<'video' | 'audio' | 'broadcast'>('video');
   const [broadcastRole, setBroadcastRole] = useState<'host' | 'audience'>('host');

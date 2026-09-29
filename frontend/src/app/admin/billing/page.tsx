@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   RefreshCw,
 } from 'lucide-react';
-import { fetchAdminBillingOverview, fetchGstr1Report, fetchGstr2Report } from '@/lib/api';
+import { fetchAdminBillingOverview, fetchGstr1Report, fetchGstr2Report, getApiBaseUrl } from '@/lib/api';
 
 export default function AdminBillingPage() {
   const [data, setData] = useState<any>(null);
@@ -337,7 +337,7 @@ export default function AdminBillingPage() {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <button
-                          onClick={() => window.open(`http://localhost:4000/v1/portal/admin/invoices/${inv.id}/print`, '_blank')}
+                          onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/invoices/${inv.id}/print`, '_blank')}
                           className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-indigo-200"
                         >
                           <Download className="h-3 w-3" /> View / PDF

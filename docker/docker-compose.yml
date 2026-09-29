@@ -5,10 +5,13 @@ services:
   # 1. LiveKit SFU Media Server
   # -------------------------------------------------------------
   livekit:
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.8.3
     container_name: nexora-livekit
     restart: unless-stopped
     network_mode: host
+    environment:
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - ./livekit.prod.yaml:/etc/livekit.yaml:ro
     command: --config /etc/livekit.yaml
@@ -19,12 +22,12 @@ services:
   # 2. Redis (Cluster Coordination & Session Cache)
   # -------------------------------------------------------------
   redis:
-    image: redis:7-alpine
+    image: redis:7.2-alpine
     container_name: nexora-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass nexora_redis_secret_2026
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379" # Bind strictly to loopback interface
     volumes:
       - redis-data:/data
 
@@ -32,10 +35,12 @@ services:
   # 3. Coturn STUN / TURN Server (NAT Traversal for Enterprise Firewalls)
   # -------------------------------------------------------------
   coturn:
-    image: coturn/coturn:latest
+    image: coturn/coturn:4.6.3-alpine
     container_name: nexora-coturn
     restart: unless-stopped
     network_mode: host
+    environment:
+      - TURN_STATIC_AUTH_SECRET=${TURN_STATIC_AUTH_SECRET}
     volumes:
       - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
     command: -c /etc/coturn/turnserver.conf

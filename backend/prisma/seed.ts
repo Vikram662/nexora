@@ -85,6 +85,19 @@ async function seed() {
     },
   });
 
+  const staffOpsOrgId = process.env.STAFF_OPS_ORG_ID || 'org_nexora_master_ops';
+  const opsOrg = await prisma.organization.upsert({
+    where: { id: staffOpsOrgId },
+    update: {},
+    create: {
+      id: staffOpsOrgId,
+      name: 'Nexora Platform Operations',
+      billingEmail: 'superadmin@nexora.io',
+      planTier: 'ENTERPRISE',
+      walletBalance: 999999.00,
+    },
+  });
+
   const org3 = await prisma.organization.create({
     data: {
       name: 'Nexora Demo Org',
@@ -94,13 +107,27 @@ async function seed() {
     },
   });
 
-  // 4. Create Users & Memberships
-  console.log('Creating Users & Roles...');
+  // 4. Create Users, Staff & Memberships
+  console.log('Creating Users, Staff & Roles...');
+  const staffPasswordHash = await bcrypt.hash('StaffMaster2026!Pass', salt);
+  await prisma.staffUser.upsert({
+    where: { email: 'superadmin@nexora.io' },
+    update: { passwordHash: staffPasswordHash, isActive: true },
+    create: {
+      email: 'superadmin@nexora.io',
+      passwordHash: staffPasswordHash,
+      mfaSecret: 'NXRA_STAFF_MFA_SEC_2026',
+      role: 'SUPER_ADMIN',
+      isActive: true,
+    },
+  });
+
   const adminUser = await prisma.user.create({
     data: {
       name: 'Chief Architect',
       email: 'admin@nexora.io',
       phone: '+919876543210',
+      passwordHash: secret1Hash,
       mfaEnabled: true,
       mfaSecret: process.env.DEFAULT_2FA_FALLBACK_SECRET || 'NXRA7729837190',
       memberships: {

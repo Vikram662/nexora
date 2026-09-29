@@ -25,8 +25,8 @@ export default function AdminSettingsPage() {
     defaultCurrency: 'INR',
     sacCode: '998314',
     defaultGstPercent: 18,
-    livekitHost: 'http://localhost:7880',
-    coturnHost: 'localhost:3478',
+    livekitHost: process.env.NEXT_PUBLIC_LIVEKIT_URL || 'http://localhost:7880',
+    coturnHost: process.env.NEXT_PUBLIC_COTURN_HOST || 'localhost:3478',
     mfaEnforcedForStaff: true,
     maxRoomsPerOrg: 50,
   });

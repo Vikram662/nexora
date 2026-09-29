@@ -137,7 +137,13 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             </div>
           </Link>
           <button
-            onClick={() => {
+            onClick={async () => {
+              try {
+                await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/v1/auth/logout`, {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+              } catch (_) {}
               document.cookie = 'nexora_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
               document.cookie = 'nexora_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
               window.location.href = '/login';

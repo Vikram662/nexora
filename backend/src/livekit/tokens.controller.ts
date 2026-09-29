@@ -9,15 +9,32 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.js';
-import { LivekitTokenService, TokenGrants } from './livekit-token.service.js';
-
+import { LivekitTokenService } from './livekit-token.service.js';
+import type { TokenGrants } from './livekit-token.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsObject } from 'class-validator';
 
-interface CreateTokenDto {
-  roomName: string;
-  participantIdentity: string;
+export class CreateTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  roomName!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  participantIdentity!: string;
+
+  @IsString()
+  @IsOptional()
   participantName?: string;
+
+  @IsInt()
+  @Min(30)
+  @Max(86400)
+  @IsOptional()
   ttlSeconds?: number;
+
+  @IsObject()
+  @IsOptional()
   grants?: TokenGrants;
 }
 
@@ -36,47 +53,53 @@ export class TokensController {
     const organization = req.organization;
 
     // Strict GST-Inclusive Safety Rule:
-    // If Production, deduct participant session fee including 18% GST immediately
-    // Base Minute Rate: ₹0.0035/min -> with 18% GST: ₹0.00413/min
+    // If Production, deduct participant session fee including 18% GST atomically
     if (project.environment === 'PRODUCTION' && organization) {
       const baseRate = Number(organization.customMinuteRate || 0.0035);
       const gstRatePercent = 18;
       const gstMultiplier = 1 + gstRatePercent / 100; // 1.18
       const effectiveRateWithGst = baseRate * gstMultiplier;
 
-      // Estimate initial 10-minute session block with GST
+      // Estimate initial session block with GST
       const sessionSeconds = Math.min(body.ttlSeconds || 600, 600);
       const sessionMinutes = sessionSeconds / 60;
-      const baseDeduction = Number((sessionMinutes * baseRate).toFixed(4));
       const totalDeductionWithGst = Number((sessionMinutes * effectiveRateWithGst).toFixed(4));
 
-      const currentBalance = Number(organization.walletBalance);
-      if (currentBalance < totalDeductionWithGst) {
+      // Atomic conditional update to eliminate race condition:
+      // Decrement wallet balance ONLY if current balance >= totalDeductionWithGst
+      const updateResult = await this.prisma.organization.updateMany({
+        where: {
+          id: organization.id,
+          walletBalance: {
+            gte: totalDeductionWithGst,
+          },
+        },
+        data: {
+          walletBalance: {
+            decrement: totalDeductionWithGst,
+          },
+        },
+      });
+
+      if (updateResult.count === 0) {
         throw new BadRequestException(
           `Insufficient wallet balance. Minimum ₹${totalDeductionWithGst.toFixed(2)} required (incl. 18% GST). Please recharge your wallet.`,
         );
       }
 
-      // Deduct immediately and record UsageLog so balance never goes negative
-      await this.prisma.$transaction([
-        this.prisma.organization.update({
-          where: { id: organization.id },
-          data: {
-            walletBalance: { decrement: totalDeductionWithGst },
-          },
-        }),
-        this.prisma.usageLog.create({
-          data: {
-            projectId: project.id,
-            roomName: body.roomName,
-            participantIdentity: body.participantIdentity,
-            startedAt: new Date(),
-            billableSeconds: sessionSeconds,
-            ratePerMinute: effectiveRateWithGst,
-            amountDeducted: totalDeductionWithGst,
-          },
-        }),
-      ]);
+      // Record UsageLog for session auditing
+      await this.prisma.usageLog.create({
+        data: {
+          projectId: project.id,
+          roomName: body.roomName,
+          roomType: 'AUDIO_CALL',
+          participantIdentity: body.participantIdentity,
+          startedAt: new Date(),
+          billableSeconds: sessionSeconds,
+          ratePerMinute: effectiveRateWithGst,
+          amountDeducted: totalDeductionWithGst,
+        },
+      });
     }
 
     const result = await this.livekitTokenService.mintToken({

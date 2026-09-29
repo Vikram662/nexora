@@ -24,6 +24,25 @@ This is a sound architecture. The stack choice (NestJS + Prisma/MySQL + Redis/Bu
 
 Each addition is folded into the relevant section below and also called out explicitly where it's new, so you can see exactly what was in your original request versus what's being added.
 
+---
+
+### Implementation Status Matrix (Audit Tracking)
+
+| Blueprint Section | Architecture Component | Implementation Status | Current Codebase State |
+| :--- | :--- | :--- | :--- |
+| **§1. System Architecture** | High-level data flow, key separation | ✅ **Implemented** | Dual credential domains, LiveKit JWT metadata round-tripping |
+| **§2. Database Schema** | Multi-tenancy, Projects, GST Invoices | ✅ **Implemented** | Single source of truth in `backend/prisma/schema.prisma` |
+| **§3.1–§3.3 Services** | Token Service, Ingress, Tenant Guard | ✅ **Implemented** | `LivekitTokenService`, `ApiKeyGuard`, `JwtAuthGuard` |
+| **§3.4 Egress Dispatcher**| S3/R2/GCS Recording worker | ⏳ **Planned** | Metadata in schema; background worker planned for BullMQ pipeline |
+| **§3.5 Billing Worker** | BullMQ Webhook billing consumer | ⏳ **Planned** | Atomic real-time billing implemented; BullMQ async worker planned |
+| **§3.6 Outbound Webhooks**| Webhook dispatch with HMAC retry | 🟡 **Partial** | Endpoints and signatures modeled in Prisma schema |
+| **§3.7 Rate Limiter** | Redis sliding window room limits | 🟡 **Partial** | Global `@nestjs/throttler` implemented; per-room limiter planned |
+| **§3.8–§3.10 AI & Broadcast**| BYOK Voice Agent, RTMP Ingress | ⏳ **Planned** | Data models present in schema; media agent dispatchers planned |
+| **§4. Developer Portal** | Next.js Console & Admin Ops Center | ✅ **Implemented** | Role-based navigation, KYC review, wallet ledger, interactive sandbox |
+| **§5. Docker & Coturn** | Multi-node deployment, TURN relay | ✅ **Implemented** | Environment-injected secrets, loopback-bound Redis |
+| **§6. Security & Compliance**| Key rotation, fail-fast crypto, timing safe | ✅ **Implemented** | 32-byte master key check, `crypto.timingSafeEqual`, constant-time auth |
+
+---
 ## 1. System Architecture & Data Flow
 
 ### 1.1 High-level architecture

@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Radio, ArrowRight, ShieldCheck, Mail, Lock, Building } from 'lucide-react';
+import { Radio, ArrowRight, ShieldCheck, Mail, Lock, Building, AlertCircle } from 'lucide-react';
+import { signupUser } from '@/lib/api';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -11,16 +12,21 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    document.cookie = 'nexora_auth_token=valid_dev_token_2026; path=/; max-age=86400; SameSite=Lax';
-    setTimeout(() => {
-      router.push('/user');
-    }, 400);
-  };
+    setErrorMsg(null);
 
+    try {
+      await signupUser(email, orgName, password);
+      router.push('/user');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Account registration failed.');
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-blue-600 selection:text-white">
@@ -37,12 +43,19 @@ export default function SignupPage() {
           Create Developer Account
         </h2>
         <p className="mt-1 text-xs text-slate-500">
-          Get 500 free test minutes with instant API keys & Sandbox access
+          Get started with instant API keys & Sandbox access
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
         <div className="bg-white py-8 px-6 sm:px-8 shadow-sm rounded-2xl border border-slate-200 space-y-6">
+          {errorMsg && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -115,7 +128,7 @@ export default function SignupPage() {
 
         <div className="mt-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-          No credit card required. Free tier includes BYOS storage support.
+          Zero-storage BYOS architecture & private real-time cloud
         </div>
       </div>
     </div>

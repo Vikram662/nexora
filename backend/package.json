@@ -15,6 +15,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "oxlint src/ test/",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -30,10 +31,16 @@
     "@nestjs/observe": "^0.1.8",
     "@nestjs/platform-express": "^12.0.1",
     "@nestjs/throttler": "^6.7.1",
+    "@types/cookie-parser": "^1.4.10",
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.3.9",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.4",
+    "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
+    "jose": "^6.2.12",
     "jsonwebtoken": "^9.0.3",
     "livekit-server-sdk": "^2.19.1",
     "reflect-metadata": "^0.2.2",
@@ -61,6 +68,7 @@
     "vitest": "^4.1.2"
   },
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed": "npx tsx prisma/seed.ts"
   }
 }
+

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken } from 'livekit-server-sdk';
 
@@ -22,21 +22,30 @@ export interface MintTokenOptions {
 }
 
 @Injectable()
-export class LivekitTokenService {
+export class LivekitTokenService implements OnModuleInit {
+  private apiKey!: string;
+  private apiSecret!: string;
+
   constructor(private readonly configService: ConfigService) {}
 
-  private get apiKey(): string {
-    return this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
-  }
+  onModuleInit() {
+    const key = this.configService.get<string>('LIVEKIT_API_KEY');
+    const secret = this.configService.get<string>('LIVEKIT_API_SECRET');
 
-  private get apiSecret(): string {
-    return this.configService.get<string>('LIVEKIT_API_SECRET') || 'nexora_secret_key_32chars_long_2026';
+    if (!key || !secret) {
+      throw new Error(
+        'FATAL: LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be explicitly set in environment variables. ' +
+        'Refusing to run with insecure hardcoded fallback credentials.'
+      );
+    }
+
+    this.apiKey = key;
+    this.apiSecret = secret;
   }
 
   async mintToken(options: MintTokenOptions): Promise<{ token: string; ttl: number }> {
     const {
       projectId,
-
       roomName,
       participantIdentity,
       participantName,

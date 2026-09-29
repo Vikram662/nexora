@@ -32,6 +32,10 @@ if (Test-Path $exePath) {
     Write-Host "[*] Downloading: $($asset.name)..." -ForegroundColor Yellow
     Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -Headers $headers
 
+    Write-Host "[*] Computing SHA256 checksum for verification..." -ForegroundColor Yellow
+    $fileHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash
+    Write-Host "[OK] Archive SHA256: $fileHash" -ForegroundColor Green
+
     Write-Host "[*] Extracting LiveKit archive..." -ForegroundColor Yellow
     Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
     Remove-Item $zipPath -Force
@@ -47,7 +51,7 @@ if (Test-Path $exePath) {
 Write-Host ""
 Write-Host "[*] Starting LiveKit SFU Media Server on port 7880..." -ForegroundColor Cyan
 Write-Host "    WebRTC TCP Port: 7881 | UDP Port Range: 50000-60000" -ForegroundColor Gray
-Write-Host "    Control Plane: http://localhost:7880 (keys: devkey:secret)" -ForegroundColor Gray
+Write-Host "    Control Plane: http://localhost:7880" -ForegroundColor Gray
 Write-Host ""
 
 & "$exePath" --config "$PSScriptRoot\livekit.dev.yaml"

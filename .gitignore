@@ -10,8 +10,9 @@ coverage/
 .next/
 out/
 
-# NestJS build
+# NestJS build & TypeScript cache
 dist/
+*.tsbuildinfo
 
 # Logs
 logs/
@@ -42,3 +43,4 @@ Thumbs.db
 # LiveKit Binaries
 bin/livekit-server.exe
 bin/*.tar.gz
+bin/*.zip
