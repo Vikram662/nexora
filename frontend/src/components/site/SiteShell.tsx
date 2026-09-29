@@ -82,7 +82,7 @@ export async function SiteShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-line bg-paper-deep">
-        <div className="max-w-6xl mx-auto px-6 py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_0.7fr_0.7fr_1.2fr] text-sm text-muted">
+        <div className="max-w-6xl mx-auto px-6 py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_0.7fr_0.7fr_0.7fr_1.2fr] text-sm text-muted">
           <section aria-label="About">
             <p className="text-xl text-ink">
               <Wordmark brand={brand} />
