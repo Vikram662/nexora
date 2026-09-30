@@ -59,7 +59,7 @@ Nexora is a self-hosted Real-Time Communication (RTC) platform: 1:1 and multi-pa
 | Outbound webhooks to customers | ✅ | HMAC-signed, retried after 1 min, 5 min, 30 min, 2 h, resend from the console, public https URLs only |
 | Recording to the customer's bucket | 🟡 | Built; test it with your LiveKit egress worker |
 | KYC | 🟡 | `MOCK` only checks the format. Use `SUREPASS` for real checks |
-| Auto-recharge | ⏳ | Not built. Settings exist in the database but nothing uses them |
+| Auto recharge | 🟡 | Built (saved card, on/off, level, amount, notice, failure handling). The Razorpay recurring calls could not be tested without your Razorpay account, so test it in Razorpay test mode first |
 | RTMP restream / OBS ingest | ⏳ | Designed, not built |
 
 ## Security notes
@@ -160,6 +160,14 @@ The demo values work on your own machine. For anything else generate real secret
 | `SMS_API_KEY` | Your MSG91 authkey. |
 | `MSG91_TEMPLATE_<TYPE>` | DLT template id per type. See [SMS setup](#sms-msg91). A type with no id is not sent by SMS. |
 
+**Auto recharge**
+
+| Variable | Notes |
+| :--- | :--- |
+| `AUTO_RECHARGE_NOTICE_HOURS` | Hours between emailing the customer and charging their card. Default `24`. RBI expects notice before a recurring debit; set `0` only if Razorpay and your CA confirm it is not needed for your setup. |
+| `AUTO_RECHARGE_MAX_AMOUNT` | Largest single automatic charge in rupees. Default `15000`, the RBI limit for card recurring payments without extra authentication. |
+| `AUTO_RECHARGE_WORKER` | `false` stops the background worker that checks balances every minute. |
+
 **Billing and webhooks**
 
 | Variable | Notes |
@@ -240,7 +248,7 @@ Do these once, in this order. Items marked **you** need accounts or dashboards o
 3. **Email (you).** Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` and `APP_URL`. Restart the API. Use **Admin, Billing, Tax Invoices, Send queued emails** to flush anything already queued.
 4. **Razorpay (you).** Put the keys in `.env`, then set up the webhook (below).
 5. **LiveKit webhook.** LiveKit must be able to reach `BACKEND_INTERNAL_WEBHOOK_URL`. It drives billing settlement (refund or charge when a participant leaves) and recording events. `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` must be identical on both sides.
-6. **SMS (you, optional).** See [SMS setup](#sms-msg91).
+6. **SMS (you, optional).** See [SMS setup](#sms-msg91). Add `MSG91_TEMPLATE_AUTO_RECHARGE_FAILED` (no variables) if you want failed auto recharges by SMS.
 7. **Try one full path:** sign up, create a project, add money, mint a token in the sandbox, join a room, leave, check the wallet and Sessions.
 
 ### Razorpay webhook
@@ -250,7 +258,7 @@ Payments credit the wallet when the browser verifies the payment. The webhook is
 1. Razorpay Dashboard, Settings, Webhooks, Add new webhook.
 2. URL: `https://<your-api-domain>/v1/portal/payments/webhook`
 3. Secret: any strong value. Put the same value in `RAZORPAY_WEBHOOK_SECRET`.
-4. Events: `payment.captured` and `order.paid`.
+4. Events: `payment.captured`, `order.paid` and `payment.failed` (the last one is how a declined automatic charge is noticed quickly).
 5. Locally, expose port 4000 with a tunnel (for example ngrok) and use that URL.
 
 Top-ups are credited in full. GST is added to each session's per-minute charge and shown on the monthly tax invoice.
@@ -266,6 +274,7 @@ Indian SMS must use DLT-approved templates, so each message type has its own tem
 | `MSG91_TEMPLATE_API_KEY_ROTATED` | `##project##` | Nexora: API secret rotated for ##project##. |
 | `MSG91_TEMPLATE_SECURITY_ALERT` | `##project##` | Nexora: repeated failed API sign-ins on ##project##. |
 | `MSG91_TEMPLATE_WEBHOOK_ENDPOINT_DEGRADED` | `##project##` | Nexora: webhook deliveries for ##project## keep failing. |
+| `MSG91_TEMPLATE_AUTO_RECHARGE_FAILED` | none | Nexora: auto recharge failed. Please check your wallet. |
 | `MSG91_TEMPLATE_KYC_APPROVED` | none | Nexora: your business is verified. |
 | `MSG91_TEMPLATE_KYC_REJECTED` | none | Nexora: we could not verify your business. |
 
@@ -282,6 +291,17 @@ Also set `SMS_PROVIDER=MSG91` and `SMS_API_KEY=<authkey>`. SMS goes to the organ
 - **GSTR-1** (Admin, Billing) lists invoices and credit notes to registered buyers and shows totals net of credit notes. GSTR-2 is not provided.
 
 **Ask your CA before going live:** how GST applies to prepaid wallet top-ups (advance received for services), whether you must issue receipt vouchers at top-up, and whether e-invoicing (IRN) applies at your turnover. This software follows the invoice fields in Rule 46 and the credit note rules in Section 34, but it is not tax advice.
+
+## Auto recharge
+
+Customers turn it on in **Console, Wallet**:
+
+1. **Save a card.** They pay a first top-up in Razorpay Checkout and allow future automatic charges on that card (cards only). Their mobile number in Profile is needed. That first payment is credited to the wallet as usual.
+2. **Set the level and amount** ("when the balance is below ₹X, add ₹Y") and switch it on. The switch can be turned off at any time, and the card can be removed.
+3. **What happens:** a background worker checks balances every minute. When a balance is below its level, the customer is emailed and told the time of the charge (`AUTO_RECHARGE_NOTICE_HOURS`, default 24 hours). If the balance is still below the level after that, the saved card is charged. The wallet is credited when Razorpay confirms the payment (the webhook, or the worker asking Razorpay if the webhook is late).
+4. **Failures:** a declined charge is counted and emailed (and sent by SMS if that is set up). After 3 failed charges in a row auto recharge switches itself off.
+
+Setup needs recurring payments enabled on your Razorpay account (ask Razorpay). The 24-hour notice means a wallet can run out before the charge happens, so tell customers to set the level well above zero. Test the whole flow in Razorpay test mode before going live, and check with Razorpay and your CA that the notice and authentication rules for your setup are met.
 
 ## Customer webhooks
 
@@ -305,7 +325,7 @@ cd frontend && npx tsc --noEmit && npm run lint && npm run build
 
 ## Known gaps
 
-- Auto-recharge is not built (you asked to do it later). Its settings exist in the database but nothing uses them, and there is no auto-recharge failure email.
+- Auto recharge charges cards only (no UPI AutoPay), and its Razorpay calls are untested against a real account.
 - No GSTR-2, no e-invoicing (IRN), no receipt vouchers for top-ups.
 - SMS supports MSG91 only.
 - PDF fonts cover Latin and Devanagari. Other scripts (Tamil, Bengali and so on) would need another embedded font.

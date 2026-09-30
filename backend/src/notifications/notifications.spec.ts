@@ -35,7 +35,7 @@ describe('email templates', () => {
   });
 
   it('has no template for types that are not emailed', () => {
-    expect(buildEmail('AUTO_RECHARGE_FAILED', {}, ctx)).toBeNull();
+    expect(buildEmail('SOMETHING_ELSE', {}, ctx)).toBeNull();
   });
 });
 
@@ -134,7 +134,7 @@ describe('NotificationsService', () => {
     });
 
     it('marks types without a template as failed instead of retrying forever', async () => {
-      prisma.notificationLog.findMany.mockResolvedValue([queued({ type: 'AUTO_RECHARGE_FAILED' })]);
+      prisma.notificationLog.findMany.mockResolvedValue([queued({ type: 'SOMETHING_ELSE' })]);
       const result = await service.processQueue();
       expect(result.failed).toBe(1);
       expect(mailer.send).not.toHaveBeenCalled();

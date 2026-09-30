@@ -88,6 +88,33 @@ export function buildEmail(
       );
       return { subject: `Credit note ${payload.creditNoteNumber}`, html, text, attachments };
     }
+    case 'AUTO_RECHARGE_NOTICE': {
+      const { html, text } = wrap(
+        ctx,
+        'We will recharge your wallet',
+        [
+          `${ctx.organizationName} has ${rupees(payload.balance)} left, below your auto recharge level of ${rupees(payload.threshold)}.`,
+          `On ${payload.chargeOn} we will charge ${rupees(payload.amount)} to your saved card and add it to the wallet, unless the balance is above the level by then.`,
+          'You can turn auto recharge off or change the amount at any time before that.',
+        ],
+        { label: 'Manage auto recharge', path: '/user/billing' },
+      );
+      return { subject: `We will recharge your wallet with ${rupees(payload.amount)}`, html, text };
+    }
+    case 'AUTO_RECHARGE_FAILED': {
+      const { html, text } = wrap(
+        ctx,
+        payload.disabled ? 'Auto recharge was switched off' : 'Auto recharge failed',
+        [
+          `We could not charge your saved card for auto recharge: ${payload.reason}.`,
+          payload.disabled
+            ? 'After repeated failures we switched auto recharge off so your card is not charged again. Add money manually or update your card, then turn it back on.'
+            : 'We will try again. Add money manually if your balance is low.',
+        ],
+        { label: 'Open wallet', path: '/user/billing' },
+      );
+      return { subject: payload.disabled ? 'Auto recharge was switched off' : 'Auto recharge failed', html, text };
+    }
     case 'TEAM_INVITE': {
       const { html, text } = wrap(
         ctx,
@@ -185,7 +212,7 @@ export function buildEmail(
 }
 
 /** Types that are urgent enough to send by SMS even when the organization asked for critical alerts only. */
-export const CRITICAL_SMS_TYPES = new Set(['LOW_BALANCE', 'API_KEY_ROTATED', 'SECURITY_ALERT']);
+export const CRITICAL_SMS_TYPES = new Set(['LOW_BALANCE', 'API_KEY_ROTATED', 'SECURITY_ALERT', 'AUTO_RECHARGE_FAILED']);
 
 // DLT variable values are limited to about 30 characters, so keep them short.
 const short = (v: unknown) => String(v ?? '').replace(/[\r\n]+/g, ' ').slice(0, 30);
@@ -197,6 +224,7 @@ const SMS_VARIABLES: Record<string, (payload: Record<string, unknown>) => Record
   API_KEY_ROTATED: (p) => ({ project: short(p.projectName) }),
   SECURITY_ALERT: (p) => ({ project: short(p.projectName) }),
   WEBHOOK_ENDPOINT_DEGRADED: (p) => ({ project: short(p.projectName) }),
+  AUTO_RECHARGE_FAILED: () => ({}),
   KYC_APPROVED: () => ({}),
   KYC_REJECTED: () => ({}),
 };

@@ -51,15 +51,23 @@ model OtpVerification {
 }
 
 model Organization {
-  id                    String   @id @default(uuid())
-  name                  String
-  walletBalance         Decimal  @default(0.00) @db.Decimal(12, 4)
-  planTier              PlanTier @default(STARTER)
-  billingEmail          String
-  autoRechargeEnabled   Boolean  @default(false)
-  autoRechargeThreshold Decimal? @db.Decimal(12, 4)
-  autoRechargeAmount    Decimal? @db.Decimal(12, 4)
-  razorpayMandateId     String?
+  id                        String    @id @default(uuid())
+  name                      String
+  walletBalance             Decimal   @default(0.00) @db.Decimal(12, 4)
+  planTier                  PlanTier  @default(STARTER)
+  billingEmail              String
+  autoRechargeEnabled       Boolean   @default(false)
+  autoRechargeThreshold     Decimal?  @db.Decimal(12, 4)
+  autoRechargeAmount        Decimal?  @db.Decimal(12, 4)
+  // Auto recharge. razorpayMandateId holds the saved card token; razorpayCustomerId is the Razorpay customer it belongs to.
+  razorpayMandateId         String?
+  razorpayCustomerId        String?
+  // When we told the customer about the coming charge (RBI expects notice before a recurring debit).
+  autoRechargeNoticeAt      DateTime?
+  autoRechargeLastAttemptAt DateTime?
+  // Failed charges in a row. Auto recharge switches itself off after too many.
+  autoRechargeFailures      Int       @default(0)
+  autoRechargeLastError     String?   @db.Text
 
   kycVerification        KycVerification?
   billingProfile         BillingProfile?
@@ -133,6 +141,7 @@ enum NotificationType {
   SECURITY_ALERT
   PLAN_LIMIT_REACHED
   TEAM_INVITE
+  AUTO_RECHARGE_NOTICE
 }
 
 model NotificationPreference {

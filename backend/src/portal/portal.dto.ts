@@ -271,6 +271,28 @@ export class UpdateProfileDto {
   phone?: string;
 }
 
+export class AutoRechargeSettingsDto {
+  @IsBoolean()
+  enabled!: boolean;
+
+  // Recharge when the wallet balance falls below this many rupees.
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(1)
+  threshold!: number;
+
+  // Rupees added each time.
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(1)
+  amount!: number;
+}
+
+export class AutoRechargeSetupDto {
+  // The first payment, which also saves the card.
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(1)
+  amount!: number;
+}
+
 export class IssueCreditNoteDto {
   @IsString()
   @IsNotEmpty()

@@ -4,6 +4,9 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { VerifyPaymentDto } from './portal.dto.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
+/** After this many failed automatic charges in a row, auto recharge switches itself off. */
+export const MAX_AUTO_RECHARGE_FAILURES = 3;
+
 interface SettleInput {
   organizationId: string;
   orderId?: string;
@@ -12,6 +15,8 @@ interface SettleInput {
   webhookVerified: boolean;
   /** The PENDING wallet top-up created with the order, if there is one. */
   pendingId?: string;
+  /** True for an automatic recharge: clears the failure count and any pending notice. */
+  autoRecharge?: boolean;
 }
 
 @Injectable()
@@ -40,7 +45,7 @@ export class PaymentService {
   }
 
   /** Placeholder keys (rzp_test_mock...) skip calls to Razorpay so local development and tests work offline. */
-  private get usesMockGateway(): boolean {
+  get usesMockGateway(): boolean {
     const mock = Boolean(process.env.RAZORPAY_KEY_ID?.startsWith('rzp_test_mock'));
     if (mock && process.env.NODE_ENV === 'production') {
       throw new ServiceUnavailableException('The payment gateway is configured with placeholder keys. Set real Razorpay keys.');
@@ -48,7 +53,7 @@ export class PaymentService {
     return mock;
   }
 
-  private async razorpay(path: string, init?: { method?: string; body?: unknown }): Promise<any> {
+  async razorpay(path: string, init?: { method?: string; body?: unknown }): Promise<any> {
     const auth = 'Basic ' + Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${this.razorpaySecret}`).toString('base64');
     let res: Response;
     try {
@@ -133,6 +138,12 @@ export class PaymentService {
           select: { walletBalance: true },
         });
         await tx.transaction.update({ where: { id: transactionId }, data: { balanceAfter: org.walletBalance } });
+        if (input.autoRecharge) {
+          await tx.organization.update({
+            where: { id: input.organizationId },
+            data: { autoRechargeFailures: 0, autoRechargeLastError: null, autoRechargeNoticeAt: null },
+          });
+        }
         return { newBalance: org.walletBalance as unknown, transactionId };
       });
       if (out) {
@@ -223,6 +234,11 @@ export class PaymentService {
     const paymentId = paymentEntity.id;
     const orderId = paymentEntity.order_id;
 
+    // A failed automatic charge: mark it and count the failure. Other failed payments are ignored (the customer sees them in checkout).
+    if (event === 'payment.failed') {
+      return this.handleFailedPayment(orderId, paymentEntity);
+    }
+
     if (!paymentId) {
       return { status: 'ignored', message: 'No payment entity in webhook payload' };
     }
@@ -263,6 +279,7 @@ export class PaymentService {
         amountRupees: amountInRupees,
         webhookVerified: true,
         pendingId: pendingOrder && pendingOrder.status !== 'SUCCESS' ? pendingOrder.id : existingTx?.id,
+        autoRecharge: pendingOrder?.type === 'AUTO_RECHARGE',
       });
       if (!settled) {
         return { status: 'success', message: 'Payment already processed and credited (idempotent)' };
@@ -276,5 +293,38 @@ export class PaymentService {
     }
 
     return { status: 'acknowledged', message: `Handled webhook event: ${event}` };
+  }
+
+  /** Credits an automatic charge that Razorpay reports as captured. Safe to call more than once. */
+  async creditCapturedPayment(input: { organizationId: string; orderId: string; paymentId: string; amountRupees: number; pendingId: string }) {
+    return this.settleTopup({ ...input, webhookVerified: false, autoRecharge: true });
+  }
+
+  /** Handles `payment.failed`. Only failures of our own automatic charges matter here. */
+  private async handleFailedPayment(orderId: string | undefined, entity: any) {
+    if (!orderId) return { status: 'ignored', message: 'No order in the failed payment' };
+    const pending = await this.prisma.transaction.findFirst({ where: { gatewayOrderId: orderId, type: 'AUTO_RECHARGE' } });
+    if (!pending || pending.status === 'SUCCESS') return { status: 'ignored', message: 'Not an automatic charge' };
+    if (pending.status === 'PENDING') {
+      await this.prisma.transaction.update({ where: { id: pending.id }, data: { status: 'FAILED', webhookVerified: true } });
+      const reason = entity?.error_description || entity?.error_reason || 'The bank declined the charge';
+      await this.recordAutoRechargeFailure(pending.organizationId, String(reason));
+    }
+    return { status: 'success', message: 'Automatic charge marked as failed' };
+  }
+
+  /** Counts a failed automatic charge, switches auto recharge off after too many, and tells the customer. */
+  async recordAutoRechargeFailure(organizationId: string, reason: string) {
+    const org = await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: { autoRechargeFailures: { increment: 1 }, autoRechargeLastError: reason.slice(0, 500), autoRechargeNoticeAt: null },
+      select: { autoRechargeFailures: true },
+    });
+    const disabled = org.autoRechargeFailures >= MAX_AUTO_RECHARGE_FAILURES;
+    if (disabled) {
+      await this.prisma.organization.update({ where: { id: organizationId }, data: { autoRechargeEnabled: false } });
+    }
+    await this.notifications?.queue(organizationId, 'AUTO_RECHARGE_FAILED', { reason, disabled });
+    return { disabled };
   }
 }

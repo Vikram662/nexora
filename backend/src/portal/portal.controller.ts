@@ -27,6 +27,7 @@ import { PaymentService } from './payment.service.js';
 import { InvoiceService } from '../invoicing/invoice.service.js';
 import { OutboundWebhookService } from '../livekit/outbound-webhook.service.js';
 import { TeamInviteService } from '../team/team-invite.service.js';
+import { AutoRechargeService } from './auto-recharge.service.js';
 import { signInviteToken } from '../team/invite-token.js';
 import { assertPublicWebhookUrl, WebhookUrlError } from '../livekit/webhook-url.js';
 import { CreditNoteService } from '../invoicing/credit-note.service.js';
@@ -57,6 +58,8 @@ import {
   GenerateInvoicesDto,
   IssueCreditNoteDto,
   UpdateProfileDto,
+  AutoRechargeSettingsDto,
+  AutoRechargeSetupDto,
 } from './portal.dto.js';
 
 @Controller('v1/portal')
@@ -72,6 +75,7 @@ export class PortalController {
     private readonly notifications: NotificationsService,
     private readonly webhooks: OutboundWebhookService,
     private readonly invitesService: TeamInviteService,
+    private readonly autoRecharge: AutoRechargeService,
   ) {}
 
   // Helper: Sanitize Project object so apiSecretHash is never leaked to frontend
@@ -766,6 +770,53 @@ export class PortalController {
     const orgId = req.user!.organizationId;
     const result = await this.paymentService.createOrder(orgId, body.amount);
     return { status: 'success', data: result };
+  }
+
+  // ---------- Auto recharge ----------
+
+  @Get('auto-recharge')
+  @UseGuards(JwtAuthGuard)
+  async getAutoRecharge(@Req() req: Request) {
+    return { status: 'success', data: await this.autoRecharge.getStatus(req.user!.organizationId) };
+  }
+
+  @Post('auto-recharge/settings')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN', 'BILLING')
+  async updateAutoRecharge(@Body() body: AutoRechargeSettingsDto, @Req() req: Request) {
+    const data = await this.autoRecharge.updateSettings(req.user!.organizationId, body);
+    await this.audit(req, body.enabled ? 'wallet.auto_recharge_on' : 'wallet.auto_recharge_off', 'organization', req.user!.organizationId, {
+      threshold: body.threshold,
+      amount: body.amount,
+    });
+    return { status: 'success', data };
+  }
+
+  // Step 1 of saving a card: an order for a first top-up that also authorizes future automatic charges.
+  @Post('auto-recharge/setup')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN', 'BILLING')
+  async startAutoRechargeSetup(@Body() body: AutoRechargeSetupDto, @Req() req: Request) {
+    return { status: 'success', data: await this.autoRecharge.startSetup(req.user!.organizationId, body.amount) };
+  }
+
+  // Step 2: Razorpay Checkout finished; verify it and keep the card.
+  @Post('auto-recharge/confirm')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN', 'BILLING')
+  async confirmAutoRechargeSetup(@Body() body: VerifyPaymentDto, @Req() req: Request) {
+    const data = await this.autoRecharge.confirmSetup(req.user!.organizationId, body);
+    await this.audit(req, 'wallet.card_saved', 'organization', req.user!.organizationId);
+    return { status: 'success', data };
+  }
+
+  @Delete('auto-recharge/method')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN', 'BILLING')
+  async removeAutoRechargeCard(@Req() req: Request) {
+    const data = await this.autoRecharge.removeMethod(req.user!.organizationId);
+    await this.audit(req, 'wallet.card_removed', 'organization', req.user!.organizationId);
+    return { status: 'success', data };
   }
 
   @Post('payments/verify')

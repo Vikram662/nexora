@@ -163,7 +163,8 @@ async function seed() {
       billingEmail: 'billing@acme.com',
       walletBalance: 8450.0,
       planTier: 'ENTERPRISE',
-      autoRechargeEnabled: true,
+      // Off: it needs a saved card, which only Razorpay Checkout can create.
+      autoRechargeEnabled: false,
       autoRechargeThreshold: 1000.0,
       autoRechargeAmount: 5000.0,
       rateOverrides: { create: [{ roomType: 'VIDEO_CALL', ratePerMinute: 0.003, reason: 'Enterprise volume contract discount' }] },
