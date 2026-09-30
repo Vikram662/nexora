@@ -17,6 +17,7 @@ import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { TeamInviteService, type AcceptedInvite } from '../team/team-invite.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { clearCookieOptions, sessionCookieOptions } from './session-cookie.js';
 import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 
@@ -29,14 +30,8 @@ export class AuthController {
   ) {}
 
   private setSessionCookie(res: Response, token: string) {
-    res.cookie('nexora_auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-    res.clearCookie('nexora_user_role', { path: '/' });
+    res.cookie('nexora_auth_token', token, sessionCookieOptions());
+    res.clearCookie('nexora_user_role', clearCookieOptions());
   }
 
   private startSession(res: Response, accepted: AcceptedInvite) {
@@ -122,18 +117,7 @@ export class AuthController {
 
     const { token, user } = await this.authService.login(body.email, body.password);
 
-    // Set secure httpOnly cookie (24 hour lifetime)
-    const isProd = process.env.NODE_ENV === 'production';
-    res.cookie('nexora_auth_token', token, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-
-    // Delete redundant, client-writable nexora_user_role cookie
-    res.clearCookie('nexora_user_role', { path: '/' });
+    this.setSessionCookie(res, token);
 
     return {
       status: 'success',
@@ -162,16 +146,7 @@ export class AuthController {
       passwordPlain: body.password,
     });
 
-    const isProd = process.env.NODE_ENV === 'production';
-    res.cookie('nexora_auth_token', token, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-
-    res.clearCookie('nexora_user_role', { path: '/' });
+    this.setSessionCookie(res, token);
 
     return {
       status: 'success',
@@ -185,8 +160,8 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('nexora_auth_token', { path: '/' });
-    res.clearCookie('nexora_user_role', { path: '/' });
+    res.clearCookie('nexora_auth_token', clearCookieOptions());
+    res.clearCookie('nexora_user_role', clearCookieOptions());
     return {
       status: 'success',
       message: 'Logged out successfully',

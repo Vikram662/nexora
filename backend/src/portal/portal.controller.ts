@@ -727,25 +727,30 @@ export class PortalController {
   @UseGuards(JwtAuthGuard)
   async createTicket(@Body() body: CreateTicketDto, @Req() req: Request) {
     const orgId = req.user!.organizationId;
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const ticketNumber = `TICK-${randomNum}`;
-
-    const ticket = await this.prisma.supportTicket.create({
-      data: {
-        organizationId: orgId,
-        ticketNumber,
-        subject: body.subject,
-        category: body.category,
-        priority: body.priority,
-        status: 'OPEN',
-        messages: {
-          create: {
-            sender: `developer:${req.user!.email}`,
-            content: body.message,
+    // Consecutive numbers from a counter row, so two tickets can never get the same number.
+    const ticket = await this.prisma.$transaction(async (tx) => {
+      const counter = await tx.invoiceCounter.upsert({
+        where: { financialYear: 'TICKET' },
+        create: { financialYear: 'TICKET', lastSerial: 1 },
+        update: { lastSerial: { increment: 1 } },
+      });
+      return tx.supportTicket.create({
+        data: {
+          organizationId: orgId,
+          ticketNumber: `TICK-${1000 + counter.lastSerial}`,
+          subject: body.subject,
+          category: body.category,
+          priority: body.priority,
+          status: 'OPEN',
+          messages: {
+            create: {
+              sender: `developer:${req.user!.email}`,
+              content: body.message,
+            },
           },
         },
-      },
-      include: { messages: true },
+        include: { messages: true },
+      });
     });
 
     return { status: 'success', data: ticket };

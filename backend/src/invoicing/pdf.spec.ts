@@ -80,7 +80,14 @@ describe('PDF documents', () => {
     for (const needle of ['Credit note', 'NXC/2627/000003', 'NXR/2627/000007', 'Session ended early', '59.00']) expect(text).toContain(needle);
   });
 
-  it('does not break on characters the standard fonts cannot draw', async () => {
+  it('embeds a font that has the rupee sign and Devanagari, so nothing falls back to "?"', async () => {
+    const pdf = await renderInvoicePdf(invoice, { ...invoiceSnapshot, recipient: { ...recipient, legalName: 'टेलीमेड हेल्थकेयर LLP' } });
+    // Text extraction cannot read the rupee sign or Devanagari back from an embedded font, so check what the file carries.
+    expect(pdf.toString('latin1')).toContain('NotoSans');
+    expect(pdf.length).toBeGreaterThan(5000);
+  });
+
+  it('does not break on unusual characters', async () => {
     const pdf = await renderInvoicePdf(invoice, { ...invoiceSnapshot, recipient: { ...recipient, legalName: 'Buyer हिन्दी Ltd' } });
     expect(pdf.length).toBeGreaterThan(1000);
   });

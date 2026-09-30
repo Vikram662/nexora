@@ -382,17 +382,20 @@ async function seed() {
 
   const ticket = (organizationId: string, ticketNumber: string, subject: string, category: string, priority: string, status: string, messages: { sender: string; content: string }[]) =>
     prisma.supportTicket.create({ data: { organizationId, ticketNumber, subject, category: category as never, priority: priority as never, status: status as never, messages: { create: messages } } });
-  await ticket(org1.id, 'TICK-9021', 'Help with S3 cross-region recording replication', 'API_INTEGRATION', 'HIGH', 'OPEN', [
+  await ticket(org1.id, 'TICK-1001', 'Help with S3 cross-region recording replication', 'API_INTEGRATION', 'HIGH', 'OPEN', [
     { sender: 'developer:billing@acme.com', content: 'We set up the S3 bucket for recordings and want to confirm the KMS key permissions for egress.' },
   ]);
-  await ticket(org2.id, 'TICK-8840', 'GST input tax credit query for Karnataka', 'BILLING_WALLET', 'MEDIUM', 'IN_PROGRESS', [
+  await ticket(org2.id, 'TICK-1002', 'GST input tax credit query for Karnataka', 'BILLING_WALLET', 'MEDIUM', 'IN_PROGRESS', [
     { sender: 'developer:finance@telemedhealth.in', content: 'Can you confirm IGST was applied on our latest invoice?' },
     { sender: 'support:support@nexora.io', content: 'Yes. Our registered state is Maharashtra (27) and your GSTIN is in Karnataka (29), so 18% IGST applies and is claimable as input credit.' },
   ]);
-  await ticket(org3.id, 'TICK-8712', 'Choppy video in the sandbox on mobile data', 'MEDIA_QUALITY', 'LOW', 'RESOLVED', [
+  await ticket(org3.id, 'TICK-1003', 'Choppy video in the sandbox on mobile data', 'MEDIA_QUALITY', 'LOW', 'RESOLVED', [
     { sender: 'developer:founder@nexora.io', content: 'Video freezes every few seconds on 4G.' },
     { sender: 'support:support@nexora.io', content: 'Enable TURN over TCP 443 in your client config. That fixed similar carrier issues.' },
   ]);
+
+  // Next ticket after the three above.
+  await prisma.invoiceCounter.upsert({ where: { financialYear: 'TICKET' }, create: { financialYear: 'TICKET', lastSerial: 3 }, update: { lastSerial: 3 } });
 
   await prisma.auditLog.createMany({
     data: [
