@@ -751,3 +751,19 @@ model TicketMessage {
 
   @@index([ticketId])
 }
+
+// ---------- Audit ----------
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  actorUserId    String?
+  action         String
+  targetType     String
+  targetId       String
+  ip             String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+}

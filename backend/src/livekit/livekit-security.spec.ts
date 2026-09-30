@@ -36,6 +36,7 @@ describe('Livekit Security & Multi-Tenant Isolation Tests', () => {
         mockRecordingService as any,
         mockOutboundWebhookService as any,
         mockPrisma as any,
+        { markSessionStarted: vi.fn(), settleSession: vi.fn() } as any,
       );
       controller.onModuleInit();
     });

@@ -47,8 +47,12 @@ export class ApiKeyGuard implements CanActivate {
 
     const now = Date.now();
 
+    // Lockouts are scoped to client IP + key, so a third party who knows a public key
+    // cannot lock the real owner out by submitting wrong secrets.
+    const trackerKey = `${request.ip ?? 'unknown'}|${apiKey}`;
+
     // Check rate limit / lockout on key
-    const tracker = ApiKeyGuard.failureTracker.get(apiKey);
+    const tracker = ApiKeyGuard.failureTracker.get(trackerKey);
     if (tracker && tracker.lockedUntil > now) {
       const waitSec = Math.ceil((tracker.lockedUntil - now) / 1000);
       throw new ForbiddenException(
@@ -75,7 +79,7 @@ export class ApiKeyGuard implements CanActivate {
     // Constant-time execution to prevent timing attack leaking if key exists
     if (!project) {
       await this.crypto.verifyApiSecret(apiSecret, DUMMY_HASH).catch(() => false);
-      this.recordFailure(apiKey);
+      this.recordFailure(trackerKey);
       throw new UnauthorizedException('Invalid API credentials');
     }
 
@@ -104,12 +108,12 @@ export class ApiKeyGuard implements CanActivate {
           projectId: project.id,
         });
         // Clear failures on success
-        ApiKeyGuard.failureTracker.delete(apiKey);
+        ApiKeyGuard.failureTracker.delete(trackerKey);
       }
     }
 
     if (!isValid) {
-      this.recordFailure(apiKey);
+      this.recordFailure(trackerKey);
       throw new UnauthorizedException('Invalid API credentials');
     }
 
@@ -130,9 +134,9 @@ export class ApiKeyGuard implements CanActivate {
     return true;
   }
 
-  private recordFailure(apiKey: string): void {
+  private recordFailure(trackerKey: string): void {
     const now = Date.now();
-    const tracker = ApiKeyGuard.failureTracker.get(apiKey) || { attempts: 0, lockedUntil: 0 };
+    const tracker = ApiKeyGuard.failureTracker.get(trackerKey) || { attempts: 0, lockedUntil: 0 };
     tracker.attempts += 1;
 
     // Lockout for 5 minutes after 10 failed attempts
@@ -140,6 +144,6 @@ export class ApiKeyGuard implements CanActivate {
       tracker.lockedUntil = now + 5 * 60 * 1000;
     }
 
-    ApiKeyGuard.failureTracker.set(apiKey, tracker);
+    ApiKeyGuard.failureTracker.set(trackerKey, tracker);
   }
 }

@@ -14,6 +14,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { WebhookReceiver } from 'livekit-server-sdk';
 import { RecordingService } from './recording.service.js';
 import { OutboundWebhookService } from './outbound-webhook.service.js';
+import { BillingService } from './billing.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 @SkipThrottle()
@@ -27,6 +28,7 @@ export class LivekitWebhookController implements OnModuleInit {
     private readonly recordingService: RecordingService,
     private readonly outboundWebhookService: OutboundWebhookService,
     private readonly prisma: PrismaService,
+    private readonly billing: BillingService,
   ) {}
 
   onModuleInit() {
@@ -157,6 +159,9 @@ export class LivekitWebhookController implements OnModuleInit {
 
       // 4. Handle Participant Lifecycle Events (participant_joined, participant_left)
       if (eventName === 'participant_joined') {
+        await this.billing
+          .markSessionStarted(projectId, logicalRoomName, event.participant?.identity)
+          .catch((e) => this.logger.warn(`Billing start failed: ${e.message}`));
         await this.outboundWebhookService.dispatchEvent({
           projectId,
           eventType: 'participant.joined',
@@ -168,6 +173,9 @@ export class LivekitWebhookController implements OnModuleInit {
           },
         });
       } else if (eventName === 'participant_left') {
+        await this.billing
+          .settleSession(projectId, logicalRoomName, event.participant?.identity)
+          .catch((e) => this.logger.warn(`Billing settlement failed: ${e.message}`));
         await this.outboundWebhookService.dispatchEvent({
           projectId,
           eventType: 'participant.left',

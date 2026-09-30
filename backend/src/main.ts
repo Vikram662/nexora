@@ -9,6 +9,13 @@ async function bootstrap() {
     rawBody: true, // Enables req.rawBody Buffer for HMAC cryptographic webhook signature verification
   });
 
+  // Behind a reverse proxy/load balancer, set TRUST_PROXY (e.g. 1) so req.ip is the real client
+  // address; per-IP lockouts and throttling depend on it.
+  if (process.env.TRUST_PROXY) {
+    const hops = Number(process.env.TRUST_PROXY);
+    app.getHttpAdapter().getInstance().set('trust proxy', Number.isNaN(hops) ? process.env.TRUST_PROXY : hops);
+  }
+
   // Security HTTP headers
   app.use(
     helmet({

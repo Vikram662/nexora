@@ -36,7 +36,8 @@ services:
           urls:
             - ${BACKEND_INTERNAL_WEBHOOK_URL:-http://127.0.0.1:4000/v1/webhooks/livekit}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
   # -------------------------------------------------------------
   # 2. Redis (Cluster Coordination & Session Cache)
@@ -48,6 +49,13 @@ services:
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     ports:
       - "127.0.0.1:6379:6379" # Bind strictly to loopback interface
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     volumes:
       - redis-data:/data
 
@@ -86,8 +94,10 @@ services:
         logging:
           level: info
     depends_on:
-      - livekit
-      - redis
+      livekit:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
 volumes:
   redis-data:

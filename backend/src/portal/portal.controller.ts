@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -134,6 +135,25 @@ export class PortalController {
     };
   }
 
+  // Best-effort audit trail: a failed audit write must never break the action being audited.
+  private async audit(req: Request, action: string, targetType: string, targetId: string, metadata?: Record<string, unknown>) {
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          organizationId: req.user!.organizationId,
+          actorUserId: req.user!.userId,
+          action,
+          targetType,
+          targetId,
+          ip: req.ip ?? null,
+          metadata: metadata as Prisma.InputJsonValue | undefined,
+        },
+      });
+    } catch {
+      // ignored on purpose
+    }
+  }
+
   // Create new project with auto-generated API Key and Secret
   @Post('projects')
   @UseGuards(JwtAuthGuard)
@@ -154,6 +174,8 @@ export class PortalController {
         apiSecretHash: secretHash,
       },
     });
+
+    await this.audit(req, 'project.created', 'project', project.id, { environment: body.environment });
 
     return {
       status: 'success',
@@ -189,6 +211,10 @@ export class PortalController {
       },
     });
 
+    await this.audit(req, 'project.secret_rotated', 'project', projectId, {
+      graceWindowExpiresAt: graceWindowExpiry.toISOString(),
+    });
+
     return {
       status: 'success',
       data: {
@@ -218,6 +244,10 @@ export class PortalController {
       data: {
         ipAllowlist: body.ipAllowlist || [],
       },
+    });
+
+    await this.audit(req, 'project.ip_allowlist_updated', 'project', projectId, {
+      entries: (body.ipAllowlist || []).length,
     });
 
     return {

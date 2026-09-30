@@ -28,7 +28,7 @@ describe('TokensController Race-Free Wallet Deduction', () => {
       resolve: vi.fn().mockResolvedValue({ baseRatePerMinute: 0.0035, gstPercent: 18, ratePerMinuteWithGst: 0.0041 }),
     };
 
-    controller = new TokensController(mockLivekitService as any, mockPrisma as any, mockPricing as any);
+    controller = new TokensController(mockLivekitService as any, mockPrisma as any, mockPricing as any, { checkLowBalance: vi.fn() } as any);
   });
 
   it('should atomically deduct balance and succeed if wallet has sufficient balance', async () => {
@@ -144,5 +144,52 @@ describe('TokensController Race-Free Wallet Deduction', () => {
 
     expect(mockPrisma.organization.updateMany).not.toHaveBeenCalled();
     expect(mockLivekitService.mintToken).not.toHaveBeenCalled();
+  });
+});
+
+describe('TokensController refunds when a token cannot be issued', () => {
+  const req = {
+    project: { id: 'proj_1', environment: 'PRODUCTION', maxTokenTtlSeconds: 1800 },
+    organization: { id: 'org_1', planTier: 'STARTER' },
+  };
+  const body = { roomName: 'r', participantIdentity: 'alice', ttlSeconds: 600 };
+
+  const build = (mint: () => Promise<unknown>, createLog = vi.fn().mockResolvedValue({})) => {
+    const prisma: any = {
+      organization: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        update: vi.fn().mockResolvedValue({}),
+      },
+      usageLog: { create: createLog },
+    };
+    const pricing: any = { resolve: vi.fn().mockResolvedValue({ ratePerMinuteWithGst: 1, gstPercent: 18 }) };
+    const billing: any = { checkLowBalance: vi.fn() };
+    const controller = new TokensController({ mintToken: vi.fn(mint) } as any, prisma, pricing, billing);
+    return { controller, prisma, billing };
+  };
+
+  it('returns the debited amount to the wallet if minting fails', async () => {
+    const { controller, prisma } = build(() => Promise.reject(new Error('boom')));
+    await expect(controller.createToken(body, req)).rejects.toThrow('boom');
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: { walletBalance: { increment: 10 } },
+    });
+  });
+
+  it('returns the debited amount if the usage log cannot be written', async () => {
+    const { controller, prisma } = build(
+      () => Promise.resolve({ token: 't', ttl: 600 }),
+      vi.fn().mockRejectedValue(new Error('db down')),
+    );
+    await expect(controller.createToken(body, req)).rejects.toThrow('db down');
+    expect(prisma.organization.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refund and checks the low balance alert on success', async () => {
+    const { controller, prisma, billing } = build(() => Promise.resolve({ token: 't', ttl: 600 }));
+    await controller.createToken(body, req);
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+    expect(billing.checkLowBalance).toHaveBeenCalledWith('org_1');
   });
 });

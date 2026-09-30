@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RoomServiceClient, DataPacket_Kind } from 'livekit-server-sdk';
 import { PrismaService } from '../prisma/prisma.service.js';

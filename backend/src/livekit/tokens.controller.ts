@@ -12,6 +12,7 @@ import { ApiKeyGuard } from '../auth/api-key.guard.js';
 import { LivekitTokenService } from './livekit-token.service.js';
 import type { TokenGrants } from './livekit-token.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BillingService } from './billing.service.js';
 import { PricingService, type BillableRoomType } from '../settings/pricing.service.js';
 import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsObject } from 'class-validator';
 
@@ -45,6 +46,7 @@ export class TokensController {
     private readonly livekitTokenService: LivekitTokenService,
     private readonly prisma: PrismaService,
     private readonly pricing: PricingService,
+    private readonly billing: BillingService,
   ) {}
 
   @Post()
@@ -53,6 +55,7 @@ export class TokensController {
   async createToken(@Body() body: CreateTokenDto, @Req() req: any) {
     const project = req.project;
     const organization = req.organization;
+    let deducted = 0;
 
     // Production sessions are prepaid: rate and GST come from the database, deducted atomically.
     if (project.environment === 'PRODUCTION' && organization) {
@@ -101,19 +104,26 @@ export class TokensController {
         );
       }
 
+      deducted = totalDeductionWithGst;
+
       // Record UsageLog for session auditing with customer's logical roomName
-      await this.prisma.usageLog.create({
-        data: {
-          projectId: project.id,
-          roomName: body.roomName,
-          roomType: effectiveRoomType,
-          participantIdentity: body.participantIdentity,
-          startedAt: new Date(),
-          billableSeconds: sessionSeconds,
-          ratePerMinute: ratePerMinuteWithGst,
-          amountDeducted: totalDeductionWithGst,
-        },
-      });
+      try {
+        await this.prisma.usageLog.create({
+          data: {
+            projectId: project.id,
+            roomName: body.roomName,
+            roomType: effectiveRoomType,
+            participantIdentity: body.participantIdentity,
+            startedAt: new Date(),
+            billableSeconds: sessionSeconds,
+            ratePerMinute: ratePerMinuteWithGst,
+            amountDeducted: totalDeductionWithGst,
+          },
+        });
+      } catch (err) {
+        await this.refund(organization.id, deducted);
+        throw err;
+      }
     }
 
     // MULTI-TENANT ISOLATION:
@@ -121,15 +131,24 @@ export class TokensController {
     // Prefix internal room name with projectId so Project A cannot join or spy on Project B's rooms.
     const namespacedLivekitRoom = `${project.id}__${body.roomName}`;
 
-    const result = await this.livekitTokenService.mintToken({
-      projectId: project.id,
-      roomName: namespacedLivekitRoom,
-      participantIdentity: body.participantIdentity,
-      participantName: body.participantName,
-      grants: body.grants,
-      ttlSeconds: body.ttlSeconds,
-      maxTtlSeconds: project.maxTokenTtlSeconds,
-    });
+    let result: { token: string; ttl: number };
+    try {
+      result = await this.livekitTokenService.mintToken({
+        projectId: project.id,
+        roomName: namespacedLivekitRoom,
+        participantIdentity: body.participantIdentity,
+        participantName: body.participantName,
+        grants: body.grants,
+        ttlSeconds: body.ttlSeconds,
+        maxTtlSeconds: project.maxTokenTtlSeconds,
+      });
+    } catch (err) {
+      // The wallet was already debited: never charge for a token that was not issued.
+      if (deducted > 0) await this.refund(organization.id, deducted);
+      throw err;
+    }
+
+    if (deducted > 0) void this.billing.checkLowBalance(organization.id);
 
     // Dynamically resolve LiveKit SFU URL: Environment variable takes priority;
     // otherwise derives dynamically from the incoming request hostname without hardcoded strings
@@ -147,5 +166,11 @@ export class TokensController {
         environment: project.environment,
       },
     };
+  }
+
+  private async refund(organizationId: string, amount: number) {
+    await this.prisma.organization
+      .update({ where: { id: organizationId }, data: { walletBalance: { increment: amount } } })
+      .catch(() => undefined);
   }
 }
