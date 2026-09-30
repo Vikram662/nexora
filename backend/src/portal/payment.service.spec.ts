@@ -16,6 +16,7 @@ describe('PaymentService Security & Integrity', () => {
         findFirst: vi.fn(),
         create: vi.fn(),
         upsert: vi.fn(),
+        update: vi.fn(),
       },
       organization: {
         findUnique: vi.fn(),
@@ -134,6 +135,35 @@ describe('PaymentService Security & Integrity', () => {
       await expect(
         paymentService.handleWebhook('{}', 'simulated_valid_webhook_signature', {}),
       ).rejects.toThrow('Simulated test webhook signatures are strictly forbidden');
+    });
+
+    const signed = (body: object) => {
+      const raw = Buffer.from(JSON.stringify(body), 'utf8');
+      const sig = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET!).update(raw).digest('hex');
+      return { raw, sig, body };
+    };
+    const captured = (amount: number) => ({
+      event: 'payment.captured',
+      payload: { payment: { entity: { id: 'pay_1', order_id: 'o1', amount, notes: { organizationId: 'org_1' } } } },
+    });
+
+    it('never credits a made-up amount when the webhook amount is missing or zero', async () => {
+      for (const amount of [0, undefined as any]) {
+        const { raw, sig, body } = signed(captured(amount));
+        const result = await paymentService.handleWebhook(raw, sig, body);
+        expect(result.status).toBe('ignored');
+      }
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('treats a concurrent duplicate delivery (unique violation) as already processed', async () => {
+      mockPrisma.organization.findUnique.mockResolvedValue({ id: 'org_1' });
+      mockPrisma.transaction.findFirst.mockResolvedValue(null);
+      mockPrisma.$transaction.mockRejectedValue(Object.assign(new Error('dup'), { code: 'P2002' }));
+      const { raw, sig, body } = signed(captured(50000));
+      const result = await paymentService.handleWebhook(raw, sig, body);
+      expect(result.status).toBe('success');
+      expect(result.message).toContain('idempotent');
     });
   });
 });

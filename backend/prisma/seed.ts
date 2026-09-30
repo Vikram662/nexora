@@ -49,8 +49,12 @@ async function seed() {
 
   // 2. Hash developer API secrets
   const salt = await bcrypt.genSalt(12);
-  const secret1Hash = await bcrypt.hash('sk_live_enterprise_ultra_2026', salt);
-  const secret2Hash = await bcrypt.hash('sk_live_fintech_secure_8819', salt);
+  // Secrets are generated per seed run and printed once; nothing sensitive is committed.
+  const secret1 = `sk_test_${crypto.randomBytes(16).toString('hex')}`;
+  const secret2 = `sk_test_${crypto.randomBytes(16).toString('hex')}`;
+  console.log(`Generated seed project secrets (shown once): ${secret1} | ${secret2}`);
+  const secret1Hash = await bcrypt.hash(secret1, salt);
+  const secret2Hash = await bcrypt.hash(secret2, salt);
 
   // 3. Create Organizations
   console.log('Creating Real Organizations...');
@@ -121,7 +125,7 @@ async function seed() {
     create: {
       email: 'superadmin@nexora.io',
       passwordHash: staffPasswordHash,
-      mfaSecret: 'NXRA_STAFF_MFA_SEC_2026',
+      mfaSecret: crypto.randomBytes(10).toString('hex').toUpperCase(),
       role: 'SUPER_ADMIN',
       isActive: true,
     },
@@ -134,7 +138,7 @@ async function seed() {
       phone: '+919876543210',
       passwordHash: secret1Hash,
       mfaEnabled: true,
-      mfaSecret: process.env.DEFAULT_2FA_FALLBACK_SECRET || 'NXRA7729837190',
+      mfaSecret: process.env.DEFAULT_2FA_FALLBACK_SECRET || crypto.randomBytes(10).toString('hex').toUpperCase(),
       memberships: {
         create: [
           { organizationId: org3.id, role: 'OWNER' },
@@ -197,7 +201,7 @@ async function seed() {
       organizationId: org1.id,
       name: 'Global Video Telehealth Mesh',
       environment: 'PRODUCTION',
-      apiKeyPrefix: 'pk_live_acme_telehealth_99',
+      apiKeyPrefix: 'pk_test_seed_acme_telehealth',
       apiSecretHash: secret1Hash,
       ipAllowlist: ['203.0.113.19', '198.51.100.4'],
       maxConcurrentRooms: 100,
@@ -210,7 +214,7 @@ async function seed() {
       organizationId: org2.id,
       name: 'Interactive Virtual Classroom',
       environment: 'PRODUCTION',
-      apiKeyPrefix: 'pk_live_telemed_edu_44',
+      apiKeyPrefix: 'pk_test_seed_telemed_edu',
       apiSecretHash: secret2Hash,
       ipAllowlist: ['103.21.244.0/24'],
       maxConcurrentRooms: 50,
@@ -223,7 +227,7 @@ async function seed() {
       organizationId: org3.id,
       name: 'Developer Sandbox App',
       environment: 'SANDBOX',
-      apiKeyPrefix: 'pk_test_nexora_sandbox',
+      apiKeyPrefix: 'pk_test_seed_nexora_sandbox',
       apiSecretHash: secret1Hash,
       maxConcurrentRooms: 10,
       maxTokenTtlSeconds: 600,
@@ -287,7 +291,7 @@ async function seed() {
       type: 'WALLET_TOPUP',
       amount: 10000.0,
       status: 'SUCCESS',
-      gatewayPaymentId: 'pay_rzp_live_9921820491',
+      gatewayPaymentId: 'pay_seed_0001',
       webhookVerified: true,
       createdAt: new Date(Date.now() - 5 * 86400 * 1000),
     },
@@ -299,7 +303,7 @@ async function seed() {
       type: 'WALLET_TOPUP',
       amount: 5000.0,
       status: 'SUCCESS',
-      gatewayPaymentId: 'pay_rzp_live_8849201940',
+      gatewayPaymentId: 'pay_seed_0002',
       webhookVerified: true,
       createdAt: new Date(Date.now() - 2 * 86400 * 1000),
     },
@@ -311,7 +315,7 @@ async function seed() {
       type: 'WALLET_TOPUP',
       amount: 1500.0,
       status: 'SUCCESS',
-      gatewayPaymentId: 'pay_rzp_mock_init_500',
+      gatewayPaymentId: 'pay_seed_0003',
       webhookVerified: true,
       createdAt: new Date(),
     },

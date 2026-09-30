@@ -168,8 +168,12 @@ export class PaymentService {
     }
 
     // Convert Razorpay paise to INR
-    let amountInRupees = Number(paymentEntity.amount || 0) / 100;
-    if (amountInRupees <= 0) amountInRupees = 500;
+    const amountInRupees = Number(paymentEntity.amount || 0) / 100;
+    if (!(amountInRupees > 0)) {
+      // Never invent a credit amount: a webhook without a positive amount credits nothing.
+      this.logger.warn(`Webhook for payment ${paymentId} has no positive amount; ignoring.`);
+      return { status: 'ignored', message: 'Webhook payment amount is missing or not positive' };
+    }
 
     // Check target organization from payment notes
     const orgIdFromNotes = paymentEntity?.notes?.organizationId;
@@ -197,31 +201,41 @@ export class PaymentService {
     }
 
     if (event === 'payment.captured' || event === 'order.paid') {
-      const [updatedOrg, transaction] = await this.prisma.$transaction([
-        this.prisma.organization.update({
-          where: { id: targetOrg.id },
-          data: {
-            walletBalance: { increment: amountInRupees },
-          },
-        }),
-        this.prisma.transaction.upsert({
-          where: { gatewayPaymentId: paymentId },
-          update: {
-            status: 'SUCCESS',
-            amount: amountInRupees,
-            webhookVerified: true,
-          },
-          create: {
-            organizationId: targetOrg.id,
-            type: 'WALLET_TOPUP',
-            amount: amountInRupees,
-            gatewayOrderId: orderId,
-            gatewayPaymentId: paymentId,
-            status: 'SUCCESS',
-            webhookVerified: true,
-          },
-        }),
-      ]);
+      // create() (not upsert) so the unique gatewayPaymentId constraint rejects a concurrent duplicate
+      // delivery; the array transaction is atomic, so the wallet increment rolls back with it.
+      const recordTransaction = existingTx
+        ? this.prisma.transaction.update({
+            where: { id: existingTx.id },
+            data: { status: 'SUCCESS', amount: amountInRupees, webhookVerified: true },
+          })
+        : this.prisma.transaction.create({
+            data: {
+              organizationId: targetOrg.id,
+              type: 'WALLET_TOPUP',
+              amount: amountInRupees,
+              gatewayOrderId: orderId,
+              gatewayPaymentId: paymentId,
+              status: 'SUCCESS',
+              webhookVerified: true,
+            },
+          });
+
+      let updatedOrg: { walletBalance: unknown };
+      let transaction: { id: string };
+      try {
+        [updatedOrg, transaction] = await this.prisma.$transaction([
+          this.prisma.organization.update({
+            where: { id: targetOrg.id },
+            data: { walletBalance: { increment: amountInRupees } },
+          }),
+          recordTransaction,
+        ]);
+      } catch (err: any) {
+        if (err?.code === 'P2002') {
+          return { status: 'success', message: 'Payment already processed and credited (idempotent)' };
+        }
+        throw err;
+      }
 
       return {
         status: 'success',
