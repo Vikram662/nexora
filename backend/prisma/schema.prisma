@@ -654,9 +654,11 @@ model WebhookDelivery {
   responseCode Int?
   succeeded    Boolean         @default(false)
   nextRetryAt  DateTime?
+  lastError    String?         @db.Text
   createdAt    DateTime        @default(now())
 
   @@index([endpointId, succeeded, nextRetryAt])
+  @@index([succeeded, nextRetryAt])
 }
 
 // ---------- Audit Logs ----------

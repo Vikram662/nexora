@@ -9,7 +9,9 @@ import {
   Min,
   Matches,
   MaxLength,
+  IsIn,
 } from 'class-validator';
+import { WEBHOOK_EVENTS } from '../livekit/webhook-url.js';
 
 export class CreateProjectDto {
   @IsString()
@@ -69,10 +71,12 @@ export class SaveFirebaseDto {
 export class AddWebhookDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(2000)
   url!: string;
 
+  // Event names to subscribe to, or "*" for all. Defaults to all events.
   @IsArray()
-  @IsString({ each: true })
+  @IsIn([...WEBHOOK_EVENTS, '*'], { each: true })
   @IsOptional()
   events?: string[];
 }

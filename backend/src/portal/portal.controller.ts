@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
   Headers,
@@ -24,6 +25,8 @@ import { SiteSettingsService } from '../settings/site-settings.service.js';
 import { UpdateSiteSettingsDto } from '../settings/site-settings.dto.js';
 import { PaymentService } from './payment.service.js';
 import { InvoiceService } from '../invoicing/invoice.service.js';
+import { OutboundWebhookService } from '../livekit/outbound-webhook.service.js';
+import { assertPublicWebhookUrl, WebhookUrlError } from '../livekit/webhook-url.js';
 import { CreditNoteService } from '../invoicing/credit-note.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { isRenderableCreditNote, renderCreditNoteHtml } from '../invoicing/credit-note.render.js';
@@ -65,6 +68,7 @@ export class PortalController {
     private readonly invoicing: InvoiceService,
     private readonly creditNotes: CreditNoteService,
     private readonly notifications: NotificationsService,
+    private readonly webhooks: OutboundWebhookService,
   ) {}
 
   // Helper: Sanitize Project object so apiSecretHash is never leaked to frontend
@@ -90,7 +94,8 @@ export class PortalController {
         projects: {
           include: {
             storageConfigs: true,
-            webhookEndpoints: true,
+            // The signing secret is shown once, when the endpoint is created.
+            webhookEndpoints: { select: { id: true, url: true, events: true, isActive: true, createdAt: true } },
           },
         },
         billingProfile: true,
@@ -452,17 +457,72 @@ export class PortalController {
     });
     if (!project) throw new BadRequestException('Project not found or unauthorized');
 
+    let url: string;
+    try {
+      url = (await assertPublicWebhookUrl(body.url.trim())).toString();
+    } catch (err) {
+      if (err instanceof WebhookUrlError) throw new BadRequestException(err.message);
+      throw err;
+    }
+
     const signingSecret = `whsec_${crypto.randomBytes(24).toString('hex')}`;
     const endpoint = await this.prisma.webhookEndpoint.create({
       data: {
         projectId,
-        url: body.url,
+        url,
         signingSecret,
-        events: body.events || ['recording.completed', 'room_finished', 'low_balance'],
+        events: body.events?.length ? body.events : ['*'],
       },
+      select: { id: true, url: true, events: true, isActive: true, createdAt: true },
     });
+    await this.audit(req, 'webhook.created', 'webhook', endpoint.id, { url });
 
     return { status: 'success', data: { endpoint, signingSecret } };
+  }
+
+  // Removes an endpoint and its delivery history.
+  @Delete('webhooks/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteWebhook(@Param('id') id: string, @Req() req: Request) {
+    const endpoint = await this.prisma.webhookEndpoint.findFirst({
+      where: { id, project: { organizationId: req.user!.organizationId } },
+      select: { id: true, url: true },
+    });
+    if (!endpoint) throw new NotFoundException('Webhook endpoint not found');
+    await this.prisma.webhookEndpoint.delete({ where: { id } });
+    await this.audit(req, 'webhook.deleted', 'webhook', id, { url: endpoint.url });
+    return { status: 'success' };
+  }
+
+  // Recent deliveries for the caller's organization, with retry status.
+  @Get('webhooks/deliveries')
+  @UseGuards(JwtAuthGuard)
+  async listWebhookDeliveries(@Req() req: Request) {
+    const deliveries = await this.prisma.webhookDelivery.findMany({
+      where: { endpoint: { project: { organizationId: req.user!.organizationId } } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        eventType: true,
+        attempt: true,
+        responseCode: true,
+        succeeded: true,
+        nextRetryAt: true,
+        lastError: true,
+        createdAt: true,
+        endpoint: { select: { id: true, url: true, project: { select: { name: true } } } },
+      },
+    });
+    return { status: 'success', data: deliveries };
+  }
+
+  // Sends a delivery again right now.
+  @Post('webhooks/deliveries/:id/resend')
+  @UseGuards(JwtAuthGuard)
+  async resendWebhookDelivery(@Param('id') id: string, @Req() req: Request) {
+    const result = await this.webhooks.resend(id, req.user!.organizationId);
+    return { status: 'success', data: result };
   }
 
   // Update GST & Billing Profile

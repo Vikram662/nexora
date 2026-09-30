@@ -267,8 +267,9 @@ async function seed() {
   const endpoint = await prisma.webhookEndpoint.create({ data: { projectId: proj1.id, url: 'https://hooks.example.com/nexora', signingSecret: `whsec_${crypto.randomBytes(24).toString('hex')}`, events: ['room.started', 'room.finished', 'participant.joined', 'participant.left', 'recording.completed'] } });
   await prisma.webhookDelivery.createMany({
     data: [
-      { endpointId: endpoint.id, eventType: 'room.started', payload: { roomName: 'doctor-consult-room-991' }, responseCode: 200, succeeded: true },
-      { endpointId: endpoint.id, eventType: 'recording.completed', payload: { roomName: 'doctor-consult-room-991' }, attempt: 2, responseCode: 500, succeeded: false, nextRetryAt: new Date(Date.now() + 3600000) },
+      { endpointId: endpoint.id, eventType: 'room.started', payload: { id: 'evt_seed_1', event: 'room.started', data: { roomName: 'doctor-consult-room-991' } }, attempt: 1, responseCode: 200, succeeded: true },
+      { endpointId: endpoint.id, eventType: 'recording.completed', payload: { id: 'evt_seed_2', event: 'recording.completed', data: { roomName: 'doctor-consult-room-991' } }, attempt: 2, responseCode: 500, succeeded: false, lastError: 'Your server answered 500', nextRetryAt: new Date(Date.now() + 300000) },
+      { endpointId: endpoint.id, eventType: 'room.finished', payload: { id: 'evt_seed_3', event: 'room.finished', data: { roomName: 'doctor-consult-room-991' } }, attempt: 5, responseCode: 0, succeeded: false, lastError: 'connect ECONNREFUSED' },
     ],
   });
 
