@@ -184,7 +184,7 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       {/* Header Info */}
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-4">
+      <div className="border-t-2 border-ink pt-5 space-y-4">
         <div>
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
             <BellRing className="h-5 w-5 text-accent" />
@@ -274,7 +274,7 @@ export default function NotificationsPage() {
 
             <div className="border border-line rounded-lg overflow-hidden divide-y divide-line bg-white">
               {/* Table Header */}
-              <div className="bg-paper p-3.5 text-muted text-[11px] font-bold uppercase tracking-wider flex items-center justify-between">
+              <div className="bg-paper p-3.5 text-muted text-[11px] font-bold flex items-center justify-between">
                 <span className="w-1/2">Event Name & Description</span>
                 <span className="w-1/4 text-center">Email Alert</span>
                 <span className="w-1/4 text-center">SMS Alert</span>
@@ -295,7 +295,7 @@ export default function NotificationsPage() {
                         </div>
                         <span className="font-bold text-ink text-xs">{alertItem.title}</span>
                         {alertItem.critical && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 font-bold uppercase border border-red-200">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 font-bold border border-red-200">
                             Critical
                           </span>
                         )}
@@ -349,7 +349,7 @@ export default function NotificationsPage() {
           <div className="pt-2">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer"
+              className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs transition-all cursor-pointer"
             >
               Save All Notification Preferences
             </button>

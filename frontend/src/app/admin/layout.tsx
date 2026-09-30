@@ -21,6 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [staffEmail, setStaffEmail] = useState<string | null>(null);
 
   // Double Lock: Verify authentic staff session from backend /v1/auth/me
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .then((json) => {
         if (json.data?.isStaff || json.data?.role === 'SUPER_ADMIN' || json.data?.role === 'STAFF') {
           setIsAuthorized(true);
+          setStaffEmail(json.data?.email ?? null);
         } else {
           setIsAuthorized(false);
           router.replace('/user');
@@ -60,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isAuthorized === null) {
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center">
-        <div className="h-6 w-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -75,13 +77,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="font-display text-xl font-semibold tracking-tight text-paper">
                 Nexora<span className="text-accent">.</span>ops
               </span>
-              <div className="font-mono text-[10px] text-red-400 uppercase tracking-[0.14em]">Staff only</div>
+              <div className="font-mono text-[10px] text-slate-400">Staff only</div>
             </Link>
           </div>
 
           <div className="p-3 mx-4 mt-4 rounded-md bg-console-line/60 border border-console-line/60 text-xs text-slate-300">
-            <span className="text-[10px] text-slate-400 uppercase font-bold block">Staff Role</span>
-            <span className="font-bold text-white">SuperAdmin (Full Permissions)</span>
+            <span className="text-[10px] text-slate-400 font-bold block">Staff Role</span>
+            <span className="font-bold text-white">Super admin</span>
           </div>
 
           <nav className="p-4 space-y-1 overflow-y-auto flex-1 text-xs">
@@ -97,7 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   href={item.href}
                   className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md font-semibold transition-all ${
                     isActive
-                      ? 'bg-red-600 text-white shadow-sm'
+                      ? 'bg-accent text-white'
                       : 'text-slate-400 hover:bg-console-line hover:text-white'
                   }`}
                 >
@@ -111,8 +113,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="p-4 border-t border-console-line flex items-center justify-between">
           <div className="text-xs">
-            <div className="font-bold text-white">superadmin@nexora.io</div>
-            <div className="text-[10px] text-slate-400">Master Operator</div>
+            <div className="font-bold text-white max-w-36 truncate">{staffEmail ?? 'Staff'}</div>
+            <div className="text-[10px] text-slate-400">Operator</div>
           </div>
           <Link href="/user" title="Switch to User Console" className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-console-line">
             <ExternalLink className="h-4 w-4" />
@@ -125,15 +127,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="h-16 bg-white border-b border-line px-6 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <h1 className="font-semibold text-base text-ink">
-              Nexora Infrastructure Operations Center
+              Operations center
             </h1>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-bold border border-red-200 uppercase">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-paper-deep text-ink font-semibold border border-line">
               Staff Only
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
             <Link href="/user" className="text-accent font-semibold hover:underline">
-              Switch to User View →
+              Switch to user view
             </Link>
           </div>
         </header>

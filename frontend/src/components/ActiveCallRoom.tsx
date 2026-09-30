@@ -414,7 +414,7 @@ export default function ActiveCallRoom({
 
         <button
           onClick={handleDisconnect}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-md shadow-sm flex items-center gap-1.5 transition-colors"
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-md flex items-center gap-1.5 transition-colors"
         >
           <PhoneOff className="h-3.5 w-3.5" /> Leave Room
         </button>
@@ -427,18 +427,18 @@ export default function ActiveCallRoom({
           <div ref={remoteContainerRef} className="w-full h-full flex items-center justify-center">
             {participantCount <= 1 && (
               <div className="text-center p-8 space-y-2 text-slate-400">
-                <Radio className="h-10 w-10 mx-auto text-teal-300 animate-pulse" />
+                <Radio className="h-10 w-10 mx-auto text-indigo-300 animate-pulse" />
                 <div className="text-sm font-bold text-white">Live Broadcast Starting Soon...</div>
                 <p className="text-xs text-slate-400">Waiting for the Host to go live in room: <strong>{roomName}</strong></p>
               </div>
             )}
           </div>
-          <div className="absolute top-4 left-4 bg-red-600/90 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+          <div className="absolute top-4 left-4 bg-onair text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-white animate-ping"></span>
             Live Stream
           </div>
           <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-white text-xs font-semibold flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5 text-teal-300" /> {participantCount} Viewers
+            <Users className="h-3.5 w-3.5 text-indigo-300" /> {participantCount} Viewers
           </div>
         </div>
       ) : callMode === 'broadcast' && isHost ? (
@@ -449,16 +449,16 @@ export default function ActiveCallRoom({
           <div ref={remoteContainerRef} className="hidden" />
 
           {/* Host Studio Badges */}
-          <div className="absolute top-4 left-4 bg-red-600/90 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+          <div className="absolute top-4 left-4 bg-onair text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-white animate-ping"></span>
             Host Broadcasting Live
           </div>
           <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-md text-white text-xs font-semibold flex items-center gap-2">
-            <Users className="h-3.5 w-3.5 text-teal-300" />
+            <Users className="h-3.5 w-3.5 text-indigo-300" />
             <span>{Math.max(0, participantCount - 1)} Active Viewers</span>
           </div>
           <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg text-white text-xs font-medium flex items-center gap-1.5">
-            <Shield className="h-3 w-3 text-cyan-400" />
+            <Shield className="h-3 w-3 text-indigo-300" />
             Your Stream is Live to Audience
           </div>
         </div>
@@ -483,10 +483,10 @@ export default function ActiveCallRoom({
             {!isAudioMuted && (
               <div className="flex items-center gap-1 mt-4">
                 <span className="h-3 w-1 bg-accent rounded-full animate-bounce"></span>
-                <span className="h-6 w-1 bg-teal-300 rounded-full animate-pulse"></span>
-                <span className="h-4 w-1 bg-cyan-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                <span className="h-7 w-1 bg-teal-300 rounded-full animate-pulse [animation-delay:0.1s]"></span>
-                <span className="h-2 w-1 bg-teal-300 rounded-full animate-bounce"></span>
+                <span className="h-6 w-1 bg-indigo-300 rounded-full animate-pulse"></span>
+                <span className="h-4 w-1 bg-indigo-300 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                <span className="h-7 w-1 bg-indigo-300 rounded-full animate-pulse [animation-delay:0.1s]"></span>
+                <span className="h-2 w-1 bg-indigo-300 rounded-full animate-bounce"></span>
               </div>
             )}
             <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-lg text-emerald-400 text-[11px] font-semibold flex items-center gap-1.5">
@@ -516,10 +516,10 @@ export default function ActiveCallRoom({
                 {/* Audio Waveform Effect */}
                 <div className="flex items-center gap-1 mt-4">
                   <span className="h-4 w-1 bg-pink-500 rounded-full animate-bounce"></span>
-                  <span className="h-7 w-1 bg-teal-300 rounded-full animate-pulse"></span>
-                  <span className="h-3 w-1 bg-teal-300 rounded-full animate-bounce [animation-delay:0.15s]"></span>
+                  <span className="h-7 w-1 bg-indigo-300 rounded-full animate-pulse"></span>
+                  <span className="h-3 w-1 bg-indigo-300 rounded-full animate-bounce [animation-delay:0.15s]"></span>
                   <span className="h-5 w-1 bg-pink-400 rounded-full animate-pulse [animation-delay:0.25s]"></span>
-                  <span className="h-2 w-1 bg-teal-300 rounded-full animate-bounce"></span>
+                  <span className="h-2 w-1 bg-indigo-300 rounded-full animate-bounce"></span>
                 </div>
                 <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-lg text-emerald-400 text-[11px] font-semibold flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> In Call
@@ -532,7 +532,7 @@ export default function ActiveCallRoom({
                 </div>
                 <div className="text-xs font-bold text-slate-300">Waiting for other person...</div>
                 <p className="text-[11px] text-muted">
-                  Open another window or incognito tab to join room: <span className="text-teal-300 font-mono">{roomName}</span>
+                  Open another window or incognito tab to join room: <span className="text-indigo-300 font-mono">{roomName}</span>
                 </p>
               </div>
             )}
@@ -545,7 +545,7 @@ export default function ActiveCallRoom({
           <div className="relative aspect-video bg-console rounded-lg overflow-hidden shadow-inner flex items-center justify-center border border-line">
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
             <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-white text-xs font-medium flex items-center gap-1.5">
-              <Shield className="h-3 w-3 text-cyan-400" />
+              <Shield className="h-3 w-3 text-indigo-300" />
               <span>You (Local Participant)</span>
             </div>
           </div>
@@ -632,7 +632,7 @@ export default function ActiveCallRoom({
           {/* Chat Header */}
           <div className="bg-console px-4 py-3 text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-teal-300" />
+              <MessageSquare className="h-4 w-4 text-indigo-300" />
               <div>
                 <h4 className="font-bold text-xs">In-Room Real-time Chat</h4>
                 <p className="text-[10px] text-slate-400">P2P WebRTC DataChannel (Sub-10ms)</p>
@@ -664,7 +664,7 @@ export default function ActiveCallRoom({
                     {m.isSelf ? 'You' : m.sender} • {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   <div
-                    className={`max-w-[85%] rounded-lg px-3 py-2 text-xs font-medium shadow-sm ${
+                    className={`max-w-[85%] rounded-lg px-3 py-2 text-xs font-medium ${
                       m.isSelf
                         ? 'bg-accent text-white rounded-tr-none'
                         : 'bg-white text-ink border border-line rounded-tl-none'
@@ -707,7 +707,7 @@ export default function ActiveCallRoom({
             <button
               type="submit"
               disabled={!chatInput.trim()}
-              className="h-8 w-8 rounded-md bg-accent hover:bg-accent-deep text-white flex items-center justify-center transition-all disabled:opacity-40 cursor-pointer shadow-sm"
+              className="h-8 w-8 rounded-md bg-accent hover:bg-accent-deep text-white flex items-center justify-center transition-all disabled:opacity-40 cursor-pointer"
               title="Send Message"
             >
               <Send className="h-3.5 w-3.5" />

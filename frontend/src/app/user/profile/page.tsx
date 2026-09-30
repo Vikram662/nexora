@@ -132,7 +132,7 @@ export default function UserProfilePage() {
       )}
 
       {/* Profile Overview Card */}
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <div className="border-t-2 border-ink pt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="h-16 w-16 rounded-lg bg-console text-white flex items-center justify-center font-semibold text-2xl">
             {orgData?.name ? orgData.name.substring(0, 2).toUpperCase() : 'ND'}
@@ -140,7 +140,7 @@ export default function UserProfilePage() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-ink">{name}</h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent-deep border border-accent/30 uppercase">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent-deep border border-accent/30">
                 Owner / Admin
               </span>
             </div>
@@ -157,11 +157,11 @@ export default function UserProfilePage() {
         </div>
 
         <div className="p-3 rounded-md bg-paper border border-line text-xs text-right space-y-1">
-          <div className="text-[10px] text-slate-400 font-semibold">Prepaid Wallet Escrow</div>
+          <div className="text-[10px] text-slate-400 font-semibold">Wallet balance</div>
           <div className="text-lg font-semibold text-emerald-600">
             ₹{Number(orgData?.walletBalance || 0).toFixed(2)}
           </div>
-          <div className="text-[10px] text-accent font-bold uppercase">
+          <div className="text-[10px] text-accent font-bold">
             Plan: {orgData?.planTier || 'STARTER'}
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function UserProfilePage() {
       {/* Edit Information Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Personal Details */}
-        <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-4">
+        <div className="border-t-2 border-ink pt-5 space-y-4">
           <h3 className="font-bold text-sm text-ink flex items-center gap-2 border-b border-line pb-3">
             <User className="h-4 w-4 text-accent" />
             Personal Contact Information
@@ -211,7 +211,7 @@ export default function UserProfilePage() {
 
             <button
               type="submit"
-              className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <Save className="h-3.5 w-3.5" /> Save Changes
             </button>
@@ -219,7 +219,7 @@ export default function UserProfilePage() {
         </div>
 
         {/* Security & Authentication */}
-        <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-4">
+        <div className="border-t-2 border-ink pt-5 space-y-4">
           <h3 className="font-bold text-sm text-ink flex items-center gap-2 border-b border-line pb-3">
             <Lock className="h-4 w-4 text-emerald-600" />
             Security & Access Control
@@ -306,7 +306,7 @@ export default function UserProfilePage() {
 
             {/* QR Code Container */}
             <div className="flex flex-col items-center justify-center p-4 bg-paper rounded-lg border border-line space-y-3">
-              <div className="p-2.5 bg-white rounded-md shadow-sm border border-line">
+              <div className="p-2.5 bg-white rounded-md border border-line">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
                     `otpauth://totp/${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || '')}:${encodeURIComponent(email)}?secret=${mfaSecret || process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || ''}&issuer=${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || '')}`
@@ -318,10 +318,10 @@ export default function UserProfilePage() {
 
               {/* Secret Key with copy */}
               <div className="w-full text-center">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                <span className="text-[10px] text-slate-400 font-bold block">
                   Or enter secret key manually:
                 </span>
-                <span className="font-mono text-xs font-semibold text-accent-deep tracking-wider select-all bg-white px-3 py-1 rounded-lg border border-line mt-1 inline-block">
+                <span className="font-mono text-xs font-semibold text-accent-deep select-all bg-white px-3 py-1 rounded-lg border border-line mt-1 inline-block">
                   {mfaSecret || process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || ''}
                 </span>
               </div>
@@ -360,7 +360,7 @@ export default function UserProfilePage() {
                 <button
                   type="submit"
                   disabled={mfaLoading || totpCode.length !== 6}
-                  className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {mfaLoading ? 'Verifying...' : 'Verify & Enable 2FA'}
                 </button>

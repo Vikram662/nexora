@@ -80,7 +80,7 @@ export default function AdminKycReviewPage() {
               onClick={() => setFilterStatus(st)}
               className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 filterStatus === st
-                  ? 'bg-console text-white shadow-sm'
+                  ? 'bg-console text-white'
                   : 'bg-white border border-line text-muted hover:bg-paper'
               }`}
             >
@@ -97,11 +97,11 @@ export default function AdminKycReviewPage() {
       )}
 
       {/* Submissions Table */}
-      <div className="bg-white rounded-lg border border-line shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-line overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="ledger w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-paper border-b border-line text-muted font-bold uppercase text-[10px] tracking-wider">
+              <tr className="bg-paper border-b border-line text-muted font-bold text-[10px]">
                 <th className="py-3.5 px-5">Organization</th>
                 <th className="py-3.5 px-5">Document Type</th>
                 <th className="py-3.5 px-5">Decrypted Identifier</th>
@@ -183,7 +183,7 @@ export default function AdminKycReviewPage() {
                           <button
                             disabled={reviewingId === sub.id}
                             onClick={() => handleReview(sub.id, 'APPROVE')}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                           </button>

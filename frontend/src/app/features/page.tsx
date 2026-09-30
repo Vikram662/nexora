@@ -101,7 +101,7 @@ export default function FeaturesPage() {
           <table className="w-full min-w-[560px] text-left text-sm">
             <caption className="sr-only">Supported client platforms</caption>
             <thead>
-              <tr className="border-b border-ink/70 text-xs uppercase tracking-wider text-muted">
+              <tr className="border-b border-ink/70 text-xs text-muted">
                 <th scope="col" className="py-3 pr-4 font-medium">Platform</th>
                 <th scope="col" className="py-3 pr-4 font-medium">Package</th>
                 <th scope="col" className="py-3 font-medium">Notes</th>

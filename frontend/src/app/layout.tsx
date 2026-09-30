@@ -1,11 +1,11 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { Familjen_Grotesk, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import { siteUrl } from '@/lib/seo';
 
-const bricolage = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-bricolage' });
-const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' });
+const familjen = Familjen_Grotesk({ subsets: ['latin'], variable: '--font-familjen' });
+const instrument = Instrument_Sans({ subsets: ['latin'], variable: '--font-instrument' });
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' });
 
 const DESCRIPTION =
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </head>
       <body
-        className={`${bricolage.variable} ${dmSans.variable} ${jetbrains.variable} font-sans bg-paper text-ink antialiased min-h-screen flex flex-col`}
+        className={`${familjen.variable} ${instrument.variable} ${jetbrains.variable} font-sans bg-paper text-ink antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
         <ToastProvider>{children}</ToastProvider>

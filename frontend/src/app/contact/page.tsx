@@ -32,7 +32,7 @@ export default async function ContactPage() {
             )}
             {contact.email && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted">Email</p>
+                <p className="text-xs text-muted">Email</p>
                 <a href={`mailto:${contact.email}`} className="mt-1 inline-block underline underline-offset-4 decoration-line hover:decoration-ink">
                   {contact.email}
                 </a>
@@ -40,7 +40,7 @@ export default async function ContactPage() {
             )}
             {contact.phone && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted">Phone</p>
+                <p className="text-xs text-muted">Phone</p>
                 <a href={`tel:${contact.phone.replace(/[^+\d]/g, '')}`} className="mt-1 inline-block hover:text-accent transition-colors">
                   {contact.phone}
                 </a>
@@ -48,7 +48,7 @@ export default async function ContactPage() {
             )}
             {contact.whatsapp && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted">WhatsApp</p>
+                <p className="text-xs text-muted">WhatsApp</p>
                 <a
                   href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`}
                   target="_blank"
@@ -61,13 +61,13 @@ export default async function ContactPage() {
             )}
             {contact.supportHours && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted">Support hours</p>
+                <p className="text-xs text-muted">Support hours</p>
                 <p className="mt-1">{contact.supportHours}</p>
               </div>
             )}
             {contact.address && (
               <div className="sm:col-span-2">
-                <p className="text-xs uppercase tracking-wider text-muted">Address</p>
+                <p className="text-xs text-muted">Address</p>
                 <p className="mt-1 whitespace-pre-line">{contact.address}</p>
               </div>
             )}

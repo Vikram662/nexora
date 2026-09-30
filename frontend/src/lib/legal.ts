@@ -110,7 +110,7 @@ export const TERMS_SECTIONS: LegalSection[] = [
       'Production usage is prepaid. You top up a wallet in rupees, and each production token deducts from it at your plan’s per-minute rate plus GST.',
       'If the wallet cannot cover a token, the request is rejected until you top up.',
       'Rates shown on the Pricing page can change; a change applies from the time it takes effect and does not alter past usage.',
-      'We issue a GST tax invoice for each top-up. You are responsible for the accuracy of the GST details you provide.',
+      'Top-ups are credited to your wallet in full, GST is added to each session’s charge, and we issue GST tax invoices for each billing period. You are responsible for the accuracy of the GST details you provide.',
     ],
   },
   {

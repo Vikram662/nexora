@@ -71,7 +71,7 @@ export async function SiteShell({ children }: { children: React.ReactNode }) {
             </Link>
             <Link
               href="/signup"
-              className="px-4 py-2 rounded-md bg-ink text-paper font-medium hover:bg-accent transition-colors active:scale-[0.98]"
+              className="px-4 py-2 rounded-md bg-accent text-white font-medium hover:bg-accent-deep transition-colors active:scale-[0.98]"
             >
               Create an account
             </Link>
@@ -111,7 +111,7 @@ export async function SiteShell({ children }: { children: React.ReactNode }) {
 
           {FOOTER_GROUPS.map((group) => (
             <nav key={group.heading} aria-label={group.heading}>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink">{group.heading}</h2>
+              <h2 className="text-sm font-semibold text-ink">{group.heading}</h2>
               <ul className="mt-4 space-y-2.5">
                 {group.links.map((link) => (
                   <li key={link.href}>
@@ -125,7 +125,7 @@ export async function SiteShell({ children }: { children: React.ReactNode }) {
           ))}
 
           <section aria-label="Contact">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink">Contact</h2>
+            <h2 className="text-sm font-semibold text-ink">Contact</h2>
             <address className="not-italic mt-4 space-y-3">
               {contact?.companyName && (
                 <p className="text-ink font-medium">

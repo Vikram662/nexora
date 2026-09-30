@@ -8,7 +8,7 @@ export default function AdminAuditPage() {
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-ink tracking-tight flex items-center gap-2.5">
-          <ShieldCheck className="h-6 w-6 text-red-600" />
+          <ShieldCheck className="h-6 w-6 text-accent" />
           <span>Master Security, Encryption & Audit Vault</span>
         </h1>
         <p className="text-xs text-muted mt-1">
@@ -17,7 +17,7 @@ export default function AdminAuditPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm space-y-2">
+        <div className="border-t-2 border-ink pt-3 space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-muted">
             <span>Envelope Encryption</span>
             <Lock className="h-4 w-4 text-emerald-600" />
@@ -28,7 +28,7 @@ export default function AdminAuditPage() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm space-y-2">
+        <div className="border-t-2 border-ink pt-3 space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-muted">
             <span>Master Key Version</span>
             <Key className="h-4 w-4 text-accent" />
@@ -37,7 +37,7 @@ export default function AdminAuditPage() {
           <div className="text-[11px] text-slate-400">Zero-Trust Key Management</div>
         </div>
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm space-y-2">
+        <div className="border-t-2 border-ink pt-3 space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-muted">
             <span>LiveKit API Security</span>
             <Database className="h-4 w-4 text-accent" />
@@ -48,7 +48,7 @@ export default function AdminAuditPage() {
       </div>
 
       {/* Audit Log Table */}
-      <div className="bg-white rounded-lg border border-line shadow-sm p-6 space-y-4">
+      <div className="bg-white rounded-lg border border-line p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-line pb-3">
           <h2 className="text-sm font-bold text-ink">System Security & Operations Log</h2>
           <span className="text-[10px] text-slate-400 font-mono">Real-time DB Events</span>

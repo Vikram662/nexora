@@ -8,7 +8,7 @@ import { Faq } from '@/components/site/Faq';
 export const metadata: Metadata = {
   title: 'Pricing',
   alternates: { canonical: '/pricing' },
-  description: 'Per-minute rates by plan, billed from a prepaid rupee wallet with a GST tax invoice for every top-up.',
+  description: 'Per-minute rates by plan, billed from a prepaid rupee wallet with GST added to each session’s charge.',
 };
 
 export default async function PricingPage() {
@@ -21,7 +21,7 @@ export default async function PricingPage() {
         <h1 className="font-display text-4xl font-semibold tracking-tight">Pricing</h1>
         <p className="mt-3 text-muted max-w-xl leading-relaxed">
           Prepaid wallet in rupees.
-          {site ? ` Every top-up gets a GST tax invoice under SAC ${site.sacCode}; rates below exclude ${site.gstPercent}% GST.` : ''}
+          {site ? ` Top-ups are credited in full. ${site.gstPercent}% GST is added to each session's charge, and tax invoices use SAC ${site.sacCode}. Rates below exclude GST.` : ''}
         </p>
 
         {plans.length === 0 ? (
@@ -33,7 +33,7 @@ export default async function PricingPage() {
             <table className="w-full min-w-[640px] text-left text-sm">
               <caption className="sr-only">Plan comparison</caption>
               <thead>
-                <tr className="border-b border-ink/70 text-xs uppercase tracking-wider text-muted">
+                <tr className="border-b border-ink/70 text-xs text-muted">
                   <th scope="col" className="py-3 pr-4 font-medium">Plan</th>
                   <th scope="col" className="py-3 pr-4 font-medium">Platform fee</th>
                   <th scope="col" className="py-3 pr-4 font-medium">Per video minute</th>
@@ -75,11 +75,11 @@ export default async function PricingPage() {
           <ol className="mt-8 grid md:grid-cols-3 gap-x-10 gap-y-8 text-sm">
             <li className="border-t-2 border-ink pt-4">
               <h3 className="font-semibold">Top up</h3>
-              <p className="mt-2 text-muted leading-relaxed">Add funds through Razorpay. Each successful payment is credited once and gets a GST tax invoice.</p>
+              <p className="mt-2 text-muted leading-relaxed">Add funds through Razorpay. Each successful payment is credited once, in full.</p>
             </li>
             <li className="border-t-2 border-ink pt-4">
               <h3 className="font-semibold">A token reserves the first block</h3>
-              <p className="mt-2 text-muted leading-relaxed">Minting a production token deducts up to the first 10 minutes at your plan rate plus GST. If the wallet cannot cover it, the request is rejected.</p>
+              <p className="mt-2 text-muted leading-relaxed">Minting a production token deducts the first 10 minutes at your plan rate plus GST. When the participant leaves, unused time is refunded, and longer sessions are charged the difference. If the wallet cannot cover the first block, the request is rejected.</p>
             </li>
             <li className="border-t-2 border-ink pt-4">
               <h3 className="font-semibold">Read it back</h3>

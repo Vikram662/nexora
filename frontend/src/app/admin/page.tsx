@@ -45,7 +45,7 @@ export default function AdminOverviewPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={loadData}
-            className="px-3.5 py-1.5 bg-white border border-line text-ink rounded-md text-xs font-bold hover:bg-paper transition-colors shadow-sm cursor-pointer"
+            className="px-3.5 py-1.5 bg-white border border-line text-ink rounded-md text-xs font-bold hover:bg-paper transition-colors cursor-pointer"
           >
             Refresh Telemetry
           </button>
@@ -64,7 +64,7 @@ export default function AdminOverviewPage() {
 
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm space-y-2">
+        <div className="border-t-2 border-ink pt-3 space-y-2">
           <div className="flex items-center justify-between text-muted text-xs font-semibold">
             <span>Total Organizations</span>
             <Building2 className="h-4 w-4 text-accent" />
@@ -77,7 +77,7 @@ export default function AdminOverviewPage() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm space-y-2">
+        <div className="border-t-2 border-ink pt-3 space-y-2">
           <div className="flex items-center justify-between text-muted text-xs font-semibold">
             <span>Live Projects</span>
             <Server className="h-4 w-4 text-accent" />
@@ -90,7 +90,7 @@ export default function AdminOverviewPage() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm space-y-2">
+        <div className="border-t-2 border-ink pt-3 space-y-2">
           <div className="flex items-center justify-between text-muted text-xs font-semibold">
             <span>Pending KYC Queue</span>
             <BadgeCheck className="h-4 w-4 text-amber-600" />
@@ -108,9 +108,9 @@ export default function AdminOverviewPage() {
           </Link>
         </div>
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm space-y-2">
+        <div className="border-t-2 border-ink pt-3 space-y-2">
           <div className="flex items-center justify-between text-muted text-xs font-semibold">
-            <span>Customer Escrow Balance</span>
+            <span>Customer wallet balance</span>
             <CreditCard className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-semibold text-ink">
@@ -125,10 +125,10 @@ export default function AdminOverviewPage() {
       {/* Cluster Nodes & Recent Transactions Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Node Infrastructure Health */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-lg border border-line shadow-sm space-y-5">
+        <div className="lg:col-span-6 border-t-2 border-ink pt-5 space-y-5">
           <div className="flex items-center justify-between border-b border-line pb-3">
             <h2 className="text-sm font-bold text-ink flex items-center gap-2">
-              <Activity className="h-4 w-4 text-red-600" />
+              <Activity className="h-4 w-4 text-accent" />
               <span>Media SFU Node Cluster Status</span>
             </h2>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-paper-deep text-ink">
@@ -179,7 +179,7 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Recent Ledger Inflow / Topups */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-lg border border-line shadow-sm space-y-5">
+        <div className="lg:col-span-6 border-t-2 border-ink pt-5 space-y-5">
           <div className="flex items-center justify-between border-b border-line pb-3">
             <h2 className="text-sm font-bold text-ink flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-emerald-600" />

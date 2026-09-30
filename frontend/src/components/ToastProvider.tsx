@@ -106,7 +106,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           >
             {t.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
             {t.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />}
-            {t.type === 'info' && <Info className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />}
+            {t.type === 'info' && <Info className="w-5 h-5 text-indigo-300 shrink-0 mt-0.5" />}
 
             <div className="flex-1 min-w-0 text-xs sm:text-sm">
               {t.title && <div className="font-semibold text-white mb-0.5">{t.title}</div>}

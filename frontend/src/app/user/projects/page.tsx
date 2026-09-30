@@ -116,14 +116,14 @@ export default function UserProjectsPage() {
         </div>
         <button
           onClick={() => setShowNewProjectModal(true)}
-          className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold text-xs rounded-md shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold text-xs rounded-md flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <Plus className="h-4 w-4" /> Create New Project
         </button>
       </div>
 
       {createdSecretAlert && (
-        <div className="p-5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 space-y-2 shadow-sm">
+        <div className="p-5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 space-y-2">
           <div className="font-bold flex items-center gap-2 text-sm">
             <AlertCircle className="h-4 w-4 text-amber-600" />
             Save Your API Secret Now (It will not be displayed again):
@@ -150,7 +150,7 @@ export default function UserProjectsPage() {
       {/* Projects List */}
       <div className="space-y-4">
         {orgData?.projects.map((proj) => (
-          <div key={proj.id} className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-4">
+          <div key={proj.id} className="border-t-2 border-ink pt-5 space-y-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
                 <div className="font-bold text-ink text-sm flex items-center gap-2">
@@ -175,7 +175,7 @@ export default function UserProjectsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
               <div className="p-3.5 bg-paper rounded-md border border-line flex items-center justify-between">
                 <div>
-                  <div className="text-[10px] font-sans font-semibold text-slate-400 uppercase tracking-wider">x-api-key</div>
+                  <div className="text-[10px] font-sans font-semibold text-slate-400">x-api-key</div>
                   <div className="text-ink font-bold mt-0.5">{proj.apiKeyPrefix}</div>
                 </div>
                 <button
@@ -188,7 +188,7 @@ export default function UserProjectsPage() {
 
               <div className="p-3.5 bg-paper rounded-md border border-line flex items-center justify-between">
                 <div>
-                  <div className="text-[10px] font-sans font-semibold text-slate-400 uppercase tracking-wider">x-api-secret</div>
+                  <div className="text-[10px] font-sans font-semibold text-slate-400">x-api-secret</div>
                   <div className="text-muted italic mt-0.5">•••••••••••••••••••••••• (Hashed)</div>
                 </div>
                 <div className="text-[11px] font-sans text-slate-400">

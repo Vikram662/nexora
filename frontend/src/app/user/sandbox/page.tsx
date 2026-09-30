@@ -112,7 +112,7 @@ export default function UserSandboxPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Token Issue Form */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-lg border border-line shadow-sm space-y-5">
+          <div className="lg:col-span-5 border-t-2 border-ink pt-5 space-y-5">
             <div>
               <h2 className="font-bold text-ink text-base flex items-center gap-2">
                 <Video className="h-5 w-5 text-accent" />
@@ -159,7 +159,7 @@ export default function UserSandboxPage() {
                     onClick={() => setCallMode('video')}
                     className={`py-2 px-2 rounded-md border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       callMode === 'video'
-                        ? 'bg-accent text-white border-accent shadow-sm'
+                        ? 'bg-accent text-white border-accent'
                         : 'bg-paper text-muted border-line hover:bg-paper-deep'
                     }`}
                   >
@@ -171,7 +171,7 @@ export default function UserSandboxPage() {
                     onClick={() => setCallMode('audio')}
                     className={`py-2 px-2 rounded-md border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       callMode === 'audio'
-                        ? 'bg-accent text-white border-accent shadow-sm'
+                        ? 'bg-accent text-white border-accent'
                         : 'bg-paper text-muted border-line hover:bg-paper-deep'
                     }`}
                   >
@@ -183,7 +183,7 @@ export default function UserSandboxPage() {
                     onClick={() => setCallMode('broadcast')}
                     className={`py-2 px-2 rounded-md border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       callMode === 'broadcast'
-                        ? 'bg-accent text-white border-accent shadow-sm'
+                        ? 'bg-accent text-white border-accent'
                         : 'bg-paper text-muted border-line hover:bg-paper-deep'
                     }`}
                   >
@@ -282,7 +282,7 @@ export default function UserSandboxPage() {
                 type="button"
                 onClick={(e) => handleMintToken(e)}
                 disabled={mintLoading}
-                className="w-full py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {mintLoading ? 'Generating WebRTC Token...' : 'Generate Room Token'}
               </button>
@@ -292,7 +292,7 @@ export default function UserSandboxPage() {
 
 
           {/* Sandbox Live Tester View */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-lg border border-line shadow-sm flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-7 border-t-2 border-ink pt-5 flex flex-col justify-between space-y-4">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-line">
                 <span className="font-bold text-ink text-sm flex items-center gap-2">

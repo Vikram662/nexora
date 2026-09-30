@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Save, Globe, Phone, Share2, Megaphone, IndianRupee, LayoutList, Server } from 'lucide-react';
+import { CheckCircle2, Save, Globe, Phone, Share2, Megaphone, IndianRupee, LayoutList, Server, Receipt } from 'lucide-react';
 import { fetchAdminSettings, updateAdminSettings, errorMessage } from '@/lib/api';
 import type {
   AdminSettingsData,
@@ -73,7 +73,7 @@ function Field({ label, value, onChange, hint, type = 'text', step, multiline }:
 
 function Panel({ icon: Icon, title, children }: { icon: typeof Globe; title: string; children: React.ReactNode }) {
   return (
-    <section className="bg-white p-6 rounded-lg border border-line space-y-4">
+    <section className="border-t-2 border-ink pt-5 space-y-4">
       <h2 className="text-sm font-bold text-ink flex items-center gap-2 border-b border-line pb-3">
         <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
         {title}
@@ -146,7 +146,14 @@ export default function AdminSettingsPage() {
       contact: form.contact,
       brand: form.brand,
       social: form.social,
-      billing: { gstPercent: Number(form.billing.gstPercent), sacCode: form.billing.sacCode },
+      billing: {
+        gstPercent: Number(form.billing.gstPercent),
+        sacCode: form.billing.sacCode,
+        supplierLegalName: form.billing.supplierLegalName.trim(),
+        supplierGstin: form.billing.supplierGstin.trim().toUpperCase(),
+        supplierStateCode: form.billing.supplierStateCode.trim(),
+        supplierAddress: form.billing.supplierAddress.trim(),
+      },
       plans: form.plans,
       rates: pendingRates,
     };
@@ -244,7 +251,7 @@ export default function AdminSettingsPage() {
           An organization-specific override still wins over the plan rate.
         </p>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="ledger w-full text-xs">
             <thead>
               <tr className="text-left text-muted border-b border-line">
                 <th scope="col" className="py-2 pr-4 font-medium">Plan</th>
@@ -286,6 +293,39 @@ export default function AdminSettingsPage() {
         {pendingRates.length > 0 && (
           <p className="text-xs text-amber-800">{pendingRates.length} rate change(s) will take effect when you save.</p>
         )}
+      </Panel>
+
+      <Panel icon={Receipt} title="Tax invoice details">
+        <p className="text-xs text-muted">
+          These appear on every GST tax invoice as the seller. Invoices cannot be generated until the legal name, GSTIN, state code and address are filled in.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3 max-w-2xl">
+          <Field
+            label="Legal name"
+            value={form.billing.supplierLegalName}
+            onChange={(v) => patch('billing', 'supplierLegalName', v)}
+            hint="Leave blank to use the company name from Contact details."
+          />
+          <Field
+            label="GSTIN"
+            value={form.billing.supplierGstin}
+            onChange={(v) => patch('billing', 'supplierGstin', v.toUpperCase())}
+            hint="15 characters, for example 27AAPFU0939F1ZV."
+          />
+          <Field
+            label="State code"
+            value={form.billing.supplierStateCode}
+            onChange={(v) => patch('billing', 'supplierStateCode', v)}
+            hint="The first two digits of the GSTIN. Decides CGST and SGST or IGST."
+          />
+          <Field
+            label="Registered address"
+            multiline
+            value={form.billing.supplierAddress}
+            onChange={(v) => patch('billing', 'supplierAddress', v)}
+            hint="Leave blank to use the address from Contact details."
+          />
+        </div>
       </Panel>
 
       <Panel icon={LayoutList} title="Plans shown on the website">

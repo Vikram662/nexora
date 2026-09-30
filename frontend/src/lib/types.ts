@@ -204,6 +204,10 @@ export interface SocialLinks {
 export interface BillingSettings {
   gstPercent: number;
   sacCode: string;
+  supplierLegalName: string;
+  supplierGstin: string;
+  supplierStateCode: string;
+  supplierAddress: string;
 }
 
 export interface PlanDisplay {

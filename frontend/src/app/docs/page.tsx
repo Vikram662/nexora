@@ -901,7 +901,7 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
             <Link href="/" className="font-display text-xl font-semibold tracking-tight">
               Nexora<span className="text-accent">.</span>rtc
             </Link>
-            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">Reference</span>
+            <span className="font-mono text-[11px] text-muted">Reference</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
@@ -1149,10 +1149,10 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
 
             {/* Quick Setup Guide */}
             <div className="p-4 bg-console/60 border-b border-console-line/80">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <div className="text-[10px] font-bold text-slate-400 mb-1">
                 Prerequisites & Setup
               </div>
-              <pre className="font-mono text-xs text-teal-300 overflow-x-auto whitespace-pre-wrap">
+              <pre className="font-mono text-xs text-indigo-300 overflow-x-auto whitespace-pre-wrap">
                 <code>{SDK_GUIDES[activeSdk][activeFeature].guide}</code>
               </pre>
             </div>

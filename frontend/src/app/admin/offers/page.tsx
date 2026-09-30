@@ -90,7 +90,7 @@ export default function AdminOffersPage() {
           <button
             onClick={loadOffers}
             disabled={loading}
-            className="px-3 py-1.5 bg-white border border-line hover:bg-paper text-ink text-xs font-semibold rounded-md flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            className="px-3 py-1.5 bg-white border border-line hover:bg-paper text-ink text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -122,7 +122,7 @@ export default function AdminOffersPage() {
             </p>
             <button
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-accent text-white rounded-md text-xs font-bold shadow-sm"
+              className="px-4 py-2 bg-accent text-white rounded-md text-xs font-bold"
             >
               Launch First Promotion
             </button>
@@ -134,7 +134,7 @@ export default function AdminOffersPage() {
           return (
             <div
               key={offer.id}
-              className={`bg-white rounded-lg border p-5 shadow-sm flex flex-col justify-between transition-all ${
+              className={`bg-white rounded-lg border p-5 flex flex-col justify-between transition-all ${
                 offer.isActive && !isExpired
                   ? 'border-accent/30 hover:border-accent'
                   : 'border-line opacity-60'

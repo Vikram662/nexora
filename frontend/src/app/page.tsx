@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { SiteShell } from '@/components/site/SiteShell';
+import { MintDemo } from '@/components/site/MintDemo';
 import { Faq } from '@/components/site/Faq';
 import { getPublicSite } from '@/lib/site';
-import { FAQ, HOW_IT_WORKS, TOKEN_REQUEST, TOKEN_RESPONSE, USE_CASES } from '@/lib/marketing';
+import { FAQ, HOW_IT_WORKS, USE_CASES } from '@/lib/marketing';
 
 const ENTRY_POINTS = [
   {
@@ -14,7 +15,7 @@ const ENTRY_POINTS = [
   {
     href: '/pricing',
     title: 'Pricing',
-    summary: 'Per-minute rates by plan, billed from a prepaid rupee wallet with GST invoices.',
+    summary: 'Per-minute rates by plan, billed from a prepaid rupee wallet with GST on every charge.',
   },
   {
     href: '/security',
@@ -27,17 +28,18 @@ const HOME_FAQ = FAQ.slice(0, 5);
 
 export default async function HomePage() {
   const site = await getPublicSite();
+  const videoRates = (site?.plans ?? []).map((p) => p.videoRatePerMinute).filter((r): r is number => r !== null);
+  const lowestVideoRate = videoRates.length ? Math.min(...videoRates) : null;
 
   return (
     <SiteShell>
       <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-start">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-accent">LiveKit control plane · billed in INR</p>
-          <h1 className="font-display mt-5 text-5xl sm:text-6xl font-semibold tracking-tight leading-[1.04]">
+          <h1 className="font-display text-5xl sm:text-6xl font-semibold tracking-tight leading-[1.04]">
             Calls, broadcasts and recordings on a media server you host.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted leading-relaxed">
-            Nexora handles tokens, rooms, permissions, usage and GST invoicing. Media flows through your LiveKit and
+            Nexora handles tokens, rooms, permissions, usage and GST billing. Media flows through your LiveKit and
             Coturn nodes, and recordings land in your own bucket, never on ours.
           </p>
 
@@ -57,19 +59,7 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <figure className="rounded-lg bg-console text-slate-200 border border-console-line overflow-hidden">
-          <figcaption className="flex items-center justify-between px-4 py-2.5 border-b border-console-line font-mono text-[11px] text-slate-400">
-            <span>Server-side · mint a token</span>
-            <span className="text-slate-500">POST /v1/tokens</span>
-          </figcaption>
-          <pre className="p-4 font-mono text-[12px] leading-relaxed overflow-x-auto">
-            <code>{TOKEN_REQUEST}</code>
-          </pre>
-          <div className="border-t border-console-line px-4 py-2 font-mono text-[11px] text-slate-500">200 OK</div>
-          <pre className="px-4 pb-4 font-mono text-[12px] leading-relaxed text-teal-200/90 overflow-x-auto">
-            <code>{TOKEN_RESPONSE}</code>
-          </pre>
-        </figure>
+        <MintDemo ratePerMinute={lowestVideoRate} />
       </section>
 
       <section aria-labelledby="how-heading" className="border-t border-line bg-paper-deep">
@@ -114,7 +104,7 @@ export default async function HomePage() {
             </h2>
             <Link
               href="/pricing"
-              className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-teal-300 underline underline-offset-4 decoration-teal-300/40 hover:decoration-teal-300"
+              className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-300 underline underline-offset-4 decoration-indigo-300/40 hover:decoration-indigo-300"
             >
               See the rate table <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </Link>
@@ -125,9 +115,9 @@ export default async function HomePage() {
               <dd className="mt-1.5 text-slate-400 leading-relaxed">Top up by card, UPI or netbanking through Razorpay. No dollar conversion.</dd>
             </div>
             <div>
-              <dt className="font-semibold text-paper">GST tax invoice per top-up</dt>
+              <dt className="font-semibold text-paper">GST on every charge, invoiced by period</dt>
               <dd className="mt-1.5 text-slate-400 leading-relaxed">
-                {site ? `SAC ${site.sacCode}, with ${site.gstPercent}% GST shown as CGST and SGST or IGST.` : 'CGST and SGST or IGST shown separately.'}
+                {site ? `Top-ups are credited in full. Each session adds ${site.gstPercent}% GST, and tax invoices under SAC ${site.sacCode} show CGST and SGST or IGST.` : 'Top-ups are credited in full. Each session adds GST, and tax invoices show CGST and SGST or IGST.'}
               </dd>
             </div>
             <div>

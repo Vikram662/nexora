@@ -18,7 +18,7 @@ export default function UserAuditPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
         <div>
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-emerald-600" />
@@ -29,9 +29,9 @@ export default function UserAuditPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto border border-line rounded-md">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-paper border-b border-line text-muted font-semibold uppercase text-[10px] tracking-wider">
+        <div className="overflow-x-auto">
+          <table className="ledger w-full text-left text-xs">
+            <thead>
               <tr>
                 <th className="p-3">Target Provider</th>
                 <th className="p-3">System Actor</th>
@@ -42,7 +42,7 @@ export default function UserAuditPage() {
             <tbody className="divide-y divide-line font-mono text-ink">
               <tr className="hover:bg-paper/50">
                 <td className="p-3 font-sans font-bold text-ink">GoogleCloudStorage</td>
-                <td className="p-3 text-cyan-700">system:egress-dispatcher</td>
+                <td className="p-3 text-accent">system:egress-dispatcher</td>
                 <td className="p-3">egress_direct_upload</td>
                 <td className="p-3 text-[11px] text-slate-400">Just now</td>
               </tr>

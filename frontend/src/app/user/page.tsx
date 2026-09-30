@@ -2,134 +2,128 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Video, HardDrive, BadgeCheck, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { fetchOrganizationData, OrganizationData } from '@/lib/api';
+
+const KYC_LABEL: Record<string, string> = {
+  VERIFIED: 'Verified',
+  PENDING_REVIEW: 'In review',
+  REJECTED: 'Rejected',
+  NOT_STARTED: 'Not started',
+};
+
+const NEXT_STEPS = [
+  { href: '/user/sandbox', title: 'Test a call in the sandbox', detail: 'Mint a token and join a video, voice or broadcast room from your browser.' },
+  { href: '/user/storage', title: 'Connect your recording bucket', detail: 'Recordings go straight to your own S3, Cloudflare R2 or Google Cloud bucket.' },
+  { href: '/user/kyc', title: 'Verify your business', detail: 'Submit PAN or GSTIN to raise production limits and get GST tax invoices.' },
+];
 
 export default function UserOverviewPage() {
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
-  const [, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     fetchOrganizationData()
       .then((data) => setOrgData(data))
-      .catch((e) => console.error(e))
-      .finally(() => setLoading(false));
+      .catch(() => setFailed(true));
   }, []);
 
+  const kycStatus = orgData?.kycVerification?.status ?? 'NOT_STARTED';
+
   return (
-    <div className="space-y-6">
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm">
-          <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">LiveKit Media SFU</div>
-          <div className="text-2xl font-semibold text-ink flex items-baseline gap-2">
-            Online <span className="text-xs font-bold text-emerald-600">:7880</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">Coturn NAT Relay enabled</p>
-        </div>
+    <div className="space-y-10">
+      {failed && (
+        <p role="alert" className="text-sm text-red-700">
+          Could not load your account details. Refresh the page to try again.
+        </p>
+      )}
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm">
-          <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Wallet Balance</div>
-          <div className="text-2xl font-semibold text-ink">
-            ₹{Number(orgData?.walletBalance || 500).toFixed(2)}
-          </div>
-          <Link href="/user/billing" className="text-[11px] text-accent hover:underline font-semibold mt-1 inline-flex items-center gap-1">
-            Top up wallet <ArrowRight className="h-3 w-3" />
+      <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-6">
+        <div className="border-t-2 border-ink pt-3">
+          <dt className="text-xs text-muted">Wallet balance</dt>
+          <dd className="mt-1 font-mono tabular text-3xl font-semibold text-ink">
+            {orgData ? `₹${Number(orgData.walletBalance).toFixed(2)}` : '—'}
+          </dd>
+          <Link href="/user/billing" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline">
+            Add money <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         </div>
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm">
-          <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Total Projects</div>
-          <div className="text-2xl font-semibold text-ink">
-            {orgData?.projects.length || 1}
-          </div>
-          <Link href="/user/projects" className="text-[11px] text-accent hover:underline font-semibold mt-1 inline-flex items-center gap-1">
-            Manage projects <ArrowRight className="h-3 w-3" />
+        <div className="border-t-2 border-ink pt-3">
+          <dt className="text-xs text-muted">Projects</dt>
+          <dd className="mt-1 font-mono tabular text-3xl font-semibold text-ink">{orgData ? orgData.projects.length : '—'}</dd>
+          <Link href="/user/projects" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline">
+            Manage projects <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         </div>
 
-        <div className="bg-white p-5 rounded-lg border border-line shadow-sm">
-          <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">BYOS Storage</div>
-          <div className="text-2xl font-semibold text-emerald-600">
-            GCS / S3 / R2
-          </div>
-          <Link href="/user/storage" className="text-[11px] text-accent hover:underline font-semibold mt-1 inline-flex items-center gap-1">
-            Configure buckets <ArrowRight className="h-3 w-3" />
+        <div className="border-t-2 border-ink pt-3">
+          <dt className="text-xs text-muted">Business verification</dt>
+          <dd className="mt-1 text-3xl font-display font-semibold text-ink">
+            {orgData ? (KYC_LABEL[kycStatus] ?? kycStatus) : '—'}
+          </dd>
+          <Link href="/user/kyc" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline">
+            Open KYC <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         </div>
-      </div>
+      </dl>
 
-      {/* Quick Action Cards */}
-      <div>
-        <h3 className="text-sm font-bold text-ink mb-3">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link
-            href="/user/sandbox"
-            className="p-5 rounded-lg bg-white border border-line hover:border-accent/40 text-left transition-all shadow-sm hover:shadow group block"
-          >
-            <div className="h-10 w-10 rounded-md bg-accent/10 text-accent flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Video className="h-5 w-5" />
-            </div>
-            <div className="font-bold text-ink text-sm">Launch Video Sandbox</div>
-            <p className="text-xs text-muted mt-1">Test real-time video/audio calling straight inside your browser.</p>
-          </Link>
-
-          <Link
-            href="/user/storage"
-            className="p-5 rounded-lg bg-white border border-line hover:border-accent/40 text-left transition-all shadow-sm hover:shadow group block"
-          >
-            <div className="h-10 w-10 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <HardDrive className="h-5 w-5" />
-            </div>
-            <div className="font-bold text-ink text-sm">Google Cloud / S3 Bucket</div>
-            <p className="text-xs text-muted mt-1">Stream recordings directly to your GCS, S3, or Cloudflare R2 bucket.</p>
-          </Link>
-
-          <Link
-            href="/user/kyc"
-            className="p-5 rounded-lg bg-white border border-line hover:border-accent/40 text-left transition-all shadow-sm hover:shadow group block"
-          >
-            <div className="h-10 w-10 rounded-md bg-accent/10 text-accent flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <BadgeCheck className="h-5 w-5" />
-            </div>
-            <div className="font-bold text-ink text-sm">Business KYC & Invoicing</div>
-            <p className="text-xs text-muted mt-1">Verify PAN/GSTIN to enable full production limits and GST tax invoices.</p>
-          </Link>
-        </div>
-      </div>
-
-      {/* Projects Snapshot */}
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+      <section aria-labelledby="projects-heading">
+        <div className="flex items-end justify-between gap-4">
           <div>
-            <h3 className="font-bold text-ink text-sm">Active Projects</h3>
-            <p className="text-xs text-muted">Isolate credentials per mobile app or web platform.</p>
+            <h2 id="projects-heading" className="font-display text-lg font-semibold">Projects</h2>
+            <p className="text-xs text-muted mt-0.5">Each project has its own API key, so keep one per app.</p>
           </div>
-          <Link
-            href="/user/projects"
-            className="px-3.5 py-1.5 bg-accent/10 text-accent-deep hover:bg-accent/15 rounded-md text-xs font-bold transition-colors inline-flex items-center gap-1"
-          >
-            View All Projects <ArrowRight className="h-3.5 w-3.5" />
+          <Link href="/user/projects" className="text-xs font-semibold text-accent hover:underline">
+            All projects
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {orgData?.projects.map((proj) => (
-            <div key={proj.id} className="p-4 rounded-md border border-line bg-paper/50 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-ink text-xs">{proj.name}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {proj.environment}
-                </span>
-              </div>
-              <div className="font-mono text-xs text-muted bg-white p-2.5 rounded-lg border border-line flex items-center justify-between">
-                <span>{proj.apiKeyPrefix}</span>
-                <span className="text-[10px] text-slate-400 font-sans">Active Key</span>
-              </div>
-            </div>
-          ))}
+        <div className="mt-4 overflow-x-auto">
+          <table className="ledger">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Environment</th>
+                <th scope="col">API key</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orgData?.projects.map((proj) => (
+                <tr key={proj.id}>
+                  <td className="font-semibold text-ink">{proj.name}</td>
+                  <td>{proj.environment === 'PRODUCTION' ? 'Production' : 'Sandbox'}</td>
+                  <td className="font-mono text-xs text-muted">{proj.apiKeyPrefix}</td>
+                </tr>
+              ))}
+              {orgData && orgData.projects.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="text-muted">
+                    No projects yet. <Link href="/user/projects" className="text-accent font-semibold hover:underline">Create your first project</Link> to get an API key.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
+
+      <section aria-labelledby="next-heading">
+        <h2 id="next-heading" className="font-display text-lg font-semibold">Set up</h2>
+        <ul className="mt-3 border-t border-ink divide-y divide-line">
+          {NEXT_STEPS.map((step) => (
+            <li key={step.href}>
+              <Link href={step.href} className="group flex items-center justify-between gap-6 py-4 hover:bg-ink/[0.03] px-1 -mx-1">
+                <span>
+                  <span className="block text-sm font-semibold text-ink">{step.title}</span>
+                  <span className="block text-xs text-muted mt-0.5 max-w-xl">{step.detail}</span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted group-hover:text-accent transition-colors" aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

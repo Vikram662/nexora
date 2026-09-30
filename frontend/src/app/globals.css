@@ -1,27 +1,112 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-display: var(--font-bricolage), system-ui, sans-serif;
-  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-familjen), system-ui, sans-serif;
+  --font-sans: var(--font-instrument), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
-  --color-paper: #f7f9fc;
-  --color-paper-deep: #edf1f7;
-  --color-ink: #0a2540;
-  --color-muted: #566a80;
-  --color-line: #dbe2ec;
-  --color-accent: #0f766e;
-  --color-accent-deep: #115e59;
-  --color-console: #0b1b2e;
-  --color-console-line: #1f3550;
+  /* Switchboard palette */
+  --color-paper: #eef0f4;
+  --color-paper-deep: #e2e6ee;
+  --color-ink: #171b34;
+  --color-muted: #566079;
+  --color-line: #d5d9e2;
+  --color-accent: #2a3fe0;
+  --color-accent-deep: #1f2fb8;
+  --color-onair: #e5392e;
+  --color-console: #10132b;
+  --color-console-line: #262b52;
+
+  /* Radius follows hierarchy: controls are tight, containers and dialogs a little softer. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
 }
 
 :root {
-  --background: #f7f9fc;
-  --foreground: #0a2540;
+  --background: #eef0f4;
+  --foreground: #171b34;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+  font-feature-settings: "ss01", "cv11";
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* Amounts, timers and IDs line up in columns. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Blinking "on air" light, used only for live or recording state. */
+@keyframes onair-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.onair-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--color-onair);
+  animation: onair-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onair-dot { animation: none; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Ledger tables: ruled rows, no boxes. Amounts and IDs use tabular figures. */
+.ledger {
+  width: 100%;
+  text-align: left;
+  font-size: 0.8125rem;
+  border-collapse: collapse;
+}
+.ledger thead,
+.ledger thead tr {
+  background: transparent;
+}
+.ledger th {
+  padding: 0.5rem 1rem 0.5rem 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-ink);
+  white-space: nowrap;
+}
+.ledger td {
+  padding: 0.75rem 1rem 0.75rem 0;
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: top;
+  font-variant-numeric: tabular-nums;
+}
+.ledger tbody tr:hover {
+  background: rgb(23 27 52 / 0.03);
+}
+.ledger th:last-child,
+.ledger td:last-child {
+  padding-right: 0;
 }

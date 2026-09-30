@@ -44,7 +44,7 @@ export default function UserFirebasePage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
         <div>
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
             <Flame className="h-5 w-5 text-amber-500" />
@@ -108,7 +108,7 @@ export default function UserFirebasePage() {
 
           <button
             type="submit"
-            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer"
+            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs transition-all cursor-pointer"
           >
             Save Firebase Config
           </button>

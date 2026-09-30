@@ -79,11 +79,11 @@ export default function AdminOrganizationsPage() {
       )}
 
       {/* Orgs Grid */}
-      <div className="bg-white rounded-lg border border-line shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-line overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="ledger w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-paper border-b border-line text-muted font-bold uppercase text-[10px] tracking-wider">
+              <tr className="bg-paper border-b border-line text-muted font-bold text-[10px]">
                 <th className="py-3.5 px-5">Organization</th>
                 <th className="py-3.5 px-5">Plan Tier</th>
                 <th className="py-3.5 px-5">Wallet Balance</th>
@@ -147,7 +147,7 @@ export default function AdminOrganizationsPage() {
                     <td className="py-4 px-5 text-right">
                       <button
                         onClick={() => setSelectedOrg(org)}
-                        className="px-3 py-1.5 bg-console hover:bg-console-line text-white rounded-lg text-xs font-bold transition-colors shadow-sm cursor-pointer inline-flex items-center gap-1.5"
+                        className="px-3 py-1.5 bg-console hover:bg-console-line text-white rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <CreditCard className="h-3 w-3" /> Adjust Balance
                       </button>
@@ -169,7 +169,7 @@ export default function AdminOrganizationsPage() {
                 Adjust Wallet Balance for {selectedOrg.name}
               </h2>
               <p className="text-xs text-muted mt-0.5">
-                Current Escrow Balance: <strong className="text-emerald-600">₹{Number(selectedOrg.walletBalance).toFixed(2)}</strong>
+                Current wallet balance: <strong className="text-emerald-600">₹{Number(selectedOrg.walletBalance).toFixed(2)}</strong>
               </p>
             </div>
 
@@ -214,7 +214,7 @@ export default function AdminOrganizationsPage() {
                 <button
                   type="submit"
                   disabled={adjustLoading}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {adjustLoading ? 'Processing...' : 'Confirm Balance Adjustment'}
                 </button>

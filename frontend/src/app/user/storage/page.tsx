@@ -55,7 +55,7 @@ export default function UserStoragePage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
         <div>
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
             <HardDrive className="h-5 w-5 text-accent" />
@@ -185,7 +185,7 @@ export default function UserStoragePage() {
 
           <button
             type="submit"
-            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer"
+            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs transition-all cursor-pointer"
           >
             Verify & Save {storageProvider === 'GOOGLE_CLOUD' ? 'GCS Bucket' : 'Storage'}
           </button>

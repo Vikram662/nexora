@@ -513,6 +513,25 @@ export async function fetchAdminBillingOverview() {
   return res.json();
 }
 
+export interface InvoiceRunResult {
+  created: number;
+  skipped: { organizationId: string; reason?: string }[];
+}
+
+export async function generateInvoices(month: string, organizationId?: string): Promise<InvoiceRunResult> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/invoices/generate`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify({ month, ...(organizationId ? { organizationId } : {}) }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(Array.isArray(json.message) ? json.message.join(', ') : json.message || 'Could not generate invoices');
+  }
+  return json.data;
+}
+
 export async function fetchAdminOffers() {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/offers`, {
     credentials: 'include',

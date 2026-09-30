@@ -38,7 +38,7 @@ export default function UserTeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-bold text-ink text-lg flex items-center gap-2">
@@ -84,7 +84,7 @@ export default function UserTeamPage() {
           </select>
           <button
             type="submit"
-            className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs cursor-pointer shadow-sm"
+            className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs cursor-pointer"
           >
             Invite Member
           </button>
@@ -92,7 +92,7 @@ export default function UserTeamPage() {
 
         {/* Members Table */}
         <div className="border border-line rounded-md overflow-hidden text-xs">
-          <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between uppercase text-[10px]">
+          <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between text-[10px]">
             <span>Member Email</span>
             <span>Role</span>
             <span>Status</span>

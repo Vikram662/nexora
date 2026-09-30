@@ -98,7 +98,7 @@ export function AuthSubmit({ loading, idle, busy }: { loading: boolean; idle: st
     <button
       type="submit"
       disabled={loading}
-      className="w-full py-2.5 rounded-md bg-ink text-paper text-sm font-medium hover:bg-accent transition-colors active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+      className="w-full py-2.5 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent-deep transition-colors active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
     >
       {loading ? busy : idle}
     </button>

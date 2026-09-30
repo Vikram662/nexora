@@ -73,9 +73,9 @@ export default function AdminTicketsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Tickets List */}
-        <div className="lg:col-span-5 bg-white rounded-lg border border-line shadow-sm overflow-hidden divide-y divide-line">
+        <div className="lg:col-span-5 bg-white rounded-lg border border-line overflow-hidden divide-y divide-line">
           <div className="p-4 bg-paper border-b border-line flex items-center justify-between">
-            <span className="text-xs font-bold text-ink uppercase tracking-wider">
+            <span className="text-xs font-bold text-ink">
               Inbox ({tickets.length})
             </span>
             <button
@@ -132,7 +132,7 @@ export default function AdminTicketsPage() {
         </div>
 
         {/* Ticket Chat & Reply Pane */}
-        <div className="lg:col-span-7 bg-white rounded-lg border border-line shadow-sm p-6 space-y-6">
+        <div className="lg:col-span-7 bg-white rounded-lg border border-line p-6 space-y-6">
           {selectedTicket ? (
             <>
               <div className="border-b border-line pb-4">
@@ -227,7 +227,7 @@ export default function AdminTicketsPage() {
                   <button
                     type="submit"
                     disabled={replyLoading || !replyMessage.trim()}
-                    className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                   >
                     <Send className="h-3.5 w-3.5" />
                     <span>{replyLoading ? 'Sending...' : 'Send Staff Response'}</span>

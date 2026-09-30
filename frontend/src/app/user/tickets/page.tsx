@@ -53,7 +53,7 @@ export default function UserTicketsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
         <div>
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
             <HelpCircle className="h-5 w-5 text-accent" />
@@ -130,7 +130,7 @@ export default function UserTicketsPage() {
 
           <button
             type="submit"
-            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer"
+            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs transition-all cursor-pointer"
           >
             Submit Ticket
           </button>
@@ -140,7 +140,7 @@ export default function UserTicketsPage() {
         <div className="space-y-3">
           <div className="font-bold text-xs text-ink">Your Support Tickets</div>
           <div className="border border-line rounded-md overflow-hidden divide-y divide-line text-xs">
-            <div className="p-3 bg-paper font-semibold text-muted flex justify-between uppercase text-[10px]">
+            <div className="p-3 bg-paper font-semibold text-muted flex justify-between text-[10px]">
               <span>Ticket # / Subject</span>
               <span>Category</span>
               <span>Status</span>

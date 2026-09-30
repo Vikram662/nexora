@@ -115,7 +115,7 @@ export default function UserKycPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-bold text-ink text-lg flex items-center gap-2">
@@ -151,7 +151,7 @@ export default function UserKycPage() {
 
         {/* SUCCESS CERTIFICATE BANNER (Shown when VERIFIED) */}
         {kycStatus === 'VERIFIED' ? (
-          <div className="p-6 rounded-lg bg-console from-emerald-500/10 to-white border border-emerald-300 space-y-6 shadow-sm">
+          <div className="p-6 rounded-lg bg-console from-emerald-500/10 to-white border border-emerald-300 space-y-6">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-emerald-600/20">
@@ -162,7 +162,7 @@ export default function UserKycPage() {
                     <span className="font-semibold text-base text-ink">
                       DigiLocker Certified Organization
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1">
                       <Lock className="h-3 w-3" /> Permanently Locked
                     </span>
                   </div>
@@ -186,19 +186,19 @@ export default function UserKycPage() {
             {/* Verified Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="p-3.5 bg-white rounded-md border border-line shadow-2xs">
-                <span className="text-slate-400 block text-[10px] font-semibold uppercase">Document Linked</span>
+                <span className="text-slate-400 block text-[10px] font-semibold">Document Linked</span>
                 <span className="font-bold text-ink mt-0.5 block">{kycDocType} Card</span>
               </div>
 
               <div className="p-3.5 bg-white rounded-md border border-line shadow-2xs">
-                <span className="text-slate-400 block text-[10px] font-semibold uppercase">Masked Identifier</span>
+                <span className="text-slate-400 block text-[10px] font-semibold">Masked Identifier</span>
                 <span className="font-mono font-bold text-ink mt-0.5 block">
                   {kycMaskedDoc || (kycDocNumber ? `${kycDocNumber.substring(0, 3)}••••${kycDocNumber.slice(-2)}` : 'ABC••••1F')}
                 </span>
               </div>
 
               <div className="p-3.5 bg-white rounded-md border border-line shadow-2xs">
-                <span className="text-slate-400 block text-[10px] font-semibold uppercase">Verification Channel</span>
+                <span className="text-slate-400 block text-[10px] font-semibold">Verification Channel</span>
                 <span className="font-bold text-emerald-700 mt-0.5 block flex items-center gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5" /> DigiLocker Aadhaar e-Sign
                 </span>
@@ -262,7 +262,7 @@ export default function UserKycPage() {
               {orgData?.billingProfile?.gstin ? (
                 <div className="p-3 bg-white rounded-lg border border-line flex items-center justify-between font-mono">
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-sans font-semibold uppercase">Linked GSTIN</span>
+                    <span className="text-[10px] text-slate-400 block font-sans font-semibold">Linked GSTIN</span>
                     <span className="text-ink font-bold">{orgData.billingProfile.gstin}</span>
                   </div>
                   <span className="text-[11px] text-emerald-700 font-sans font-semibold">18% ITC Eligible</span>
@@ -280,7 +280,7 @@ export default function UserKycPage() {
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs cursor-pointer shadow-sm transition-all"
+                    className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs cursor-pointer transition-all"
                   >
                     Link GSTIN
                   </button>
@@ -341,7 +341,7 @@ export default function UserKycPage() {
                 }
                 value={kycDocNumber}
                 onChange={(e) => setKycDocNumber(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 bg-white border border-line rounded-md font-mono uppercase text-ink"
+                className="w-full px-3 py-2 bg-white border border-line rounded-md font-mono text-ink"
                 required
               />
             </div>
@@ -357,7 +357,7 @@ export default function UserKycPage() {
 
             <button
               type="submit"
-              className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs transition-all cursor-pointer flex items-center gap-1.5"
             >
               <BadgeCheck className="h-4 w-4" />
               Request DigiLocker Verification

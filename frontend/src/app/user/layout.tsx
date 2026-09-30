@@ -45,28 +45,34 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrganizationData()
       .then((data) => setOrgData(data))
       .catch((err) => console.error('Failed to load org data', err));
+
+    fetch(`${getApiBaseUrl()}/v1/auth/me`, { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => setEmail(json?.data?.email ?? null))
+      .catch(() => setEmail(null));
   }, []);
 
   const getPageTitle = () => {
-    if (pathname === '/user') return 'Platform Overview & Live Metrics';
-    if (pathname.includes('/projects')) return 'Projects & API Key Management';
-    if (pathname.includes('/sandbox')) return 'Live Video Call Testing Sandbox';
-    if (pathname.includes('/storage')) return 'BYOS Recording Storage (AWS S3 / R2 / Google Cloud)';
-    if (pathname.includes('/firebase')) return 'BYOF Firebase Config (Push Call Signaling)';
-    if (pathname.includes('/webhooks')) return 'Outbound Webhooks Manager';
-    if (pathname.includes('/usage')) return 'Real-time Session Logs & Recordings';
-    if (pathname.includes('/kyc')) return 'Business KYC & Identity Verification';
-    if (pathname.includes('/team')) return 'Team Members & RBAC Permissions';
-    if (pathname.includes('/audit')) return 'Zero-Data Storage Proof & Decrypt Audit Trail';
-    if (pathname.includes('/tickets')) return 'Developer Support & Technical Helpdesk';
-    if (pathname.includes('/notifications')) return 'Email & SMS Notification Routing';
-    if (pathname.includes('/billing')) return 'Prepaid Wallet & GST Tax Profile';
-    return 'Nexora RTC Developer Console';
+    if (pathname === '/user') return 'Overview';
+    if (pathname.includes('/projects')) return 'Projects and API keys';
+    if (pathname.includes('/sandbox')) return 'Sandbox';
+    if (pathname.includes('/storage')) return 'Recording storage';
+    if (pathname.includes('/firebase')) return 'Firebase push';
+    if (pathname.includes('/webhooks')) return 'Webhooks';
+    if (pathname.includes('/usage')) return 'Sessions and recordings';
+    if (pathname.includes('/kyc')) return 'Business verification (KYC)';
+    if (pathname.includes('/team')) return 'Team and roles';
+    if (pathname.includes('/audit')) return 'Audit trail';
+    if (pathname.includes('/tickets')) return 'Support';
+    if (pathname.includes('/notifications')) return 'Notifications';
+    if (pathname.includes('/billing')) return 'Wallet and GST';
+    return 'Console';
   };
 
   return (
@@ -80,19 +86,19 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
               <span className="font-display text-xl font-semibold tracking-tight">
                 Nexora<span className="text-accent">.</span>rtc
               </span>
-              <div className="font-mono text-[10px] text-muted uppercase tracking-[0.14em]">Console</div>
+              <div className="font-mono text-[10px] text-muted">Console</div>
             </Link>
           </div>
 
           {/* Org & Wallet Badge */}
           <div className="p-4 mx-4 mt-4 rounded-md bg-paper border border-line space-y-1 shrink-0">
-            <div className="text-[11px] font-semibold text-muted uppercase tracking-wider">Organization</div>
+            <div className="text-[11px] font-semibold text-muted">Organization</div>
             <div className="text-sm font-bold text-ink truncate">
               {orgData?.name ?? '—'}
             </div>
-            <div className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 pt-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-              {orgData ? `₹${Number(orgData.walletBalance).toFixed(2)} balance` : 'Balance unavailable'}
+            <div className="pt-1 text-xs text-muted">Wallet balance</div>
+            <div className="font-mono tabular text-lg font-semibold text-ink">
+              {orgData ? `₹${Number(orgData.walletBalance).toFixed(2)}` : '—'}
             </div>
           </div>
 
@@ -108,10 +114,11 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md text-xs font-semibold transition-all ${
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`w-full flex items-center gap-3 pl-3 pr-3.5 py-2.5 border-l-2 text-xs font-semibold transition-colors ${
                     isActive
-                      ? 'bg-accent/10 text-accent-deep shadow-sm'
-                      : 'text-muted hover:bg-paper hover:text-ink'
+                      ? 'border-accent bg-paper text-ink'
+                      : 'border-transparent text-muted hover:bg-paper hover:text-ink'
                   }`}
                 >
                   <Icon className={`h-4 w-4 ${item.badgeColor || ''}`} />
@@ -126,11 +133,11 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         <div className="p-4 border-t border-line flex items-center justify-between shrink-0">
           <Link href="/user/profile" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 rounded-full bg-accent/15 text-accent-deep font-bold text-xs flex items-center justify-center">
-              ND
+              {(email ?? '?').slice(0, 2).toUpperCase()}
             </div>
             <div className="text-left">
-              <div className="text-xs font-bold text-ink">developer@company.com</div>
-              <div className="text-[10px] text-accent font-medium hover:underline">Manage Profile →</div>
+              <div className="text-xs font-bold text-ink max-w-36 truncate">{email ?? 'Signed in'}</div>
+              <div className="text-[10px] text-accent font-medium hover:underline">Manage profile</div>
             </div>
           </Link>
           <button

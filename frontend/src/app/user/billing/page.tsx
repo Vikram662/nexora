@@ -148,14 +148,14 @@ export default function UserBillingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-line shadow-sm space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
         <div>
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-accent" />
-            Prepaid Wallet & Escrow Funds
+            Wallet
           </h2>
           <p className="text-xs text-muted mt-0.5">
-            Wallet deposits are held 100% in escrow (0% GST on recharge). Statutory 18% GST is invoiced & deducted at month-end based on actual metered WebRTC usage.
+            Top-ups are added to your balance in full. GST is added to each session&rsquo;s per-minute charge, and tax invoices are issued for each billing period.
           </p>
         </div>
 
@@ -166,31 +166,30 @@ export default function UserBillingPage() {
           </div>
         )}
 
-        {/* Current Balance Card */}
-        <div className="p-6 rounded-lg bg-console text-white space-y-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Available Wallet Escrow</span>
-              <div className="text-3xl font-semibold mt-1">₹{Number(orgData?.walletBalance || 500).toFixed(2)}</div>
-            </div>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Escrow Active
-            </span>
+        {/* Current balance */}
+        <dl className="grid sm:grid-cols-3 gap-x-8 gap-y-4 border-y border-ink py-4">
+          <div>
+            <dt className="text-xs text-muted">Available balance</dt>
+            <dd className="mt-1 font-mono tabular text-3xl font-semibold text-ink">
+              {orgData ? `₹${Number(orgData.walletBalance).toFixed(2)}` : '—'}
+            </dd>
           </div>
-
-          <div className="pt-2 border-t border-console-line/60 flex items-center justify-between text-xs text-slate-300">
-            <span>Tier: <strong className="text-white">{orgData?.planTier || 'STARTER'}</strong></span>
-            <span>Billing Email: <strong className="text-white">{orgData?.billingEmail}</strong></span>
+          <div>
+            <dt className="text-xs text-muted">Plan</dt>
+            <dd className="mt-1 text-sm font-semibold text-ink">{orgData?.planTier || 'STARTER'}</dd>
           </div>
-        </div>
+          <div>
+            <dt className="text-xs text-muted">Invoices go to</dt>
+            <dd className="mt-1 text-sm font-semibold text-ink break-all">{orgData?.billingEmail ?? '—'}</dd>
+          </div>
+        </dl>
 
         {/* Top-up Presets */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-ink">Select Instant Recharge Amount:</span>
+            <span className="font-bold text-xs text-ink">Add money</span>
             <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-              ✓ 100% Pure Balance Credit (No GST deducted on deposit)
+              Credited in full, no GST on top-ups
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
@@ -222,7 +221,7 @@ export default function UserBillingPage() {
             <button
               onClick={() => handleInitiateTopup()}
               disabled={topupLoading}
-              className="px-5 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-all cursor-pointer disabled:opacity-50"
             >
               {topupLoading ? 'Opening...' : 'Recharge via Razorpay'}
             </button>
@@ -233,7 +232,7 @@ export default function UserBillingPage() {
         <div className="space-y-3 pt-2">
           <span className="font-bold text-xs text-ink">Recent Wallet Transactions</span>
           <div className="border border-line rounded-md overflow-hidden text-xs">
-            <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between uppercase text-[10px]">
+            <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between text-[10px]">
               <span>Transaction Ref</span>
               <span>Type</span>
               <span>Amount</span>
@@ -270,7 +269,7 @@ export default function UserBillingPage() {
           </div>
 
           <div className="border border-line rounded-md overflow-hidden text-xs">
-            <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between uppercase text-[10px]">
+            <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between text-[10px]">
               <span>Invoice #</span>
               <span>Billing Cycle</span>
               <span>Amount</span>
@@ -287,25 +286,17 @@ export default function UserBillingPage() {
                     </span>
                     <span className="font-bold text-ink">₹{Number(inv.totalAmount).toFixed(2)}</span>
                     <button
-                      onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/invoices/${inv.id}/print`, '_blank')}
+                      onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/invoices/${inv.id}/print`, '_blank')}
                       className="px-2.5 py-1 bg-accent/10 hover:bg-accent/15 text-accent-deep rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-accent/30"
                     >
-                      <Download className="h-3 w-3" /> View / Print PDF
+                      <Download className="h-3 w-3" /> View or print
                     </button>
                   </div>
                 ))
               ) : (
-                <div className="p-3 flex justify-between items-center hover:bg-paper/50">
-                  <span className="font-mono font-bold text-accent-deep">NXRA-INV-2026-001</span>
-                  <span className="text-muted text-[11px]">Current Monthly Billing Period</span>
-                  <span className="font-bold text-ink">₹2,950.00</span>
-                  <button
-                    onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/invoices/latest/print`, '_blank')}
-                    className="px-2.5 py-1 bg-accent/10 hover:bg-accent/15 text-accent-deep rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-accent/30"
-                  >
-                    <Download className="h-3 w-3" /> View / Print PDF
-                  </button>
-                </div>
+                <p className="p-3 text-muted text-xs">
+                  No tax invoices yet. Invoices are issued after each billing month closes, for the sessions charged in that month.
+                </p>
               )}
             </div>
           </div>
@@ -350,7 +341,7 @@ export default function UserBillingPage() {
                 maxLength={15}
                 value={profileForm.gstin}
                 onChange={(e) => setProfileForm({ ...profileForm, gstin: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono uppercase"
+                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono"
                 placeholder="27ABCDE1234F1Z5"
               />
             </div>
@@ -362,7 +353,7 @@ export default function UserBillingPage() {
                 maxLength={10}
                 value={profileForm.panNumber}
                 onChange={(e) => setProfileForm({ ...profileForm, panNumber: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono uppercase"
+                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono"
                 placeholder="ABCDE1234F"
                 required
               />
@@ -458,7 +449,7 @@ export default function UserBillingPage() {
             </div>
 
             <div className="text-center py-2 space-y-1">
-              <div className="text-xs text-muted uppercase tracking-wider font-semibold">Total Recharge Amount</div>
+              <div className="text-xs text-muted font-semibold">Total Recharge Amount</div>
               <div className="text-3xl font-semibold text-ink">₹{activePaymentOrder.amount}.00</div>
               <div className="text-[11px] text-slate-400">Nexora RTC PaaS Prepaid Topup</div>
             </div>
