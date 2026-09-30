@@ -51,14 +51,14 @@ model OtpVerification {
 }
 
 model Organization {
-  id                    String                  @id @default(uuid())
+  id                    String   @id @default(uuid())
   name                  String
-  walletBalance         Decimal                 @default(0.00) @db.Decimal(12, 4)
-  planTier              PlanTier                @default(STARTER)
+  walletBalance         Decimal  @default(0.00) @db.Decimal(12, 4)
+  planTier              PlanTier @default(STARTER)
   billingEmail          String
-  autoRechargeEnabled   Boolean                 @default(false)
-  autoRechargeThreshold Decimal?                @db.Decimal(12, 4)
-  autoRechargeAmount    Decimal?                @db.Decimal(12, 4)
+  autoRechargeEnabled   Boolean  @default(false)
+  autoRechargeThreshold Decimal? @db.Decimal(12, 4)
+  autoRechargeAmount    Decimal? @db.Decimal(12, 4)
   razorpayMandateId     String?
 
   kycVerification        KycVerification?
@@ -71,8 +71,8 @@ model Organization {
   transactions           Transaction[]
   invoices               Invoice[]
   tickets                SupportTicket[]
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
 }
 
 enum OrgRole {
@@ -163,9 +163,9 @@ enum KycDocumentType {
 }
 
 model KycVerification {
-  id                      String          @id @default(uuid())
-  organizationId          String          @unique
-  organization            Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   documentType            KycDocumentType
   encryptedDocumentNumber String          @db.Text
@@ -173,17 +173,17 @@ model KycVerification {
   encryptionAuthTag       String
   keyVersion              Int             @default(1)
 
-  documentFileKey         String?
-  verifiedViaDigiLocker   Boolean         @default(false)
+  documentFileKey       String?
+  verifiedViaDigiLocker Boolean @default(false)
 
-  status                  KycStatus       @default(NOT_STARTED)
-  reviewedByStaffId       String?
-  reviewedAt              DateTime?
-  rejectionReason         String?
+  status            KycStatus @default(NOT_STARTED)
+  reviewedByStaffId String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
 
-  submittedAt             DateTime?
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([status])
 }
@@ -191,9 +191,9 @@ model KycVerification {
 // ---------- Billing Profile & GST Invoices ----------
 
 model BillingProfile {
-  id                     String       @id @default(uuid())
-  organizationId         String       @unique
-  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   legalBusinessName      String
   gstin                  String?
@@ -204,64 +204,78 @@ model BillingProfile {
   placeOfSupplyStateCode String
   pincode                String
   invoiceEmail           String
-  gstinSourcedFromKyc    Boolean      @default(false)
+  gstinSourcedFromKyc    Boolean @default(false)
 
-  createdAt              DateTime     @default(now())
-  updatedAt              DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Invoice {
-  id              String       @id @default(uuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invoiceNumber   String       @unique
-  periodStart     DateTime
-  periodEnd       DateTime
-  subtotal        Decimal      @db.Decimal(12, 4)
-  cgstAmount      Decimal      @default(0.00) @db.Decimal(12, 4)
-  sgstAmount      Decimal      @default(0.00) @db.Decimal(12, 4)
-  igstAmount      Decimal      @default(0.00) @db.Decimal(12, 4)
-  totalAmount     Decimal      @db.Decimal(12, 4)
-  sacCode         String       @default("998314")
-  pdfObjectKey    String?
-  billingSnapshot Json
-  createdAt       DateTime     @default(now())
+  id                     String       @id @default(uuid())
+  organizationId         String
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoiceNumber          String       @unique
+  periodStart            DateTime
+  periodEnd              DateTime
+  subtotal               Decimal      @db.Decimal(12, 4)
+  cgstAmount             Decimal      @default(0.00) @db.Decimal(12, 4)
+  sgstAmount             Decimal      @default(0.00) @db.Decimal(12, 4)
+  igstAmount             Decimal      @default(0.00) @db.Decimal(12, 4)
+  totalAmount            Decimal      @db.Decimal(12, 4)
+  sacCode                String       @default("998314")
+  pdfObjectKey           String?
+  billingSnapshot        Json
+  // Rule 46 CGST Rules: consecutive serial number, unique per financial year.
+  financialYear          String?
+  serial                 Int?
+  placeOfSupplyStateCode String?
+  createdAt              DateTime     @default(now())
+  usageLogs              UsageLog[]
 
+  @@unique([organizationId, periodStart, periodEnd])
+  @@unique([financialYear, serial])
   @@index([organizationId, periodStart])
+}
+
+// Gap-free invoice numbering: one counter row per financial year, incremented in the same
+// transaction that creates the invoice.
+model InvoiceCounter {
+  financialYear String @id
+  lastSerial    Int    @default(0)
 }
 
 // ---------- Projects & Keys ----------
 
 model Project {
-  id                      String              @id @default(uuid())
-  organizationId          String
-  organization            Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name                    String
-  environment             Environment         @default(PRODUCTION)
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  environment    Environment  @default(PRODUCTION)
 
-  apiKeyPrefix            String              @unique
+  apiKeyPrefix            String    @unique
   apiSecretHash           String
-  apiSecretRolledAt       DateTime            @default(now())
+  apiSecretRolledAt       DateTime  @default(now())
   previousSecretHash      String?
   previousSecretExpiresAt DateTime?
 
-  ipAllowlist             Json?
-  maxConcurrentRooms      Int                 @default(50)
-  maxTokenTtlSeconds      Int                 @default(600)
-  isSuspended             Boolean             @default(false)
+  ipAllowlist        Json?
+  maxConcurrentRooms Int     @default(50)
+  maxTokenTtlSeconds Int     @default(600)
+  isSuspended        Boolean @default(false)
 
-  storageConfigs          StorageConfig[]
-  firebaseConfig          FirebaseConfig?
-  webhookEndpoints        WebhookEndpoint[]
-  usageLogs               UsageLog[]
-  recordings              Recording[]
-  aiProviderConfigs       AiProviderConfig[]
-  aiAgentProfiles         AiAgentProfile[]
-  aiAgentSessions         AiAgentSession[]
-  broadcastSessions       BroadcastSession[]
+  storageConfigs    StorageConfig[]
+  firebaseConfig    FirebaseConfig?
+  webhookEndpoints  WebhookEndpoint[]
+  usageLogs         UsageLog[]
+  recordings        Recording[]
+  aiProviderConfigs AiProviderConfig[]
+  aiAgentProfiles   AiAgentProfile[]
+  aiAgentSessions   AiAgentSession[]
+  broadcastSessions BroadcastSession[]
 
-  createdAt               DateTime            @default(now())
-  updatedAt               DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([organizationId])
 }
@@ -280,28 +294,28 @@ enum StorageProvider {
 }
 
 model StorageConfig {
-  id                 String          @id @default(uuid())
-  projectId          String
-  project            Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  provider           StorageProvider
-  label              String
-  isDefault          Boolean         @default(true)
+  id        String          @id @default(uuid())
+  projectId String
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  provider  StorageProvider
+  label     String
+  isDefault Boolean         @default(true)
 
-  bucketName         String
-  region             String?
-  endpoint           String?
+  bucketName String
+  region     String?
+  endpoint   String?
 
-  encryptedAccessKey String          @db.Text
-  encryptedSecretKey String          @db.Text
+  encryptedAccessKey String @db.Text
+  encryptedSecretKey String @db.Text
   encryptionIv       String
   encryptionAuthTag  String
-  keyVersion         Int             @default(1)
+  keyVersion         Int    @default(1)
 
-  lastVerifiedAt     DateTime?
-  lastVerifyError    String?         @db.Text
+  lastVerifiedAt  DateTime?
+  lastVerifyError String?   @db.Text
 
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, label])
   @@index([projectId])
@@ -310,21 +324,21 @@ model StorageConfig {
 // ---------- BYOF ----------
 
 model FirebaseConfig {
-  id                          String   @id @default(uuid())
-  projectId                   String   @unique
-  project                     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   firebaseProjectId           String
-  encryptedServiceAccountJson String   @db.Text
+  encryptedServiceAccountJson String @db.Text
   encryptionIv                String
   encryptionAuthTag           String
-  keyVersion                  Int      @default(1)
+  keyVersion                  Int    @default(1)
 
-  lastVerifiedAt              DateTime?
-  lastVerifyError             String?  @db.Text
+  lastVerifiedAt  DateTime?
+  lastVerifyError String?   @db.Text
 
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ---------- BYOK: AI Voice Agent ----------
@@ -359,14 +373,14 @@ model AiProviderConfig {
   encryptionAuthTag String
   keyVersion        Int            @default(1)
 
-  modelName         String?
-  extraConfig       Json?
+  modelName   String?
+  extraConfig Json?
 
-  lastVerifiedAt    DateTime?
-  lastVerifyError   String?        @db.Text
+  lastVerifiedAt  DateTime?
+  lastVerifyError String?   @db.Text
 
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, providerType])
 }
@@ -400,7 +414,7 @@ model AiAgentSession {
   amountDeducted  Decimal?       @db.Decimal(12, 4)
   endReason       String?
 
-  createdAt       DateTime       @default(now())
+  createdAt DateTime @default(now())
 
   @@index([projectId, startedAt])
   @@index([roomName])
@@ -474,19 +488,22 @@ model UsageLog {
   ratePerMinute       Decimal   @db.Decimal(8, 4)
   amountDeducted      Decimal?  @db.Decimal(12, 4)
   livekitEgressId     String?
+  // Set once the usage is billed on a tax invoice; a billed row is never adjusted again.
+  invoiceId           String?
+  invoice             Invoice?  @relation(fields: [invoiceId], references: [id])
 
-  createdAt           DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([projectId, startedAt])
   @@index([roomName])
 }
 
 model Transaction {
-  id                    String            @id @default(uuid())
-  organizationId        String
-  organization          Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  type                  TransactionType
-  amount                Decimal           @db.Decimal(12, 4)
+  id             String          @id @default(uuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           TransactionType
+  amount         Decimal         @db.Decimal(12, 4)
 
   gatewayOrderId        String?
   gatewayPaymentId      String?           @unique
@@ -745,7 +762,7 @@ model TicketMessage {
   id        String        @id @default(uuid())
   ticketId  String
   ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  sender    String        // "developer:user@company.com" or "support:staff_agent"
+  sender    String // "developer:user@company.com" or "support:staff_agent"
   content   String        @db.Text
   createdAt DateTime      @default(now())
 

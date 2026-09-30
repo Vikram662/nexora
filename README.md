@@ -141,7 +141,7 @@ openssl rand -hex 32
 | `CORS_ORIGIN` | No | `http://localhost:3000` | Comma-separated browser origins allowed to call the API. |
 | `STAFF_OPS_ORG_ID` | No | `org_nexora_master_ops` | Organisation staff sessions are bound to. The seed creates it. |
 | `MFA_ISSUER_NAME` | No | `Nexora RTC` | Label in authenticator apps. |
-| `COMPANY_LEGAL_NAME` | No | | Shown in Admin Settings. |
+| `INVOICE_AUTO_GENERATE` | No | | `true` issues the previous month's invoices automatically. Otherwise use Admin, Billing, Tax Invoices. Needs the company GSTIN and address saved in Settings first. |
 | `COTURN_HOST` | No | `localhost:3478` | Shown read-only in Admin Settings. |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | For payments | `rzp_test_...` | Without them wallet top-ups fail. Point the Razorpay webhook at `POST /v1/portal/payments/webhook` with the same webhook secret. |
 | `EMAIL_PROVIDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Optional | | Notification email. |

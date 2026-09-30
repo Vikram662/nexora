@@ -64,7 +64,7 @@ export class BillingService {
    */
   async settleSession(projectId: string, roomName: string, identity: string, leftAt = new Date()): Promise<void> {
     const log = await this.prisma.usageLog.findFirst({
-      where: { projectId, roomName, participantIdentity: identity, endedAt: null },
+      where: { projectId, roomName, participantIdentity: identity, endedAt: null, invoiceId: null },
       orderBy: { startedAt: 'desc' },
       include: { project: { select: { organizationId: true } } },
     });

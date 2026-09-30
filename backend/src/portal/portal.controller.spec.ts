@@ -35,6 +35,7 @@ describe('PortalController Tenant Isolation & Redaction', () => {
       mockKycGateway as any,
       {} as any,
       mockPaymentService as any,
+      {} as any,
     );
   });
 

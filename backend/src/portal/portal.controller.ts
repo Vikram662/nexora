@@ -12,6 +12,8 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import * as crypto from 'crypto';
@@ -21,6 +23,9 @@ import { KycGatewayService } from './kyc-gateway.service.js';
 import { SiteSettingsService } from '../settings/site-settings.service.js';
 import { UpdateSiteSettingsDto } from '../settings/site-settings.dto.js';
 import { PaymentService } from './payment.service.js';
+import { InvoiceService } from '../invoicing/invoice.service.js';
+import { isRenderableSnapshot, renderInvoiceHtml } from '../invoicing/invoice.render.js';
+import { monthRange } from '../invoicing/invoice-math.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard, Roles, RequireStaff } from '../auth/roles.guard.js';
 import {
@@ -40,6 +45,7 @@ import {
   AdjustBalanceDto,
   ReplyTicketDto,
   CreateOfferDto,
+  GenerateInvoicesDto,
 } from './portal.dto.js';
 
 @Controller('v1/portal')
@@ -50,6 +56,7 @@ export class PortalController {
     private readonly kycGateway: KycGatewayService,
     private readonly siteSettings: SiteSettingsService,
     private readonly paymentService: PaymentService,
+    private readonly invoicing: InvoiceService,
   ) {}
 
   // Helper: Sanitize Project object so apiSecretHash is never leaked to frontend
@@ -1029,89 +1036,67 @@ export class PortalController {
     };
   }
 
+  // Customers read their own invoices; staff can read any.
+  private async sendInvoice(where: { id: string; organizationId?: string }, res: Response) {
+    const invoice = await this.prisma.invoice.findFirst({ where });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+    if (!isRenderableSnapshot(invoice.billingSnapshot)) {
+      throw new UnprocessableEntityException('This invoice has no printable record. It predates tax invoice generation.');
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+    return res.send(renderInvoiceHtml(invoice, invoice.billingSnapshot));
+  }
+
+  @Get('invoices/:id/print')
+  @UseGuards(JwtAuthGuard)
+  async getInvoicePrintable(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
+    let invoiceId = id;
+    if (id === 'latest') {
+      const latest = await this.prisma.invoice.findFirst({
+        where: { organizationId: req.user!.organizationId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+      if (!latest) throw new NotFoundException('You have no invoices yet');
+      invoiceId = latest.id;
+    }
+    return this.sendInvoice({ id: invoiceId, organizationId: req.user!.organizationId }, res);
+  }
+
   @Get('admin/invoices/:id/print')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireStaff()
   async getAdminInvoicePrintable(@Param('id') id: string, @Res() res: Response) {
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id },
-      include: { organization: { include: { billingProfile: true } } },
+    return this.sendInvoice({ id }, res);
+  }
+
+  // Issues GST tax invoices for a closed billing month. Safe to repeat: existing invoices are never duplicated.
+  @Post('admin/invoices/generate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff()
+  async generateInvoices(@Body() body: GenerateInvoicesDto, @Req() req: Request) {
+    const [year, month] = body.month.split('-').map(Number);
+    const { start, end } = monthRange(year, month - 1);
+
+    const result = body.organizationId
+      ? await this.invoicing.generateForOrganization(body.organizationId, start, end).then((o) => ({
+          created: o.status === 'created' ? 1 : 0,
+          skipped: o.status === 'skipped' ? [o] : [],
+          outcomes: [o],
+        }))
+      : await this.invoicing.generateForPeriod(start, end);
+
+    await this.prisma.adminActionLog.create({
+      data: {
+        staffUserId: req.user!.userId,
+        action: 'GENERATE_INVOICES',
+        targetType: 'Invoice',
+        targetId: `${body.month}${body.organizationId ? `:${body.organizationId}` : ''}`,
+        ipAddress: req.ip,
+      },
     });
-
-    if (!invoice) throw new BadRequestException('Invoice not found');
-
-    const orgName = invoice.organization.name;
-    const invoiceNum = invoice.invoiceNumber;
-    const period = `${new Date(invoice.periodStart).toLocaleDateString()} to ${new Date(invoice.periodEnd).toLocaleDateString()}`;
-    const subtotal = Number(invoice.subtotal);
-    const cgst = Number(invoice.cgstAmount);
-    const sgst = Number(invoice.sgstAmount);
-    const total = Number(invoice.totalAmount);
-    const bp = invoice.organization.billingProfile;
-
-    const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>GST Tax Invoice - ${invoiceNum}</title>
-      <style>
-        body { font-family: sans-serif; margin: 0; padding: 30px; color: #1e293b; background: #f8fafc; }
-        .invoice-card { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0; }
-        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 24px; }
-        .company-logo { font-size: 24px; font-weight: 900; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #f1f5f9; padding: 12px; text-align: left; }
-        td { padding: 14px 12px; border-bottom: 1px solid #f1f5f9; }
-        .totals { margin-top: 25px; margin-left: auto; width: 320px; }
-        .totals-row { display: flex; justify-content: space-between; padding: 8px 0; }
-        .total-final { font-size: 16px; font-weight: 900; border-top: 2px solid #e2e8f0; padding-top: 10px; }
-      </style>
-    </head>
-    <body>
-      <div class="invoice-card">
-        <div class="header">
-          <div>
-            <div class="company-logo">Nexora RTC</div>
-            <div>Nexora Cloud Infrastructure Pvt Ltd</div>
-          </div>
-          <div style="text-align: right;">
-            <div>TAX INVOICE</div>
-            <div>${invoiceNum}</div>
-          </div>
-        </div>
-        <div class="grid-2">
-          <div>
-            <strong>Billed To:</strong><br>
-            ${orgName}<br>
-            GSTIN: ${bp?.gstin || 'Unregistered'}
-          </div>
-          <div style="text-align: right;">
-            <strong>Period:</strong> ${period}
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr><th>Description</th><th>SAC</th><th>Amount</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Nexora WebRTC SFU Services</td><td>998314</td><td>₹${subtotal.toFixed(2)}</td></tr>
-          </tbody>
-        </table>
-        <div class="totals">
-          <div class="totals-row"><span>Subtotal:</span><span>₹${subtotal.toFixed(2)}</span></div>
-          <div class="totals-row"><span>CGST:</span><span>₹${cgst.toFixed(2)}</span></div>
-          <div class="totals-row"><span>SGST:</span><span>₹${sgst.toFixed(2)}</span></div>
-          <div class="totals-row total-final"><span>Total:</span><span>₹${total.toFixed(2)}</span></div>
-        </div>
-      </div>
-    </body>
-    </html>
-    `;
-
-    res.setHeader('Content-Type', 'text/html');
-    return res.send(html);
+    return { status: 'success', data: result };
   }
 
   // Admin Settings: Return SAFE configuration without raw secrets or SMTP passwords
@@ -1130,7 +1115,7 @@ export class PortalController {
         plans,
         rates,
 
-        companyLegalName: process.env.COMPANY_LEGAL_NAME || '',
+        companyLegalName: billing.supplierLegalName || contact.companyName || '',
         livekitHost: process.env.LIVEKIT_URL || '',
         coturnHost: process.env.COTURN_HOST || '',
         mfaEnforcedForStaff: true,

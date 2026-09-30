@@ -111,6 +111,29 @@ export class BillingSettingsDto {
   @Matches(/^\d{4,8}$/, { message: 'sacCode must be 4-8 digits' })
   @IsOptional()
   sacCode?: string;
+
+  // Supplier identity printed on tax invoices. Empty means not set yet.
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
+  @IsString()
+  @MaxLength(120)
+  @IsOptional()
+  supplierLegalName?: string;
+
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
+  @Matches(/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, { message: 'supplierGstin must be a valid 15-character GSTIN' })
+  @IsOptional()
+  supplierGstin?: string;
+
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
+  @Matches(/^\d{2}$/, { message: 'supplierStateCode must be a 2-digit GST state code' })
+  @IsOptional()
+  supplierStateCode?: string;
+
+  @ValidateIf((_: any, v: any) => v !== '' && v !== undefined)
+  @IsString()
+  @MaxLength(300)
+  @IsOptional()
+  supplierAddress?: string;
 }
 
 export class PlanDisplayDto {

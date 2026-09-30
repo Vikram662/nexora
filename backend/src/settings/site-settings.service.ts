@@ -35,6 +35,11 @@ export interface SocialLinks {
 export interface BillingSettings {
   gstPercent: number;
   sacCode: string;
+  // Who issues the tax invoices. Managed in Admin Settings; blank until an admin fills it in.
+  supplierLegalName: string;
+  supplierGstin: string;
+  supplierStateCode: string;
+  supplierAddress: string;
 }
 
 export type PlanDisplay = Omit<PlanDisplayDto, never>;
@@ -59,7 +64,14 @@ const KEYS = { contact: 'contact', brand: 'brand', social: 'social', billing: 'b
 export const DEFAULT_CONTACT: ContactSettings = { companyName: '', email: '', phone: '', whatsapp: '', address: '', supportHours: '' };
 export const DEFAULT_BRAND: BrandSettings = { siteName: 'Nexora', tagline: '', logoUrl: '', announcement: '' };
 export const DEFAULT_SOCIAL: SocialLinks = { linkedin: '', twitter: '', github: '', youtube: '' };
-export const DEFAULT_BILLING: BillingSettings = { gstPercent: 18, sacCode: '998314' };
+export const DEFAULT_BILLING: BillingSettings = {
+  gstPercent: 18,
+  sacCode: '998314',
+  supplierLegalName: '',
+  supplierGstin: '',
+  supplierStateCode: '',
+  supplierAddress: '',
+};
 export const DEFAULT_PLANS: PlanDisplay[] = [
   { tier: 'STARTER', name: 'Starter', platformFee: '₹0 / month', maxRooms: '10', maxParticipants: '12', includes: 'S3, R2 or GCS recording export' },
   { tier: 'GROWTH', name: 'Growth', platformFee: '₹4,999 / month', maxRooms: '100', maxParticipants: '50', includes: 'Broadcast rooms, priority TURN' },

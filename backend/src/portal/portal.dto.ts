@@ -253,3 +253,14 @@ export class CreateOfferDto {
   @IsOptional()
   validDays?: number;
 }
+
+export class GenerateInvoicesDto {
+  // Billing month as YYYY-MM, e.g. 2026-08.
+  @IsString()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'month must look like 2026-08' })
+  month!: string;
+
+  @IsString()
+  @IsOptional()
+  organizationId?: string;
+}
