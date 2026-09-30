@@ -144,7 +144,9 @@ openssl rand -hex 32
 | `INVOICE_AUTO_GENERATE` | No | | `true` issues the previous month's invoices automatically. Otherwise use Admin, Billing, Tax Invoices. Needs the company GSTIN and address saved in Settings first. |
 | `COTURN_HOST` | No | `localhost:3478` | Shown read-only in Admin Settings. |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | For payments | `rzp_test_...` | Without them wallet top-ups fail. Point the Razorpay webhook at `POST /v1/portal/payments/webhook` with the same webhook secret. |
-| `EMAIL_PROVIDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Optional | | Notification email. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | For email | | SMTP server used to send notification emails: tax invoices, credit notes, payment receipts, low balance and KYC results. Until `SMTP_HOST` and `EMAIL_FROM` are set, emails wait in the queue. |
+| `APP_URL` | No | | Public web app URL for links in emails. |
+| `NOTIFICATIONS_AUTO_SEND` | No | `true` | `false` stops the 30-second background sender. |
 | `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER_ID` | Optional | | Notification SMS. |
 | `KYC_PROVIDER`, `KYC_ENV`, `KYC_API_TOKEN` | Optional | `MOCK`, `SANDBOX` | `MOCK` only checks document format. Use `SUREPASS` with a token for real verification. |
 | `SEED_STAFF_PASSWORD` | Seed only | | Password for the seeded staff accounts. If unset the seed generates one and prints it once. |

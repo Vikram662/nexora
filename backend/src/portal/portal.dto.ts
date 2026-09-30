@@ -8,6 +8,7 @@ import {
   IsBoolean,
   Min,
   Matches,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateProjectDto {
@@ -252,6 +253,25 @@ export class CreateOfferDto {
   @IsNumber()
   @IsOptional()
   validDays?: number;
+}
+
+export class IssueCreditNoteDto {
+  @IsString()
+  @IsNotEmpty()
+  invoiceId!: string;
+
+  // GST-inclusive amount to credit, in rupees.
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  amount!: number;
+
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+
+  @IsBoolean()
+  @IsOptional()
+  creditToWallet?: boolean;
 }
 
 export class GenerateInvoicesDto {

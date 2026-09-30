@@ -36,6 +36,12 @@ export function formatInvoiceNumber(financialYear: string, serial: number): stri
   return `NXR/${compact}/${String(serial).padStart(6, '0')}`;
 }
 
+/** Credit notes run their own consecutive series, e.g. NXC/2627/000001. */
+export function formatCreditNoteNumber(financialYear: string, serial: number): string {
+  const compact = `${financialYear.slice(2, 4)}${financialYear.slice(5, 7)}`;
+  return `NXC/${compact}/${String(serial).padStart(6, '0')}`;
+}
+
 export function toPaise(rupees: number): number {
   return Math.round(rupees * 100);
 }

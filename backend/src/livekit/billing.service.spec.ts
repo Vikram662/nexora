@@ -83,7 +83,7 @@ describe('BillingService', () => {
       prisma.organization.findUnique.mockResolvedValue({ walletBalance: 20, billingEmail: 'a@b.c', notificationPreference: null });
       await service.checkLowBalance('org_1');
       expect(prisma.notificationLog.create).toHaveBeenCalledWith({
-        data: { organizationId: 'org_1', type: 'LOW_BALANCE', channel: 'EMAIL', destination: 'a@b.c', status: 'QUEUED' },
+        data: { organizationId: 'org_1', type: 'LOW_BALANCE', channel: 'EMAIL', destination: 'a@b.c', status: 'QUEUED', payload: { balance: 20, threshold: 100 } },
       });
     });
 

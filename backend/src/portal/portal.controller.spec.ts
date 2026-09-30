@@ -36,6 +36,8 @@ describe('PortalController Tenant Isolation & Redaction', () => {
       {} as any,
       mockPaymentService as any,
       {} as any,
+      {} as any,
+      {} as any,
     );
   });
 

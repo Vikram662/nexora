@@ -24,8 +24,11 @@ import { SiteSettingsService } from '../settings/site-settings.service.js';
 import { UpdateSiteSettingsDto } from '../settings/site-settings.dto.js';
 import { PaymentService } from './payment.service.js';
 import { InvoiceService } from '../invoicing/invoice.service.js';
+import { CreditNoteService } from '../invoicing/credit-note.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { isRenderableCreditNote, renderCreditNoteHtml } from '../invoicing/credit-note.render.js';
 import { isRenderableSnapshot, renderInvoiceHtml } from '../invoicing/invoice.render.js';
-import { monthRange } from '../invoicing/invoice-math.js';
+import { financialYearOf, monthRange } from '../invoicing/invoice-math.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard, Roles, RequireStaff } from '../auth/roles.guard.js';
 import {
@@ -46,6 +49,7 @@ import {
   ReplyTicketDto,
   CreateOfferDto,
   GenerateInvoicesDto,
+  IssueCreditNoteDto,
 } from './portal.dto.js';
 
 @Controller('v1/portal')
@@ -57,6 +61,8 @@ export class PortalController {
     private readonly siteSettings: SiteSettingsService,
     private readonly paymentService: PaymentService,
     private readonly invoicing: InvoiceService,
+    private readonly creditNotes: CreditNoteService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // Helper: Sanitize Project object so apiSecretHash is never leaked to frontend
@@ -90,6 +96,11 @@ export class PortalController {
         invoices: {
           take: 10,
           orderBy: { createdAt: 'desc' },
+        },
+        creditNotes: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          include: { invoice: { select: { invoiceNumber: true } } },
         },
         transactions: {
           take: 10,
@@ -862,6 +873,12 @@ export class PortalController {
       },
     });
 
+    await this.notifications.queue(
+      kyc.organizationId,
+      body.action === 'APPROVE' ? 'KYC_APPROVED' : 'KYC_REJECTED',
+      { reason: updated.rejectionReason },
+    );
+
     return { status: 'success', data: updated };
   }
 
@@ -990,7 +1007,7 @@ export class PortalController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireStaff()
   async getAdminBillingOverview() {
-    const [organizations, transactions, invoices, usageLogs] = await Promise.all([
+    const [organizations, transactions, invoices, creditNotes, usageLogs] = await Promise.all([
       this.prisma.organization.findMany({
         select: { id: true, name: true, walletBalance: true, planTier: true, billingEmail: true, createdAt: true },
       }),
@@ -1003,6 +1020,11 @@ export class PortalController {
         orderBy: { createdAt: 'desc' },
         take: 30,
         include: { organization: { select: { id: true, name: true } } },
+      }),
+      this.prisma.creditNote.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+        include: { organization: { select: { id: true, name: true } }, invoice: { select: { invoiceNumber: true } } },
       }),
       this.prisma.usageLog.findMany({
         orderBy: { startedAt: 'desc' },
@@ -1026,11 +1048,13 @@ export class PortalController {
           totalTopups,
           totalUsageDeductions,
           totalInvoiced,
+          totalCreditNotes: creditNotes.reduce((sum, n) => sum + Number(n.totalAmount || 0), 0),
           totalCustWalletEscrow,
           activePayingTenants: organizations.length,
         },
         transactions,
         invoices,
+        creditNotes,
         organizations,
       },
     };
@@ -1099,6 +1123,65 @@ export class PortalController {
     return { status: 'success', data: result };
   }
 
+  // ---------- Credit notes (GST Section 34) ----------
+
+  private async sendCreditNote(where: { id: string; organizationId?: string }, res: Response) {
+    const note = await this.prisma.creditNote.findFirst({ where });
+    if (!note) throw new NotFoundException('Credit note not found');
+    if (!isRenderableCreditNote(note.snapshot)) {
+      throw new UnprocessableEntityException('This credit note has no printable record.');
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+    return res.send(renderCreditNoteHtml(note, note.snapshot));
+  }
+
+  @Get('credit-notes/:id/print')
+  @UseGuards(JwtAuthGuard)
+  async getCreditNotePrintable(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
+    return this.sendCreditNote({ id, organizationId: req.user!.organizationId }, res);
+  }
+
+  @Get('admin/credit-notes/:id/print')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff()
+  async getAdminCreditNotePrintable(@Param('id') id: string, @Res() res: Response) {
+    return this.sendCreditNote({ id }, res);
+  }
+
+  // Issues a credit note against a tax invoice and, by default, adds the amount back to the customer's wallet.
+  @Post('admin/credit-notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff()
+  async issueCreditNote(@Body() body: IssueCreditNoteDto, @Req() req: Request) {
+    const note = await this.creditNotes.issue({
+      invoiceId: body.invoiceId,
+      amount: body.amount,
+      reason: body.reason,
+      creditToWallet: body.creditToWallet,
+      issuedByStaffId: req.user!.userId,
+    });
+    await this.prisma.adminActionLog.create({
+      data: {
+        staffUserId: req.user!.userId,
+        action: 'ISSUE_CREDIT_NOTE',
+        targetType: 'CreditNote',
+        targetId: note.id,
+        reason: body.reason,
+        ipAddress: req.ip,
+      },
+    });
+    return { status: 'success', data: note };
+  }
+
+  // Sends any queued emails now instead of waiting for the next automatic run.
+  @Post('admin/notifications/process')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff()
+  async processNotifications() {
+    return { status: 'success', data: await this.notifications.processQueue() };
+  }
+
   // Admin Settings: Return SAFE configuration without raw secrets or SMTP passwords
   @Get('admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -1163,10 +1246,16 @@ export class PortalController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireStaff()
   async getGstr1Report() {
-    const invoices = await this.prisma.invoice.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: { organization: { include: { billingProfile: true } } },
-    });
+    const [invoices, creditNotes, billing] = await Promise.all([
+      this.prisma.invoice.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { organization: { include: { billingProfile: true } } },
+      }),
+      this.prisma.creditNote.findMany({ select: { taxableAmount: true, cgstAmount: true, sgstAmount: true, igstAmount: true } }),
+      this.siteSettings.getBilling(),
+    ]);
+    const creditTaxable = creditNotes.reduce((sum, n) => sum + Number(n.taxableAmount || 0), 0);
+    const creditTax = creditNotes.reduce((sum, n) => sum + Number(n.cgstAmount || 0) + Number(n.sgstAmount || 0) + Number(n.igstAmount || 0), 0);
 
     const b2bInvoices = invoices.filter((inv) => Boolean(inv.organization?.billingProfile?.gstin));
     const b2cInvoices = invoices.filter((inv) => !inv.organization?.billingProfile?.gstin);
@@ -1179,14 +1268,16 @@ export class PortalController {
     return {
       status: 'success',
       data: {
-        filingPeriod: 'FY 2025-26',
-        sacCode: '998314',
+        filingPeriod: `FY ${financialYearOf(new Date())}`,
+        sacCode: billing.sacCode,
         summary: {
           totalB2bCount: b2bInvoices.length,
           totalB2cCount: b2cInvoices.length,
-          totalTaxable,
-          totalTaxCollected,
-          totalGrossValue: totalTaxable + totalTaxCollected,
+          totalCreditNoteCount: creditNotes.length,
+          // Net of credit notes, as they are reported in GSTR-1.
+          totalTaxable: totalTaxable - creditTaxable,
+          totalTaxCollected: totalTaxCollected - creditTax,
+          totalGrossValue: totalTaxable - creditTaxable + (totalTaxCollected - creditTax),
         },
       },
     };

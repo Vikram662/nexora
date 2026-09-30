@@ -10,6 +10,7 @@ import {
   SiteSettingsService,
 } from '../src/settings/site-settings.service.js';
 import { InvoiceService } from '../src/invoicing/invoice.service.js';
+import { CreditNoteService } from '../src/invoicing/credit-note.service.js';
 import { monthRange } from '../src/invoicing/invoice-math.js';
 
 /**
@@ -339,6 +340,18 @@ async function seed() {
   const run = await invoicing.generateForPeriod(prev.start, prev.end, issueAt);
   console.log(`  ${run.created} invoice(s) created, ${run.skipped.length} skipped`);
 
+  // One partial credit note, so the credit note screens and printouts have data.
+  const firstInvoice = await prisma.invoice.findFirst({ where: { organizationId: org1.id }, orderBy: { createdAt: 'asc' } });
+  if (firstInvoice) {
+    await new CreditNoteService(prisma as never).issue({
+      invoiceId: firstInvoice.id,
+      amount: 2,
+      reason: 'Goodwill credit for a session that dropped early',
+      issuedByStaffId: staff.BILLING_OPS.id,
+      now: issueAt,
+    });
+  }
+
   // ---------- Notifications ----------
   console.log('Notifications, tickets and audit trails...');
   await prisma.notificationPreference.createMany({
@@ -354,7 +367,7 @@ async function seed() {
       { organizationId: org1.id, type: 'KYC_APPROVED', channel: 'EMAIL', destination: 'billing@acme.com', status: 'SENT', providerRef: 'msg_seed_2' },
       { organizationId: org1.id, type: 'INVOICE_GENERATED', channel: 'EMAIL', destination: 'finance@acme.com', status: 'SENT', providerRef: 'msg_seed_3' },
       { organizationId: org2.id, type: 'PAYMENT_RECEIVED', channel: 'EMAIL', destination: 'finance@telemedhealth.in', status: 'SENT', providerRef: 'msg_seed_4' },
-      { organizationId: org2.id, type: 'LOW_BALANCE', channel: 'EMAIL', destination: 'finance@telemedhealth.in', status: 'QUEUED' },
+      { organizationId: org2.id, type: 'LOW_BALANCE', channel: 'EMAIL', destination: 'finance@telemedhealth.in', status: 'QUEUED', payload: { balance: 3200.5, threshold: 5000 } },
       { organizationId: org3.id, type: 'KYC_REJECTED', channel: 'EMAIL', destination: 'founder@nexora.io', status: 'FAILED', errorReason: 'Mailbox unavailable' },
     ],
   });

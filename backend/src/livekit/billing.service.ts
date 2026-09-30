@@ -43,6 +43,7 @@ export class BillingService {
           channel: 'EMAIL',
           destination: org.billingEmail,
           status: 'QUEUED',
+          payload: { balance: Number(org.walletBalance), threshold },
         },
       });
     } catch (err) {

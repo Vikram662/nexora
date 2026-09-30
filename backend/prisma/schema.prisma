@@ -70,6 +70,7 @@ model Organization {
   projects               Project[]
   transactions           Transaction[]
   invoices               Invoice[]
+  creditNotes            CreditNote[]
   tickets                SupportTicket[]
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
@@ -132,6 +133,10 @@ model NotificationLog {
   channel        NotificationChannel
   destination    String
   status         NotificationStatus  @default(QUEUED)
+  // Template variables (amounts, record ids). The email is rendered from type + payload when it is sent.
+  payload        Json?
+  attempts       Int                 @default(0)
+  sentAt         DateTime?
   providerRef    String?
   errorReason    String?
   createdAt      DateTime            @default(now())
@@ -231,10 +236,37 @@ model Invoice {
   placeOfSupplyStateCode String?
   createdAt              DateTime     @default(now())
   usageLogs              UsageLog[]
+  creditNotes            CreditNote[]
 
   @@unique([organizationId, periodStart, periodEnd])
   @@unique([financialYear, serial])
   @@index([organizationId, periodStart])
+}
+
+// Section 34 CGST Act: issued against a tax invoice when the taxable value or tax is reduced (for example a
+// refund). It has its own consecutive numbering series and refers back to the original invoice.
+model CreditNote {
+  id               String       @id @default(uuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoiceId        String
+  invoice          Invoice      @relation(fields: [invoiceId], references: [id])
+  creditNoteNumber String       @unique
+  financialYear    String
+  serial           Int
+  reason           String       @db.Text
+  taxableAmount    Decimal      @db.Decimal(12, 4)
+  cgstAmount       Decimal      @default(0.00) @db.Decimal(12, 4)
+  sgstAmount       Decimal      @default(0.00) @db.Decimal(12, 4)
+  igstAmount       Decimal      @default(0.00) @db.Decimal(12, 4)
+  totalAmount      Decimal      @db.Decimal(12, 4)
+  snapshot         Json
+  issuedByStaffId  String?
+  createdAt        DateTime     @default(now())
+
+  @@unique([financialYear, serial])
+  @@index([organizationId, createdAt])
+  @@index([invoiceId])
 }
 
 // Gap-free invoice numbering: one counter row per financial year, incremented in the same

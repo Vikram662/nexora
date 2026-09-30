@@ -1,6 +1,7 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SiteSettingsService } from '../settings/site-settings.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import {
   GST_STATES,
   financialYearOf,
@@ -68,6 +69,7 @@ export class InvoiceService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly siteSettings: SiteSettingsService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   onModuleInit() {
@@ -164,7 +166,7 @@ export class InvoiceService implements OnModuleInit, OnModuleDestroy {
     }
     const intraState = recipientStateCode === supplier.stateCode;
 
-    return this.prisma.$transaction(async (tx) => {
+    const outcome = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.invoice.findUnique({
         where: { organizationId_periodStart_periodEnd: { organizationId, periodStart: start, periodEnd: end } },
         select: { id: true },
@@ -243,6 +245,11 @@ export class InvoiceService implements OnModuleInit, OnModuleDestroy {
 
       return { status: 'created', organizationId, invoiceId: invoice.id, invoiceNumber } as InvoiceOutcome;
     });
+
+    if (outcome.status === 'created') {
+      await this.notifications?.queue(organizationId, 'INVOICE_GENERATED', { invoiceId: outcome.invoiceId }, profile.invoiceEmail || undefined);
+    }
+    return outcome;
   }
 
   private usageFilter(start: Date, end: Date) {
