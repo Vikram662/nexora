@@ -7,7 +7,7 @@ export interface OutgoingEmail {
   subject: string;
   text: string;
   html: string;
-  attachments?: { filename: string; content: string; contentType?: string }[];
+  attachments?: { filename: string; content: string | Buffer; contentType?: string }[];
 }
 
 /** Thin SMTP wrapper. Settings come from the environment: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM. */

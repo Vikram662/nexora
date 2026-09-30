@@ -128,7 +128,7 @@ export class KycGatewayService {
   }
 
   // 3. Initiate DigiLocker Aadhaar Consent
-  async initiateDigilockerSession(docNumber: string): Promise<{ sessionUrl?: string; requiresOtp: boolean }> {
+  async initiateDigilockerSession(_docNumber: string): Promise<{ sessionUrl?: string; requiresOtp: boolean }> {
     if (this.kycEnv === 'SANDBOX') {
       return {
         requiresOtp: true,

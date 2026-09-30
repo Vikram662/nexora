@@ -27,6 +27,7 @@ import { InvoiceService } from '../invoicing/invoice.service.js';
 import { CreditNoteService } from '../invoicing/credit-note.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { isRenderableCreditNote, renderCreditNoteHtml } from '../invoicing/credit-note.render.js';
+import { renderCreditNotePdf, renderInvoicePdf } from '../invoicing/pdf.render.js';
 import { isRenderableSnapshot, renderInvoiceHtml } from '../invoicing/invoice.render.js';
 import { financialYearOf, monthRange } from '../invoicing/invoice-math.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
@@ -50,6 +51,7 @@ import {
   CreateOfferDto,
   GenerateInvoicesDto,
   IssueCreditNoteDto,
+  UpdateProfileDto,
 } from './portal.dto.js';
 
 @Controller('v1/portal')
@@ -68,7 +70,7 @@ export class PortalController {
   // Helper: Sanitize Project object so apiSecretHash is never leaked to frontend
   private sanitizeProject(project: any) {
     if (!project) return project;
-    const { apiSecretHash, previousSecretHash, ...safe } = project;
+    const { apiSecretHash: _secret, previousSecretHash: _previous, ...safe } = project;
     return safe;
   }
 
@@ -128,7 +130,7 @@ export class PortalController {
         } else if (decrypted) {
           maskedDoc = `${decrypted.substring(0, 1)}••••`;
         }
-      } catch (e) {
+      } catch {
         maskedDoc = 'VERIFIED';
       }
 
@@ -151,6 +153,38 @@ export class PortalController {
         kycVerification: kycData,
       },
     };
+  }
+
+  // The signed-in user's own profile. The phone number is where SMS alerts go for organization owners.
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  async getProfile(@Req() req: Request) {
+    const [user, org, membership] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: req.user!.userId }, select: { name: true, email: true, phone: true } }),
+      this.prisma.organization.findUnique({ where: { id: req.user!.organizationId }, select: { name: true } }),
+      this.prisma.orgMember.findFirst({ where: { userId: req.user!.userId, organizationId: req.user!.organizationId }, select: { role: true } }),
+    ]);
+    if (!user) throw new NotFoundException('User not found');
+    return { status: 'success', data: { ...user, role: membership?.role ?? req.user!.role, organizationName: org?.name ?? '' } };
+  }
+
+  @Post('profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(@Body() body: UpdateProfileDto, @Req() req: Request) {
+    const data: { name?: string; phone?: string | null } = {};
+    if (body.name !== undefined) data.name = body.name.trim();
+    if (body.phone !== undefined) data.phone = body.phone === '' ? null : body.phone;
+    try {
+      const user = await this.prisma.user.update({
+        where: { id: req.user!.userId },
+        data,
+        select: { name: true, email: true, phone: true },
+      });
+      return { status: 'success', data: user };
+    } catch (err: any) {
+      if (err?.code === 'P2002') throw new BadRequestException('This phone number is already used by another account.');
+      throw err;
+    }
   }
 
   // Best-effort audit trail: a failed audit write must never break the action being audited.
@@ -229,6 +263,11 @@ export class PortalController {
       },
     });
 
+    await this.notifications.queue(orgId, 'API_KEY_ROTATED', {
+      projectName: project.name,
+      graceWindowExpiresAt: graceWindowExpiry.toISOString(),
+      ip: req.ip,
+    });
     await this.audit(req, 'project.secret_rotated', 'project', projectId, {
       graceWindowExpiresAt: graceWindowExpiry.toISOString(),
     });
@@ -592,7 +631,11 @@ export class PortalController {
   @Get('audit-log')
   @UseGuards(JwtAuthGuard)
   async getAuditLog(@Req() req: Request) {
+    // Scoped to the caller's own organization: these rows name projects, actors and IP addresses.
+    const orgId = req.user!.organizationId;
+    const projects = await this.prisma.project.findMany({ where: { organizationId: orgId }, select: { id: true } });
     const logs = await this.prisma.credentialAccessLog.findMany({
+      where: { targetId: { in: [orgId, ...projects.map((p) => p.id)] } },
       take: 25,
       orderBy: { createdAt: 'desc' },
     });
@@ -832,7 +875,9 @@ export class PortalController {
           iv: sub.encryptionIv,
           authTag: sub.encryptionAuthTag,
         });
-      } catch (_) {}
+      } catch {
+        // best effort
+      }
 
       return {
         id: sub.id,
@@ -1072,6 +1117,41 @@ export class PortalController {
     return res.send(renderInvoiceHtml(invoice, invoice.billingSnapshot));
   }
 
+  private async sendInvoicePdf(where: { id: string; organizationId?: string }, res: Response) {
+    const invoice = await this.prisma.invoice.findFirst({ where });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+    if (!isRenderableSnapshot(invoice.billingSnapshot)) {
+      throw new UnprocessableEntityException('This invoice has no printable record. It predates tax invoice generation.');
+    }
+    const pdf = await renderInvoicePdf(invoice, invoice.billingSnapshot);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber.replace(/\//g, '-')}.pdf"`);
+    return res.send(pdf);
+  }
+
+  @Get('invoices/:id/pdf')
+  @UseGuards(JwtAuthGuard)
+  async getInvoicePdf(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
+    let invoiceId = id;
+    if (id === 'latest') {
+      const latest = await this.prisma.invoice.findFirst({
+        where: { organizationId: req.user!.organizationId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+      if (!latest) throw new NotFoundException('You have no invoices yet');
+      invoiceId = latest.id;
+    }
+    return this.sendInvoicePdf({ id: invoiceId, organizationId: req.user!.organizationId }, res);
+  }
+
+  @Get('admin/invoices/:id/pdf')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff()
+  async getAdminInvoicePdf(@Param('id') id: string, @Res() res: Response) {
+    return this.sendInvoicePdf({ id }, res);
+  }
+
   @Get('invoices/:id/print')
   @UseGuards(JwtAuthGuard)
   async getInvoicePrintable(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
@@ -1134,6 +1214,31 @@ export class PortalController {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
     return res.send(renderCreditNoteHtml(note, note.snapshot));
+  }
+
+  private async sendCreditNotePdf(where: { id: string; organizationId?: string }, res: Response) {
+    const note = await this.prisma.creditNote.findFirst({ where });
+    if (!note) throw new NotFoundException('Credit note not found');
+    if (!isRenderableCreditNote(note.snapshot)) {
+      throw new UnprocessableEntityException('This credit note has no printable record.');
+    }
+    const pdf = await renderCreditNotePdf(note, note.snapshot);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${note.creditNoteNumber.replace(/\//g, '-')}.pdf"`);
+    return res.send(pdf);
+  }
+
+  @Get('credit-notes/:id/pdf')
+  @UseGuards(JwtAuthGuard)
+  async getCreditNotePdf(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
+    return this.sendCreditNotePdf({ id, organizationId: req.user!.organizationId }, res);
+  }
+
+  @Get('admin/credit-notes/:id/pdf')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff()
+  async getAdminCreditNotePdf(@Param('id') id: string, @Res() res: Response) {
+    return this.sendCreditNotePdf({ id }, res);
   }
 
   @Get('credit-notes/:id/print')
@@ -1220,7 +1325,6 @@ export class PortalController {
         // SMS dispatch
         smsProvider: process.env.SMS_PROVIDER || '',
         smsApiKeySet: Boolean(process.env.SMS_API_KEY),
-        smsSenderId: process.env.SMS_SENDER_ID || '',
       },
     };
   }
@@ -1251,7 +1355,10 @@ export class PortalController {
         orderBy: { createdAt: 'desc' },
         include: { organization: { include: { billingProfile: true } } },
       }),
-      this.prisma.creditNote.findMany({ select: { taxableAmount: true, cgstAmount: true, sgstAmount: true, igstAmount: true } }),
+      this.prisma.creditNote.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { invoice: { select: { invoiceNumber: true } }, organization: { include: { billingProfile: true } } },
+      }),
       this.siteSettings.getBilling(),
     ]);
     const creditTaxable = creditNotes.reduce((sum, n) => sum + Number(n.taxableAmount || 0), 0);
@@ -1270,6 +1377,34 @@ export class PortalController {
       data: {
         filingPeriod: `FY ${financialYearOf(new Date())}`,
         sacCode: billing.sacCode,
+        // Registered buyers (B2B), one row per tax invoice.
+        b2b: b2bInvoices.map((inv) => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          customerName: inv.organization?.billingProfile?.legalBusinessName ?? inv.organization?.name,
+          customerGstin: inv.organization?.billingProfile?.gstin,
+          placeOfSupply: inv.placeOfSupplyStateCode,
+          taxableValue: Number(inv.subtotal),
+          cgst: Number(inv.cgstAmount),
+          sgst: Number(inv.sgstAmount),
+          igst: Number(inv.igstAmount),
+          totalInvoiceValue: Number(inv.totalAmount),
+        })),
+        // Credit notes issued to registered buyers (reported as CDNR).
+        creditNotes: creditNotes
+          .filter((n) => Boolean(n.organization?.billingProfile?.gstin))
+          .map((n) => ({
+            id: n.id,
+            creditNoteNumber: n.creditNoteNumber,
+            invoiceNumber: n.invoice.invoiceNumber,
+            customerName: n.organization?.billingProfile?.legalBusinessName ?? n.organization?.name,
+            customerGstin: n.organization?.billingProfile?.gstin,
+            taxableValue: Number(n.taxableAmount),
+            cgst: Number(n.cgstAmount),
+            sgst: Number(n.sgstAmount),
+            igst: Number(n.igstAmount),
+            total: Number(n.totalAmount),
+          })),
         summary: {
           totalB2bCount: b2bInvoices.length,
           totalB2cCount: b2cInvoices.length,
@@ -1278,22 +1413,6 @@ export class PortalController {
           totalTaxable: totalTaxable - creditTaxable,
           totalTaxCollected: totalTaxCollected - creditTax,
           totalGrossValue: totalTaxable - creditTaxable + (totalTaxCollected - creditTax),
-        },
-      },
-    };
-  }
-
-  @Get('admin/billing/gstr-2')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
-  async getGstr2Report() {
-    return {
-      status: 'success',
-      data: {
-        filingPeriod: 'FY 2025-26',
-        summary: {
-          totalInwardTaxable: 60500.0,
-          totalInputTaxCredit: 10890.0,
         },
       },
     };

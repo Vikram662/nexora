@@ -3,11 +3,13 @@ import {
   UnauthorizedException,
   BadRequestException,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CryptoService } from '../crypto/crypto.service.js';
 import { JwtUserPayload } from './auth.types.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 // Fixed dummy hash with cost factor 12 to ensure constant-time timing on nonexistent accounts
 const DUMMY_USER_HASH = '$2a$12$e80yvQzG1m64v2z1Vv2PquFzV3Y2N2k0N2o5K6W4u1z9V0z8k7e2m';
@@ -20,6 +22,7 @@ export class AuthService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   onModuleInit() {
@@ -176,6 +179,8 @@ export class AuthService implements OnModuleInit {
       role: 'OWNER',
       isStaff: false,
     };
+
+    await this.notifications?.queue(org.id, 'WELCOME');
 
     const token = this.generateToken(payload);
     return { token, user: payload };

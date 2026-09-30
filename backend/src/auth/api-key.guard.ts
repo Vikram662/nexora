@@ -4,10 +4,12 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  Optional,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CryptoService } from '../crypto/crypto.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 interface CacheEntry {
   expiresAt: number;
@@ -18,6 +20,8 @@ interface FailureTracker {
   attempts: number;
   lockedUntil: number;
 }
+
+const LOCKOUT_MINUTES = 5;
 
 // Dummy constant hash used for constant-time comparison on nonexistent keys
 const DUMMY_HASH = '$2a$12$e80yvQzG1m64v2z1Vv2PquFzV3Y2N2k0N2o5K6W4u1z9V0z8k7e2m';
@@ -32,6 +36,7 @@ export class ApiKeyGuard implements CanActivate {
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -113,7 +118,16 @@ export class ApiKeyGuard implements CanActivate {
     }
 
     if (!isValid) {
-      this.recordFailure(trackerKey);
+      const justLocked = this.recordFailure(trackerKey);
+      if (justLocked) {
+        void this.notifications?.queueOncePerDay(project.organizationId, 'SECURITY_ALERT', {
+          projectName: project.name,
+          apiKeyPrefix: apiKey,
+          ip: request.ip,
+          attempts: ApiKeyGuard.failureTracker.get(trackerKey)?.attempts,
+          lockMinutes: LOCKOUT_MINUTES,
+        });
+      }
       throw new UnauthorizedException('Invalid API credentials');
     }
 
@@ -134,16 +148,20 @@ export class ApiKeyGuard implements CanActivate {
     return true;
   }
 
-  private recordFailure(trackerKey: string): void {
+  /** Records a failed attempt. Returns true when this attempt just locked the key. */
+  private recordFailure(trackerKey: string): boolean {
     const now = Date.now();
     const tracker = ApiKeyGuard.failureTracker.get(trackerKey) || { attempts: 0, lockedUntil: 0 };
     tracker.attempts += 1;
 
     // Lockout for 5 minutes after 10 failed attempts
+    let justLocked = false;
     if (tracker.attempts >= 10) {
-      tracker.lockedUntil = now + 5 * 60 * 1000;
+      justLocked = tracker.lockedUntil <= now;
+      tracker.lockedUntil = now + LOCKOUT_MINUTES * 60 * 1000;
     }
 
     ApiKeyGuard.failureTracker.set(trackerKey, tracker);
+    return justLocked;
   }
 }

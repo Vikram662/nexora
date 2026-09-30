@@ -9,7 +9,8 @@ export interface TemplateContext {
 
 export interface TemplateAttachment {
   filename: string;
-  content: string;
+  content: string | Buffer;
+  contentType: string;
 }
 
 const esc = (value: unknown) =>
@@ -38,7 +39,7 @@ export function buildEmail(
   ctx: TemplateContext,
   attachment?: TemplateAttachment,
 ): Omit<OutgoingEmail, 'to'> | null {
-  const attachments = attachment ? [{ filename: attachment.filename, content: attachment.content, contentType: 'text/html' }] : undefined;
+  const attachments = attachment ? [{ filename: attachment.filename, content: attachment.content, contentType: attachment.contentType }] : undefined;
 
   switch (type) {
     case 'LOW_BALANCE': {
@@ -87,6 +88,69 @@ export function buildEmail(
       );
       return { subject: `Credit note ${payload.creditNoteNumber}`, html, text, attachments };
     }
+    case 'WELCOME': {
+      const { html, text } = wrap(
+        ctx,
+        `Welcome to ${ctx.siteName}`,
+        [
+          `${ctx.organizationName} is ready. Create a project to get an API key, then try a call in the sandbox.`,
+          'Sandbox projects are not billed. Add money to your wallet when you are ready for production.',
+        ],
+        { label: 'Open console', path: '/user' },
+      );
+      return { subject: `Welcome to ${ctx.siteName}`, html, text };
+    }
+    case 'API_KEY_ROTATED': {
+      const { html, text } = wrap(
+        ctx,
+        'An API secret was rotated',
+        [
+          `The secret for project "${payload.projectName}" in ${ctx.organizationName} was rotated${payload.ip ? ` from IP address ${payload.ip}` : ''}.`,
+          payload.graceWindowExpiresAt
+            ? `The previous secret keeps working until ${payload.graceWindowExpiresAt}. Update your servers before then.`
+            : 'Update your servers with the new secret.',
+          'If you did not do this, sign in and rotate the secret again, then review your team members.',
+        ],
+        { label: 'Open projects', path: '/user/projects' },
+      );
+      return { subject: `API secret rotated for ${payload.projectName}`, html, text };
+    }
+    case 'WEBHOOK_ENDPOINT_DEGRADED': {
+      const { html, text } = wrap(
+        ctx,
+        'A webhook endpoint keeps failing',
+        [
+          `The last 5 deliveries to ${payload.url} for project "${payload.projectName}" failed.`,
+          'Events are still recorded, but your server is not receiving them. Check that the URL is reachable and returns a 2xx response.',
+        ],
+        { label: 'Open webhooks', path: '/user/webhooks' },
+      );
+      return { subject: `Webhook endpoint failing for ${payload.projectName}`, html, text };
+    }
+    case 'SECURITY_ALERT': {
+      const { html, text } = wrap(
+        ctx,
+        'Repeated failed API sign-ins',
+        [
+          `Project "${payload.projectName}" (${payload.apiKeyPrefix}) had ${payload.attempts} failed API authentication attempts${payload.ip ? `, the latest from ${payload.ip}` : ''}.`,
+          `The key is locked for ${payload.lockMinutes} minutes for that address. If this was not you, rotate the project secret.`,
+        ],
+        { label: 'Open projects', path: '/user/projects' },
+      );
+      return { subject: `Security alert for ${payload.projectName}`, html, text };
+    }
+    case 'PLAN_LIMIT_REACHED': {
+      const { html, text } = wrap(
+        ctx,
+        'A project reached its room limit',
+        [
+          `Project "${payload.projectName}" tried to open more than ${payload.limit} rooms at once, so the request was refused.`,
+          'Close rooms you no longer use, or contact us to raise the limit.',
+        ],
+        { label: 'Open projects', path: '/user/projects' },
+      );
+      return { subject: `Room limit reached for ${payload.projectName}`, html, text };
+    }
     case 'KYC_APPROVED': {
       const { html, text } = wrap(ctx, 'Your business is verified', [`${ctx.organizationName} passed verification. Production limits and GST tax invoices are now available.`], {
         label: 'Open console',
@@ -106,4 +170,26 @@ export function buildEmail(
     default:
       return null;
   }
+}
+
+/** Types that are urgent enough to send by SMS even when the organization asked for critical alerts only. */
+export const CRITICAL_SMS_TYPES = new Set(['LOW_BALANCE', 'API_KEY_ROTATED', 'SECURITY_ALERT']);
+
+// DLT variable values are limited to about 30 characters, so keep them short.
+const short = (v: unknown) => String(v ?? '').replace(/[\r\n]+/g, ' ').slice(0, 30);
+const inr = (v: unknown) => Number(v ?? 0).toFixed(2);
+
+const SMS_VARIABLES: Record<string, (payload: Record<string, unknown>) => Record<string, string>> = {
+  LOW_BALANCE: (p) => ({ balance: inr(p.balance) }),
+  PAYMENT_RECEIVED: (p) => ({ amount: inr(p.amount) }),
+  API_KEY_ROTATED: (p) => ({ project: short(p.projectName) }),
+  SECURITY_ALERT: (p) => ({ project: short(p.projectName) }),
+  WEBHOOK_ENDPOINT_DEGRADED: (p) => ({ project: short(p.projectName) }),
+  KYC_APPROVED: () => ({}),
+  KYC_REJECTED: () => ({}),
+};
+
+/** Values for a type's SMS template variables. Returns null for types that are only sent by email. */
+export function smsVariables(type: string, payload: Record<string, unknown>): Record<string, string> | null {
+  return SMS_VARIABLES[type]?.(payload) ?? null;
 }

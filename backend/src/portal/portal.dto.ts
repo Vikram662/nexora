@@ -255,6 +255,18 @@ export class CreateOfferDto {
   validDays?: number;
 }
 
+export class UpdateProfileDto {
+  @IsString()
+  @MaxLength(80)
+  @IsOptional()
+  name?: string;
+
+  // International format, e.g. +919876543210. An empty string removes the number.
+  @Matches(/^(\+[1-9]\d{7,14})?$/, { message: 'phone must be in international format, for example +919876543210' })
+  @IsOptional()
+  phone?: string;
+}
+
 export class IssueCreditNoteDto {
   @IsString()
   @IsNotEmpty()

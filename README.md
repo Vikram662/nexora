@@ -147,7 +147,8 @@ openssl rand -hex 32
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | For email | | SMTP server used to send notification emails: tax invoices, credit notes, payment receipts, low balance and KYC results. Until `SMTP_HOST` and `EMAIL_FROM` are set, emails wait in the queue. |
 | `APP_URL` | No | | Public web app URL for links in emails. |
 | `NOTIFICATIONS_AUTO_SEND` | No | `true` | `false` stops the 30-second background sender. |
-| `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER_ID` | Optional | | Notification SMS. |
+| `SMS_PROVIDER`, `SMS_API_KEY` | For SMS | | SMS alerts over MSG91: `SMS_PROVIDER=MSG91`, `SMS_API_KEY=<MSG91 authkey>`. Sent to the organization owner's saved phone number when they opt in. |
+| `MSG91_TEMPLATE_<TYPE>` | For SMS | | DLT template id for each SMS type: `LOW_BALANCE` (variable `##balance##`), `PAYMENT_RECEIVED` (`##amount##`), `API_KEY_ROTATED`, `SECURITY_ALERT`, `WEBHOOK_ENDPOINT_DEGRADED` (each `##project##`), `KYC_APPROVED`, `KYC_REJECTED` (no variables). A type with no template id is not sent by SMS. |
 | `KYC_PROVIDER`, `KYC_ENV`, `KYC_API_TOKEN` | Optional | `MOCK`, `SANDBOX` | `MOCK` only checks document format. Use `SUREPASS` with a token for real verification. |
 | `SEED_STAFF_PASSWORD` | Seed only | | Password for the seeded staff accounts. If unset the seed generates one and prints it once. |
 

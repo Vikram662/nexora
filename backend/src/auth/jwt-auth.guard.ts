@@ -26,7 +26,7 @@ export class JwtAuthGuard implements CanActivate {
       const decoded = jwt.verify(token, secret) as JwtUserPayload;
       request.user = decoded;
       return true;
-    } catch (err: any) {
+    } catch {
       throw new UnauthorizedException('Invalid or expired authentication session');
     }
   }

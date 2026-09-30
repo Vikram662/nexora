@@ -6,9 +6,10 @@ import { JwtAuthGuard } from './jwt-auth.guard.js';
 import { RolesGuard } from './roles.guard.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { CryptoModule } from '../crypto/crypto.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 @Module({
-  imports: [PrismaModule, CryptoModule],
+  imports: [PrismaModule, CryptoModule, NotificationsModule],
   controllers: [AuthController],
   providers: [AuthService, ApiKeyGuard, JwtAuthGuard, RolesGuard],
   exports: [AuthService, ApiKeyGuard, JwtAuthGuard, RolesGuard],

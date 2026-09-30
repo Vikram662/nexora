@@ -1,7 +1,8 @@
-import { Injectable, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RoomServiceClient, DataPacket_Kind } from 'livekit-server-sdk';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 export interface CreateRoomOptions {
   projectId: string;
@@ -37,6 +38,7 @@ export class RoomsService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   onModuleInit() {
@@ -71,7 +73,7 @@ export class RoomsService implements OnModuleInit {
     // Enforce project maxConcurrentRooms limit
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      select: { maxConcurrentRooms: true },
+      select: { maxConcurrentRooms: true, name: true, organizationId: true },
     });
 
     const maxRooms = project?.maxConcurrentRooms ?? 50;
@@ -82,6 +84,9 @@ export class RoomsService implements OnModuleInit {
     // If room already exists, let createRoom update/return it without violating limit
     const alreadyExists = currentProjectRooms.some((r) => r.name === namespacedRoom);
     if (!alreadyExists && currentProjectRooms.length >= maxRooms) {
+      if (project) {
+        void this.notifications?.queueOncePerDay(project.organizationId, 'PLAN_LIMIT_REACHED', { projectName: project.name, limit: maxRooms });
+      }
       throw new BadRequestException(
         `Project room limit reached (${currentProjectRooms.length}/${maxRooms} active rooms). Please close unused rooms or upgrade your plan.`
       );

@@ -33,7 +33,7 @@ export class StartRecordingDto {
   @IsString()
   @IsOptional()
   @MaxLength(255)
-  @Matches(/^[a-zA-Z0-9_\-\/]+(\.(mp4|ogg|webm))?$/, {
+  @Matches(/^[a-zA-Z0-9_\-/]+(\.(mp4|ogg|webm))?$/, {
     message:
       'customOutputFilename must contain only alphanumeric characters, slashes, hyphens, and underscores, without directory traversal (..) or leading slashes.',
   })

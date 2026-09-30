@@ -89,7 +89,7 @@ export class SiteSettingsService {
 
   async getBilling(): Promise<BillingSettings> {
     const row = await this.prisma.siteSetting.findUnique({ where: { key: KEYS.billing } });
-    return { ...DEFAULT_BILLING, ...((row?.value as Partial<BillingSettings>) ?? {}) };
+    return { ...DEFAULT_BILLING, ...(row?.value as Partial<BillingSettings> | undefined) };
   }
 
   async getRates(): Promise<RateTable> {
@@ -110,10 +110,10 @@ export class SiteSettingsService {
   async getSnapshot(): Promise<SiteSettingsSnapshot> {
     const [stored, rates] = await Promise.all([this.readAll(), this.getRates()]);
     return {
-      contact: { ...DEFAULT_CONTACT, ...((stored.get(KEYS.contact) as Partial<ContactSettings>) ?? {}) },
-      brand: { ...DEFAULT_BRAND, ...((stored.get(KEYS.brand) as Partial<BrandSettings>) ?? {}) },
-      social: { ...DEFAULT_SOCIAL, ...((stored.get(KEYS.social) as Partial<SocialLinks>) ?? {}) },
-      billing: { ...DEFAULT_BILLING, ...((stored.get(KEYS.billing) as Partial<BillingSettings>) ?? {}) },
+      contact: { ...DEFAULT_CONTACT, ...(stored.get(KEYS.contact) as Partial<ContactSettings> | undefined) },
+      brand: { ...DEFAULT_BRAND, ...(stored.get(KEYS.brand) as Partial<BrandSettings> | undefined) },
+      social: { ...DEFAULT_SOCIAL, ...(stored.get(KEYS.social) as Partial<SocialLinks> | undefined) },
+      billing: { ...DEFAULT_BILLING, ...(stored.get(KEYS.billing) as Partial<BillingSettings> | undefined) },
       plans: (stored.get(KEYS.plans) as PlanDisplay[] | undefined) ?? DEFAULT_PLANS,
       rates,
     };

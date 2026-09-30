@@ -1,6 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+
+// After this many failed deliveries in a row, the customer is told their endpoint is failing.
+const DEGRADED_AFTER = 5;
 
 export interface DispatchWebhookOptions {
   projectId: string;
@@ -12,7 +16,28 @@ export interface DispatchWebhookOptions {
 export class OutboundWebhookService {
   private readonly logger = new Logger(OutboundWebhookService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
+  ) {}
+
+  /** Tells the customer once a day when the last DEGRADED_AFTER deliveries to an endpoint all failed. */
+  async checkDegraded(endpoint: { id: string; url: string; projectId: string }) {
+    try {
+      const recent = await this.prisma.webhookDelivery.findMany({
+        where: { endpointId: endpoint.id },
+        orderBy: { createdAt: 'desc' },
+        take: DEGRADED_AFTER,
+        select: { succeeded: true },
+      });
+      if (recent.length < DEGRADED_AFTER || recent.some((d) => d.succeeded)) return;
+      const project = await this.prisma.project.findUnique({ where: { id: endpoint.projectId }, select: { name: true, organizationId: true } });
+      if (!project) return;
+      await this.notifications?.queueOncePerDay(project.organizationId, 'WEBHOOK_ENDPOINT_DEGRADED', { url: endpoint.url, projectName: project.name });
+    } catch (err: any) {
+      this.logger.warn(`Webhook health check failed: ${err.message}`);
+    }
+  }
 
   // Dispatches signed HMAC-SHA256 event to all active endpoints subscribed to this event
   async dispatchEvent(options: DispatchWebhookOptions) {
@@ -44,7 +69,7 @@ export class OutboundWebhookService {
           subscribedEvents = Array.isArray(endpoint.events)
             ? (endpoint.events as string[])
             : JSON.parse(endpoint.events as string);
-        } catch (_) {
+        } catch {
           subscribedEvents = [];
         }
 
@@ -89,6 +114,7 @@ export class OutboundWebhookService {
                 succeeded: res.ok,
               },
             });
+            if (!res.ok) await this.checkDegraded(endpoint);
           })
           .catch(async (err: any) => {
             this.logger.warn(`Failed to deliver webhook to ${endpoint.url}: ${err.message}`);
@@ -101,6 +127,7 @@ export class OutboundWebhookService {
                 succeeded: false,
               },
             });
+            await this.checkDegraded(endpoint);
           });
       }
     } catch (err: any) {

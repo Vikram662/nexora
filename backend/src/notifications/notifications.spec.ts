@@ -16,21 +16,33 @@ describe('email templates', () => {
 
   it('attaches the invoice to the invoice email', () => {
     const email = buildEmail('INVOICE_GENERATED', { invoiceNumber: 'NXR/2627/000001', period: '2026-08-01 to 2026-08-31', total: 118 }, ctx, {
-      filename: 'NXR-2627-000001.html',
-      content: '<html></html>',
+      filename: 'NXR-2627-000001.pdf',
+      content: Buffer.from('%PDF-1.3'),
+      contentType: 'application/pdf',
     })!;
     expect(email.subject).toContain('NXR/2627/000001');
-    expect(email.attachments).toEqual([{ filename: 'NXR-2627-000001.html', content: '<html></html>', contentType: 'text/html' }]);
+    expect(email.attachments).toEqual([{ filename: 'NXR-2627-000001.pdf', content: Buffer.from('%PDF-1.3'), contentType: 'application/pdf' }]);
+  });
+
+  it('builds welcome and API key rotation emails', () => {
+    const welcome = buildEmail('WELCOME', {}, ctx)!;
+    expect(welcome.subject).toBe('Welcome to Nexora');
+    const rotated = buildEmail('API_KEY_ROTATED', { projectName: 'Video <App>', ip: '203.0.113.9', graceWindowExpiresAt: '2026-10-02T00:00:00.000Z' }, ctx)!;
+    expect(rotated.subject).toBe('API secret rotated for Video <App>');
+    expect(rotated.html).toContain('Video &lt;App&gt;');
+    expect(rotated.text).toContain('203.0.113.9');
+    expect(rotated.text).toContain('2026-10-02');
   });
 
   it('has no template for types that are not emailed', () => {
-    expect(buildEmail('SECURITY_ALERT', {}, ctx)).toBeNull();
+    expect(buildEmail('AUTO_RECHARGE_FAILED', {}, ctx)).toBeNull();
   });
 });
 
 describe('NotificationsService', () => {
   let prisma: any;
   let mailer: any;
+  let sms: any;
   let service: NotificationsService;
   const queued = (over: object = {}) => ({
     id: 'n1',
@@ -58,7 +70,8 @@ describe('NotificationsService', () => {
     };
     mailer = { isConfigured: vi.fn().mockReturnValue(true), send: vi.fn().mockResolvedValue({ messageId: 'm1' }) };
     const settings: any = { getSnapshot: vi.fn().mockResolvedValue({ brand: { siteName: 'Nexora' } }) };
-    service = new NotificationsService(prisma, settings, mailer as MailerService);
+    sms = { isConfigured: vi.fn().mockReturnValue(false), supports: vi.fn().mockReturnValue(false), send: vi.fn().mockResolvedValue({ messageId: 'sms1' }) };
+    service = new NotificationsService(prisma, settings, mailer as MailerService, sms);
   });
 
   describe('queue', () => {
@@ -121,13 +134,13 @@ describe('NotificationsService', () => {
     });
 
     it('marks types without a template as failed instead of retrying forever', async () => {
-      prisma.notificationLog.findMany.mockResolvedValue([queued({ type: 'SECURITY_ALERT' })]);
+      prisma.notificationLog.findMany.mockResolvedValue([queued({ type: 'AUTO_RECHARGE_FAILED' })]);
       const result = await service.processQueue();
       expect(result.failed).toBe(1);
       expect(mailer.send).not.toHaveBeenCalled();
     });
 
-    it('attaches the printable invoice to the invoice email', async () => {
+    it('attaches the invoice as a PDF to the invoice email', async () => {
       prisma.notificationLog.findMany.mockResolvedValue([queued({ type: 'INVOICE_GENERATED', payload: { invoiceId: 'inv_1' } })]);
       prisma.invoice.findUnique.mockResolvedValue({
         invoiceNumber: 'NXR/2627/000001',
@@ -153,8 +166,9 @@ describe('NotificationsService', () => {
       });
       await service.processQueue();
       const sent = mailer.send.mock.calls[0][0];
-      expect(sent.attachments[0].filename).toBe('NXR-2627-000001.html');
-      expect(sent.attachments[0].content).toContain('Tax invoice');
+      expect(sent.attachments[0].filename).toBe('NXR-2627-000001.pdf');
+      expect(sent.attachments[0].contentType).toBe('application/pdf');
+      expect(Buffer.from(sent.attachments[0].content).subarray(0, 5).toString()).toBe('%PDF-');
     });
   });
 });
