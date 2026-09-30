@@ -7,8 +7,10 @@ import { loginUser } from '@/lib/api';
 import { AuthShell, AuthField, AuthError, AuthSubmit } from '@/components/AuthShell';
 
 function resolveDestination(redirectTo: string, isStaff: boolean): string {
-  if (isStaff) return redirectTo.startsWith('/admin') ? redirectTo : '/admin';
-  return redirectTo.startsWith('/admin') ? '/user' : redirectTo;
+  // Only paths on this site: anything else (https://elsewhere, //elsewhere) would be an open redirect.
+  const safe = redirectTo.startsWith('/') && !redirectTo.startsWith('//') && !redirectTo.includes('\\') ? redirectTo : '/user';
+  if (isStaff) return safe.startsWith('/admin') ? safe : '/admin';
+  return safe.startsWith('/admin') ? '/user' : safe;
 }
 
 export default function LoginPage() {

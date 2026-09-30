@@ -9,16 +9,14 @@ import {
   updateCustomerBillingProfile,
   OrganizationData,
   getApiBaseUrl, errorMessage } from '@/lib/api';
-import type { PaymentOrder, TaxInvoice, RazorpayResponse, CreditNote } from '@/lib/types';
+import type { TaxInvoice, RazorpayResponse, CreditNote } from '@/lib/types';
 import { useToast } from '@/components/ToastProvider';
 
 export default function UserBillingPage() {
-  const { success, error: toastError, info } = useToast();
+  const { success, error: toastError } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [topupAmount, setTopupAmount] = useState(1000);
   const [topupLoading, setTopupLoading] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [activePaymentOrder, setActivePaymentOrder] = useState<PaymentOrder | null>(null);
   const [paymentSuccessAlert, setPaymentSuccessAlert] = useState(false);
   const [, setLoading] = useState(true);
   const [profileForm, setProfileForm] = useState({
@@ -129,21 +127,13 @@ export default function UserBillingPage() {
         });
         rzp.open();
       } else {
-        // Fallback to Order Review Modal if Razorpay script is blocked
-        setActivePaymentOrder(order);
-        setShowPaymentModal(true);
+        toastError('The payment window could not load. Turn off your ad blocker or check your connection, then try again.');
       }
     } catch (err) {
       toastError(errorMessage(err,'Payment initiation failed'));
     } finally {
       setTopupLoading(false);
     }
-  };
-
-  const handleConfirmPayment = async () => {
-    if (!activePaymentOrder) return;
-    info('Real verification enforced: Please enter valid Razorpay credentials in Admin Settings or pay via live Razorpay checkout to generate a verified cryptographic signature.');
-    setShowPaymentModal(false);
   };
 
   return (
@@ -477,66 +467,6 @@ export default function UserBillingPage() {
           </form>
         </div>
       </div>
-
-      {/* RAZORPAY PAYMENT MODAL */}
-      {showPaymentModal && activePaymentOrder && (
-        <div className="fixed inset-0 bg-console/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-sm w-full p-6 space-y-5 border border-line">
-            <div className="flex items-center justify-between border-b border-line pb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-xs">
-                  R
-                </div>
-                <span className="font-bold text-sm text-ink">Razorpay Checkout</span>
-              </div>
-              <span className="text-[11px] font-mono text-slate-400">{activePaymentOrder.orderId}</span>
-            </div>
-
-            <div className="text-center py-2 space-y-1">
-              <div className="text-xs text-muted font-semibold">Total Recharge Amount</div>
-              <div className="text-3xl font-semibold text-ink">₹{activePaymentOrder.amount}.00</div>
-              <div className="text-[11px] text-slate-400">Nexora RTC PaaS Prepaid Topup</div>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-md bg-accent/10 border border-accent/20 text-ink font-medium space-y-1">
-                <div className="flex justify-between font-bold">
-                  <span>Payment Gateway</span>
-                  <span className="text-emerald-600">Simulated Test Mode</span>
-                </div>
-                <div className="text-[11px] text-accent-deep">
-                  Select payment instrument below to complete wallet recharge:
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-                <button
-                  onClick={handleConfirmPayment}
-                  className="p-3 rounded-md border border-line hover:border-accent hover:bg-accent/10 text-ink text-center transition-all cursor-pointer"
-                >
-                  UPI (GPay / PhonePe)
-                </button>
-                <button
-                  onClick={handleConfirmPayment}
-                  className="p-3 rounded-md border border-line hover:border-accent hover:bg-accent/10 text-ink text-center transition-all cursor-pointer"
-                >
-                  Credit / Debit Card
-                </button>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-line">
-              <button
-                type="button"
-                onClick={() => setShowPaymentModal(false)}
-                className="w-full py-2 bg-paper-deep hover:bg-line text-ink rounded-md font-semibold text-xs cursor-pointer"
-              >
-                Cancel Payment
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

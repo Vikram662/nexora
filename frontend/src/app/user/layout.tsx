@@ -21,7 +21,7 @@ import {
   ExternalLink,
   BookOpen,
 } from 'lucide-react';
-import { fetchOrganizationData, OrganizationData, getApiBaseUrl } from '@/lib/api';
+import { fetchOrganizationData, fetchOrganizations, switchOrganization, OrganizationData, OrganizationChoice, getApiBaseUrl } from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/user', label: 'Overview & Metrics', icon: Activity, exact: true },
@@ -46,11 +46,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<OrganizationChoice[]>([]);
 
   useEffect(() => {
     fetchOrganizationData()
       .then((data) => setOrgData(data))
       .catch((err) => console.error('Failed to load org data', err));
+
+    fetchOrganizations().then(setOrganizations).catch(() => setOrganizations([]));
 
     fetch(`${getApiBaseUrl()}/v1/auth/me`, { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
@@ -93,9 +96,27 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
           {/* Org & Wallet Badge */}
           <div className="p-4 mx-4 mt-4 rounded-md bg-paper border border-line space-y-1 shrink-0">
             <div className="text-[11px] font-semibold text-muted">Organization</div>
-            <div className="text-sm font-bold text-ink truncate">
-              {orgData?.name ?? '—'}
-            </div>
+            {organizations.length > 1 ? (
+              <select
+                aria-label="Switch organization"
+                value={organizations.find((o) => o.current)?.organizationId ?? ''}
+                onChange={async (e) => {
+                  await switchOrganization(e.target.value);
+                  // A full load so every panel starts with the other organization's data.
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                  window.location.href = '/user';
+                }}
+                className="w-full -mx-1 px-1 py-0.5 bg-transparent text-sm font-bold text-ink truncate cursor-pointer"
+              >
+                {organizations.map((o) => (
+                  <option key={o.organizationId} value={o.organizationId}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="text-sm font-bold text-ink truncate">{orgData?.name ?? '—'}</div>
+            )}
             <div className="pt-1 text-xs text-muted">Wallet balance</div>
             <div className="font-mono tabular text-lg font-semibold text-ink">
               {orgData ? `₹${Number(orgData.walletBalance).toFixed(2)}` : '—'}

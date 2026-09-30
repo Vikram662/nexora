@@ -290,8 +290,100 @@ export async function inviteMember(email: string, role: string) {
     body: JSON.stringify({ email, role }),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error('Failed to invite member');
-  return res.json();
+  if (!res.ok) throw await readError(res, 'Failed to invite member');
+  return (await res.json()) as { data: { id: string; email: string; token: string } };
+}
+
+export interface PendingInvite {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  createdAt: string;
+  token: string;
+}
+
+export async function fetchTeamInvites(): Promise<PendingInvite[]> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/team/invites`, { credentials: 'include' });
+  if (!res.ok) throw await readError(res, 'Failed to load invitations');
+  return (await res.json()).data;
+}
+
+export async function revokeTeamInvite(id: string) {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/team/invites/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!res.ok) throw await readError(res, 'Failed to cancel the invitation');
+}
+
+/** Keeps the session token readable by the site, the same way sign-in does. */
+export function persistSession(token?: string) {
+  if (token && typeof document !== 'undefined') {
+    document.cookie = `nexora_auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+  }
+}
+
+export interface InvitePreview {
+  email: string;
+  role: string;
+  organizationName: string;
+  expiresAt: string;
+  hasAccount: boolean;
+}
+
+export async function fetchInvitePreview(token: string): Promise<InvitePreview> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/auth/invite/${encodeURIComponent(token)}`, { cache: 'no-store' });
+  if (!res.ok) throw await readError(res, 'This invitation link is not valid.');
+  return (await res.json()).data;
+}
+
+export async function acceptInvite(token: string, password: string, name: string) {
+  const res = await fetch(`${getApiBaseUrl()}/v1/auth/invite/accept`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify({ token, password, name }),
+  });
+  if (!res.ok) throw await readError(res, 'Could not accept the invitation');
+  const json = await res.json();
+  persistSession(json.data?.token);
+  return json.data;
+}
+
+export async function acceptInviteExisting(token: string) {
+  const res = await fetch(`${getApiBaseUrl()}/v1/auth/invite/accept-existing`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify({ token }),
+  });
+  if (res.status === 401) throw new Error('SIGN_IN_REQUIRED');
+  if (!res.ok) throw await readError(res, 'Could not accept the invitation');
+  const json = await res.json();
+  persistSession(json.data?.token);
+  return json.data;
+}
+
+export interface OrganizationChoice {
+  organizationId: string;
+  name: string;
+  role: string;
+  current: boolean;
+}
+
+export async function fetchOrganizations(): Promise<OrganizationChoice[]> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/auth/organizations`, { credentials: 'include' });
+  if (!res.ok) return [];
+  return (await res.json()).data;
+}
+
+export async function switchOrganization(organizationId: string) {
+  const res = await fetch(`${getApiBaseUrl()}/v1/auth/switch-org`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify({ organizationId }),
+  });
+  if (!res.ok) throw await readError(res, 'Could not switch organization');
+  persistSession((await res.json()).data?.token);
 }
 
 export async function fetchUsageAndRecordings() {

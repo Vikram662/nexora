@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { Users2 } from 'lucide-react';
-import { fetchTeamMembers, inviteMember, errorMessage } from '@/lib/api';
+import { fetchTeamMembers, fetchTeamInvites, inviteMember, revokeTeamInvite, errorMessage, type PendingInvite } from '@/lib/api';
 import type { TeamMember } from '@/lib/types';
 
 export default function UserTeamPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'ADMIN' | 'DEVELOPER' | 'BILLING'>('DEVELOPER');
   const [, setLoading] = useState(true);
@@ -18,7 +19,32 @@ export default function UserTeamPage() {
       .then((tm) => setTeamMembers(tm))
       .catch((e) => console.error(e))
       .finally(() => setLoading(false));
+    fetchTeamInvites()
+      .then(setPendingInvites)
+      .catch(() => setPendingInvites([]));
   }, []);
+
+  const handleCopy = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/invite/${token}`);
+      setActionError(null);
+      setActionSuccess('Invitation link copied.');
+    } catch {
+      setActionError('Could not copy the link. Your browser blocked clipboard access.');
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    setActionSuccess(null);
+    setActionError(null);
+    try {
+      await revokeTeamInvite(id);
+      setPendingInvites(await fetchTeamInvites());
+      setActionSuccess('Invitation cancelled. Its link no longer works.');
+    } catch (err) {
+      setActionError(errorMessage(err, 'Could not cancel the invitation'));
+    }
+  };
 
   const handleInviteMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +52,9 @@ export default function UserTeamPage() {
     setActionError(null);
     try {
       await inviteMember(inviteEmail, inviteRole);
+      setPendingInvites(await fetchTeamInvites());
+      setActionSuccess(`Invitation sent to ${inviteEmail}. The link works once and expires in 7 days. If the email does not arrive, copy the link from Pending invitations below.`);
       setInviteEmail('');
-      const updated = await fetchTeamMembers();
-      setTeamMembers(updated);
-      setActionSuccess(`Invitation successfully sent to ${inviteEmail} with role ${inviteRole}!`);
-      setTimeout(() => setActionSuccess(null), 4000);
     } catch (err) {
       setActionError(errorMessage(err,'Failed to invite team member'));
     }
@@ -43,10 +67,10 @@ export default function UserTeamPage() {
           <div>
             <h2 className="font-bold text-ink text-lg flex items-center gap-2">
               <Users2 className="h-5 w-5 text-accent" />
-              Team Members & Role-Based Access Control (RBAC)
+              Team and roles
             </h2>
             <p className="text-xs text-muted mt-0.5">
-              Invite frontend developers, backend engineers, and finance managers with scoped permissions.
+              Invite people by email. They get a one-time link to set a password and join.
             </p>
           </div>
         </div>
@@ -86,7 +110,7 @@ export default function UserTeamPage() {
             type="submit"
             className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs cursor-pointer"
           >
-            Invite Member
+            Send invitation
           </button>
         </form>
 
@@ -99,22 +123,6 @@ export default function UserTeamPage() {
           </div>
 
           <div className="divide-y divide-line">
-            <div className="p-3.5 flex justify-between items-center hover:bg-paper/50">
-              <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-full bg-accent/15 text-accent-deep font-bold text-xs flex items-center justify-center">
-                  ND
-                </div>
-                <div>
-                  <span className="font-bold text-ink block">developer@company.com</span>
-                  <span className="text-[10px] text-slate-400">Owner Access</span>
-                </div>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-sm bg-accent/10 text-accent-deep font-semibold text-[10px]">
-                OWNER
-              </span>
-              <span className="text-emerald-600 font-bold text-[10px]">Active</span>
-            </div>
-
             {teamMembers.map((m) => (
               <div key={m.id} className="p-3.5 flex justify-between items-center hover:bg-paper/50">
                 <div className="flex items-center gap-2.5">
@@ -127,12 +135,45 @@ export default function UserTeamPage() {
                   {m.role}
                 </span>
                 <span className="text-muted font-medium text-[10px]">
-                  {m.acceptedAt ? 'Active' : 'Invitation Pending'}
+                  {m.acceptedAt ? 'Active' : 'Pending'}
                 </span>
               </div>
             ))}
           </div>
         </div>
+
+        {pendingInvites.length > 0 && (
+          <section aria-labelledby="pending-heading" className="pt-2">
+            <h3 id="pending-heading" className="font-display text-base font-semibold">Pending invitations</h3>
+            <table className="ledger mt-2">
+              <thead>
+                <tr>
+                  <th scope="col">Email</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Expires</th>
+                  <th scope="col"><span className="sr-only">Action</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingInvites.map((inv) => (
+                  <tr key={inv.id}>
+                    <td className="font-semibold text-ink">{inv.email}</td>
+                    <td>{inv.role}</td>
+                    <td className="text-muted">{new Date(inv.expiresAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</td>
+                    <td>
+                      <button onClick={() => handleCopy(inv.token)} className="text-xs font-semibold text-accent hover:underline cursor-pointer mr-4">
+                        Copy link
+                      </button>
+                      <button onClick={() => handleRevoke(inv.id)} className="text-xs font-semibold text-red-700 hover:underline cursor-pointer">
+                        Cancel
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
       </div>
     </div>
   );
