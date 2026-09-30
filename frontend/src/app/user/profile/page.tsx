@@ -7,7 +7,7 @@ import { fetchOrganizationData, OrganizationData, fetch2faSetup, verifyAndToggle
 import { useToast } from '@/components/ToastProvider';
 
 export default function UserProfilePage() {
-  const { success, error: toastError } = useToast();
+  const { success, error: toastError, confirm } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [, setLoading] = useState(true);
   const [name, setName] = useState('Lead Engineer');
@@ -84,7 +84,13 @@ export default function UserProfilePage() {
   };
 
   const handleDisable2fa = async () => {
-    if (!confirm('Are you sure you want to disable Two-Factor Authentication?')) return;
+    const ok = await confirm({
+      title: 'Disable Two-Factor Authentication?',
+      message: 'Your account will be protected by your password only.',
+      confirmLabel: 'Disable',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await verifyAndToggle2fa('', false);
       setTwoFactorEnabled(false);

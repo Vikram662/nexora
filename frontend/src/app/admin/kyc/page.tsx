@@ -8,7 +8,7 @@ import type { KycSubmission } from '@/lib/types';
 import { useToast } from '@/components/ToastProvider';
 
 export default function AdminKycReviewPage() {
-  const { success, error: toastError } = useToast();
+  const { success, error: toastError, prompt } = useToast();
   const [submissions, setSubmissions] = useState<KycSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,13 @@ export default function AdminKycReviewPage() {
   const handleReview = async (id: string, action: 'APPROVE' | 'REJECT') => {
     let reason: string | undefined = undefined;
     if (action === 'REJECT') {
-      const input = prompt('Please provide reason for rejecting this KYC submission:');
+      const input = await prompt({
+        title: 'Reject KYC submission',
+        message: 'Please provide a reason for rejecting this KYC submission.',
+        confirmLabel: 'Reject',
+        danger: true,
+        input: { placeholder: 'Reason' },
+      });
       if (!input) return; // cancelled
       reason = input;
     }

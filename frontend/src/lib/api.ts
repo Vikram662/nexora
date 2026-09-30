@@ -354,6 +354,7 @@ export async function mintRtcToken(params: {
   roomName: string;
   participantIdentity: string;
   canPublish?: boolean;
+  canPublishSources?: string[];
 }) {
   const url = `${getApiBaseUrl()}/v1/tokens`;
   const res = await fetch(url, {
@@ -368,6 +369,7 @@ export async function mintRtcToken(params: {
       participantIdentity: params.participantIdentity,
       grants: {
         canPublish: params.canPublish ?? true,
+        ...(params.canPublishSources ? { canPublishSources: params.canPublishSources } : {}),
         canSubscribe: true,
         canPublishData: true,
       },

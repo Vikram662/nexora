@@ -52,6 +52,14 @@ export default function ActiveCallRoom({
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteContainerRef = useRef<HTMLDivElement>(null);
 
+  // Latest callbacks live in refs so the connection effect only reconnects when the token or server changes.
+  const onLeaveRef = useRef(onLeave);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onLeaveRef.current = onLeave;
+    onErrorRef.current = onError;
+  });
+
   const durationRef = useRef(0);
   useEffect(() => {
     durationRef.current = durationSeconds;
@@ -194,13 +202,13 @@ export default function ActiveCallRoom({
               if (currentRoom) {
                 currentRoom.disconnect().catch(() => {});
               }
-              onLeave();
+              onLeaveRef.current();
             } else if (data.type === 'BROADCAST_ENDED' && callMode === 'broadcast' && !isHost) {
               // Broadcast Host ended the live stream: Viewers get disconnected
               if (currentRoom) {
                 currentRoom.disconnect().catch(() => {});
               }
-              onLeave();
+              onLeaveRef.current();
             }
           } catch (_) {}
         });
@@ -213,7 +221,7 @@ export default function ActiveCallRoom({
             if (currentRoom) {
               currentRoom.disconnect().catch(() => {});
             }
-            onLeave();
+            onLeaveRef.current();
           } else if (callMode === 'broadcast' && !isHost) {
             // In Live Broadcast: If the Host leaves, goes back, or closes the tab, end stream for all viewers!
             const wasPublisher = participant.trackPublications.size > 0 || participant.identity.includes('host') || currentRoom.remoteParticipants.size === 0;
@@ -221,7 +229,7 @@ export default function ActiveCallRoom({
               if (currentRoom) {
                 currentRoom.disconnect().catch(() => {});
               }
-              onLeave();
+              onLeaveRef.current();
             }
           }
         });
@@ -230,7 +238,7 @@ export default function ActiveCallRoom({
           setStatus('disconnected');
           setDurationSeconds(0);
           if (!isConnecting) {
-            onLeave();
+            onLeaveRef.current();
           }
         });
 
@@ -276,10 +284,10 @@ export default function ActiveCallRoom({
         console.error('Failed to connect to LiveKit SFU:', err);
         setStatus('disconnected');
         const detailedError = errorMessage(err,`Could not connect to LiveKit media node (${livekitUrl})`);
-        if (onError) {
-          onError(`Connection Error: ${detailedError}. Please verify that the LiveKit RTC service is reachable.`);
+        if (onErrorRef.current) {
+          onErrorRef.current?.(`Connection Error: ${detailedError}. Please verify that the LiveKit RTC service is reachable.`);
         }
-        onLeave();
+        onLeaveRef.current();
       }
     };
 
@@ -294,6 +302,8 @@ export default function ActiveCallRoom({
         currentRoom.disconnect().catch(() => {});
       }
     };
+  // Mode and role are fixed for the lifetime of a token, so they must not trigger a reconnect.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, livekitUrl]);
 
 

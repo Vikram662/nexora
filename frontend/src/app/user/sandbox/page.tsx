@@ -5,7 +5,6 @@ import { Video, Terminal, Activity, Zap, Radio } from 'lucide-react';
 
 import { fetchOrganizationData, mintRtcToken, OrganizationData, getLivekitWsUrl, errorMessage as toMessage } from '@/lib/api';
 import ActiveCallRoom from '@/components/ActiveCallRoom';
-import type {  } from '@/lib/types';
 
 export default function UserSandboxPage() {
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
@@ -61,6 +60,9 @@ export default function UserSandboxPage() {
         apiSecret: apiSecret.trim(),
         roomName: (roomName || 'demo-room-alpha').trim(),
         participantIdentity: (identity || 'user-tester').trim(),
+        // Grants must match the selected mode so billing and permissions are correct.
+        canPublish: !(callMode === 'broadcast' && broadcastRole === 'audience'),
+        canPublishSources: callMode === 'audio' ? ['microphone'] : undefined,
       });
 
       if (res && res.data && res.data.token) {
@@ -143,7 +145,7 @@ export default function UserSandboxPage() {
                       </option>
                     ))
                   ) : (
-                    <option value="seed_project">Default Test Project (pk_live_nexora_test)</option>
+                    <option value="seed_project">No projects yet - create one first</option>
                   )}
                 </select>
               </div>

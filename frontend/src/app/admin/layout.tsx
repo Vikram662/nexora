@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ShieldCheck, BadgeCheck, HelpCircle, Activity, CreditCard, Building2, Radio, ExternalLink, ShieldAlert, Settings } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api';
@@ -19,6 +19,7 @@ const ADMIN_NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   // Double Lock: Verify authentic staff session from backend /v1/auth/me
@@ -35,14 +36,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           setIsAuthorized(true);
         } else {
           setIsAuthorized(false);
-          window.location.href = '/user';
+          router.replace('/user');
         }
       })
       .catch(() => {
         setIsAuthorized(false);
-        window.location.href = '/login';
+        router.replace('/login');
       });
-  }, [pathname]);
+  }, [pathname, router]);
 
   if (isAuthorized === false) {
     return (

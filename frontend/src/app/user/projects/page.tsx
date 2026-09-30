@@ -11,7 +11,7 @@ import {
 import { useToast } from '@/components/ToastProvider';
 
 export default function UserProjectsPage() {
-  const { success, error: toastError, info } = useToast();
+  const { success, error: toastError, info, confirm } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -88,9 +88,12 @@ export default function UserProjectsPage() {
   };
 
   const handleRotateSecret = async (projectId: string) => {
-    if (!confirm('Are you sure you want to rotate this API secret? The previous secret will continue working for a 24-hour grace window.')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Rotate API secret?',
+      message: 'The previous secret will continue working for a 24-hour grace window.',
+      confirmLabel: 'Rotate',
+    });
+    if (!ok) return;
     try {
       const res = await rotateProjectSecret(projectId);
       setCreatedSecretAlert({

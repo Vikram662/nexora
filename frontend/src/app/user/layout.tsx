@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Key,
   Video,
@@ -43,6 +43,7 @@ const NAV_ITEMS = [
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
 
   useEffect(() => {
@@ -142,7 +143,8 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
               } catch (_) {}
               document.cookie = 'nexora_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
               document.cookie = 'nexora_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-              window.location.href = '/login';
+              router.replace('/login');
+              router.refresh();
             }}
             title="Log Out"
             className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-paper-deep transition-colors cursor-pointer"
