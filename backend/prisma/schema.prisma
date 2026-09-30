@@ -71,9 +71,27 @@ model Organization {
   transactions           Transaction[]
   invoices               Invoice[]
   creditNotes            CreditNote[]
+  teamInvites            TeamInvite[]
   tickets                SupportTicket[]
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
+}
+
+// An invitation to join an organization. The emailed link carries a signed token derived from the invite id,
+// so nothing secret is stored; the row only tracks expiry, use and revocation.
+model TeamInvite {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email           String
+  role            OrgRole      @default(DEVELOPER)
+  invitedByUserId String?
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime     @default(now())
+
+  @@index([organizationId, email])
 }
 
 enum OrgRole {
@@ -114,6 +132,7 @@ enum NotificationType {
   API_KEY_ROTATED
   SECURITY_ALERT
   PLAN_LIMIT_REACHED
+  TEAM_INVITE
 }
 
 model NotificationPreference {

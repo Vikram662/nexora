@@ -45,6 +45,7 @@ describe('PortalController Tenant Isolation & Redaction', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
   });
 

@@ -26,6 +26,8 @@ import { UpdateSiteSettingsDto } from '../settings/site-settings.dto.js';
 import { PaymentService } from './payment.service.js';
 import { InvoiceService } from '../invoicing/invoice.service.js';
 import { OutboundWebhookService } from '../livekit/outbound-webhook.service.js';
+import { TeamInviteService } from '../team/team-invite.service.js';
+import { signInviteToken } from '../team/invite-token.js';
 import { assertPublicWebhookUrl, WebhookUrlError } from '../livekit/webhook-url.js';
 import { CreditNoteService } from '../invoicing/credit-note.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -69,6 +71,7 @@ export class PortalController {
     private readonly creditNotes: CreditNoteService,
     private readonly notifications: NotificationsService,
     private readonly webhooks: OutboundWebhookService,
+    private readonly invitesService: TeamInviteService,
   ) {}
 
   // Helper: Sanitize Project object so apiSecretHash is never leaked to frontend
@@ -617,33 +620,37 @@ export class PortalController {
     };
   }
 
-  // Invite Team Member
+  // Invite a team member by email. They get a one-time link to set a password (or sign in) and join.
   @Post('team/invite')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('OWNER', 'ADMIN')
   async inviteTeamMember(@Body() body: InviteTeamMemberDto, @Req() req: Request) {
-    const orgId = req.user!.organizationId;
-
-    let user = await this.prisma.user.findUnique({ where: { email: body.email } });
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email: body.email,
-          name: body.email.split('@')[0],
-        },
-      });
-    }
-
-    const member = await this.prisma.orgMember.create({
-      data: {
-        organizationId: orgId,
-        userId: user.id,
-        role: body.role,
-      },
-      include: { user: true },
+    const invite = await this.invitesService.create({
+      organizationId: req.user!.organizationId,
+      email: body.email,
+      role: body.role,
+      invitedByUserId: req.user!.userId,
     });
+    await this.audit(req, 'team.invited', 'invite', invite.id, { email: invite.email, role: invite.role });
+    return { status: 'success', data: { id: invite.id, email: invite.email, role: invite.role, expiresAt: invite.expiresAt, token: signInviteToken(invite.id) } };
+  }
 
-    return { status: 'success', data: member };
+  // Owners and admins also get each link's token, so they can copy an invitation link when email is not set up.
+  @Get('team/invites')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN')
+  async listTeamInvites(@Req() req: Request) {
+    const invites = await this.invitesService.listPending(req.user!.organizationId);
+    return { status: 'success', data: invites.map((i) => ({ ...i, token: signInviteToken(i.id) })) };
+  }
+
+  @Delete('team/invites/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN')
+  async revokeTeamInvite(@Param('id') id: string, @Req() req: Request) {
+    await this.invitesService.revoke(req.user!.organizationId, id);
+    await this.audit(req, 'team.invite_revoked', 'invite', id);
+    return { status: 'success' };
   }
 
   // Get Team Members

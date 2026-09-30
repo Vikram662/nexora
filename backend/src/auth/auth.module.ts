@@ -7,11 +7,12 @@ import { RolesGuard } from './roles.guard.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { CryptoModule } from '../crypto/crypto.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { TeamInviteService } from '../team/team-invite.service.js';
 
 @Module({
   imports: [PrismaModule, CryptoModule, NotificationsModule],
   controllers: [AuthController],
-  providers: [AuthService, ApiKeyGuard, JwtAuthGuard, RolesGuard],
-  exports: [AuthService, ApiKeyGuard, JwtAuthGuard, RolesGuard],
+  providers: [AuthService, TeamInviteService, ApiKeyGuard, JwtAuthGuard, RolesGuard],
+  exports: [AuthService, TeamInviteService, ApiKeyGuard, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}

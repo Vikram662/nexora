@@ -88,6 +88,18 @@ export function buildEmail(
       );
       return { subject: `Credit note ${payload.creditNoteNumber}`, html, text, attachments };
     }
+    case 'TEAM_INVITE': {
+      const { html, text } = wrap(
+        ctx,
+        `You are invited to ${ctx.organizationName}`,
+        [
+          `You were invited to join ${ctx.organizationName} on ${ctx.siteName} as ${String(payload.role ?? 'DEVELOPER').toLowerCase()}.`,
+          'The link works once and expires in 7 days. If you were not expecting this, ignore this email.',
+        ],
+        { label: 'Accept the invitation', path: `/invite/${payload.token}` },
+      );
+      return { subject: `Invitation to join ${ctx.organizationName}`, html, text };
+    }
     case 'WELCOME': {
       const { html, text } = wrap(
         ctx,

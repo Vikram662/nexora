@@ -5,6 +5,7 @@ import { MailerService } from './mailer.service.js';
 import { SmsService } from './sms.service.js';
 import { CRITICAL_SMS_TYPES, buildEmail, smsVariables, type TemplateAttachment } from './notification-templates.js';
 import { isRenderableSnapshot } from '../invoicing/invoice.render.js';
+import { signInviteToken } from '../team/invite-token.js';
 import { isRenderableCreditNote } from '../invoicing/credit-note.render.js';
 import { renderCreditNotePdf, renderInvoicePdf } from '../invoicing/pdf.render.js';
 
@@ -15,7 +16,7 @@ const BATCH_SIZE = 20;
 export type NotificationTypeName =
   | 'WELCOME' | 'KYC_APPROVED' | 'KYC_REJECTED' | 'LOW_BALANCE' | 'INVOICE_GENERATED' | 'PAYMENT_RECEIVED'
   | 'REFUND_PROCESSED' | 'AUTO_RECHARGE_FAILED' | 'WEBHOOK_ENDPOINT_DEGRADED' | 'API_KEY_ROTATED'
-  | 'SECURITY_ALERT' | 'PLAN_LIMIT_REACHED';
+  | 'SECURITY_ALERT' | 'PLAN_LIMIT_REACHED' | 'TEAM_INVITE';
 
 export interface ProcessResult {
   sent: number;
@@ -58,7 +59,13 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
    * Queues an email for an organization. Respects the organization's email preference and never throws,
    * so a notification problem can never break the action that triggered it.
    */
-  async queue(organizationId: string, type: NotificationTypeName, payload: Record<string, unknown> = {}, to?: string): Promise<void> {
+  async queue(
+    organizationId: string,
+    type: NotificationTypeName,
+    payload: Record<string, unknown> = {},
+    to?: string,
+    opts: { ignorePreference?: boolean } = {},
+  ): Promise<void> {
     try {
       const org = await this.prisma.organization.findUnique({
         where: { id: organizationId },
@@ -70,7 +77,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
       if (!org) return;
       const pref = org.notificationPreference;
 
-      if (!pref || pref.emailEnabled) {
+      if (opts.ignorePreference || !pref || pref.emailEnabled) {
         await this.prisma.notificationLog.create({
           data: { organizationId, type: type as never, channel: 'EMAIL', destination: to || org.billingEmail, status: 'QUEUED', payload: payload as never },
         });
@@ -184,6 +191,9 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     const payload = { ...(log.payload as Record<string, unknown> | null) };
     let attachment: TemplateAttachment | undefined;
 
+    if (log.type === 'TEAM_INVITE' && payload.inviteId) {
+      payload.token = signInviteToken(String(payload.inviteId));
+    }
     if (log.type === 'INVOICE_GENERATED' && payload.invoiceId) {
       const invoice = await this.prisma.invoice.findUnique({ where: { id: String(payload.invoiceId) } });
       if (!invoice) throw new Error('The invoice no longer exists.');

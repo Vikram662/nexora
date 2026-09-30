@@ -202,6 +202,13 @@ async function seed() {
     { organizationId: org1.id, role: 'ADMIN' },
   ], true);
 
+  await prisma.teamInvite.createMany({
+    data: [
+      { organizationId: org1.id, email: 'new.engineer@acme.com', role: 'DEVELOPER', invitedByUserId: acmeOwner.id, expiresAt: new Date(Date.now() + 5 * DAY) },
+      { organizationId: org1.id, email: 'former.invitee@acme.com', role: 'BILLING', invitedByUserId: acmeOwner.id, expiresAt: new Date(Date.now() - DAY), revokedAt: new Date(Date.now() - 2 * DAY) },
+    ],
+  });
+
   await prisma.otpVerification.createMany({
     data: [
       { userId: admin.id, channel: 'EMAIL', destination: admin.email, purpose: 'LOGIN', codeHash: await bcrypt.hash(crypto.randomInt(100000, 999999).toString(), 8), attempts: 1, expiresAt: new Date(Date.now() - DAY + 600000), consumedAt: new Date(Date.now() - DAY) },
