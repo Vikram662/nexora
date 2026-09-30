@@ -2,17 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { CreditCard, TrendingUp, Receipt, DollarSign, Download, Search, ArrowUpRight, ShieldCheck, RefreshCw } from 'lucide-react';
-import { fetchAdminBillingOverview, fetchGstr1Report, fetchGstr2Report, getApiBaseUrl, errorMessage, generateInvoices, issueCreditNote, processQueuedEmails } from '@/lib/api';
+import { fetchAdminBillingOverview, fetchGstr1Report, getApiBaseUrl, errorMessage, generateInvoices, issueCreditNote, processQueuedEmails } from '@/lib/api';
 import { useToast } from '@/components/ToastProvider';
-import type { AdminBillingOverview, Gstr1Report, Gstr2Report, Gstr2Row, LedgerTransaction, TaxInvoice, OrgSummary, CreditNote } from '@/lib/types';
+import type { AdminBillingOverview, Gstr1Report, LedgerTransaction, TaxInvoice, OrgSummary, CreditNote } from '@/lib/types';
 
 export default function AdminBillingPage() {
   const [data, setData] = useState<AdminBillingOverview | null>(null);
   const [gstr1Data, setGstr1Data] = useState<Gstr1Report | null>(null);
-  const [gstr2Data, setGstr2Data] = useState<Gstr2Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'transactions' | 'invoices' | 'escrow' | 'gstr1' | 'gstr2'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'invoices' | 'escrow' | 'gstr1'>('transactions');
   const [searchTerm, setSearchTerm] = useState('');
   const { success, error: toastError, info } = useToast();
   const [invoiceMonth, setInvoiceMonth] = useState(() => {
@@ -85,15 +84,13 @@ export default function AdminBillingPage() {
 
   const loadData = async () => {
     try {
-      const [res, g1, g2] = await Promise.all([
+      const [res, g1] = await Promise.all([
         fetchAdminBillingOverview(),
         fetchGstr1Report().catch(() => ({ data: null })),
-        fetchGstr2Report().catch(() => ({ data: null })),
       ]);
       setData(res.data);
       setError(null);
       if (g1?.data) setGstr1Data(g1.data);
-      if (g2?.data) setGstr2Data(g2.data);
     } catch (err) {
       setError(errorMessage(err,'Failed to load billing ledger'));
     } finally {
@@ -269,16 +266,6 @@ export default function AdminBillingPage() {
             >
               GSTR-1 Outward Return
             </button>
-            <button
-              onClick={() => setActiveTab('gstr2')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'gstr2'
-                  ? 'bg-white text-accent-deep'
-                  : 'text-muted hover:text-ink'
-              }`}
-            >
-              GSTR-2 ITC Credit
-            </button>
           </div>
 
           <div className="relative w-full sm:w-64">
@@ -324,7 +311,7 @@ export default function AdminBillingPage() {
                         {tx.organization?.name || 'Unknown Org'}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
+                        <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
                           {tx.type}
                         </span>
                       </td>
@@ -332,7 +319,7 @@ export default function AdminBillingPage() {
                         ₹{Number(tx.amount).toFixed(2)}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
                           tx.status === 'SUCCESS'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -426,8 +413,14 @@ export default function AdminBillingPage() {
                           onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/invoices/${inv.id}/print`, '_blank')}
                           className="px-2.5 py-1 rounded-lg bg-accent/10 hover:bg-accent/15 text-accent-deep text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-accent/30"
                         >
-                          <Download className="h-3 w-3" /> View / PDF
+                          <Download className="h-3 w-3" /> View or print
                         </button>
+                        <a
+                          href={`${getApiBaseUrl()}/v1/portal/admin/invoices/${inv.id}/pdf`}
+                          className="ml-2 px-2.5 py-1 rounded-lg border border-line hover:border-ink text-ink text-[11px] font-bold inline-flex items-center"
+                        >
+                          PDF
+                        </a>
                         <button
                           onClick={() => openCreditNote(inv)}
                           className="ml-2 px-2.5 py-1 rounded-lg border border-line hover:border-ink text-ink text-[11px] font-bold cursor-pointer"
@@ -468,6 +461,9 @@ export default function AdminBillingPage() {
                       >
                         View or print
                       </button>
+                      <a href={`${getApiBaseUrl()}/v1/portal/admin/credit-notes/${note.id}/pdf`} className="ml-3 text-xs font-semibold text-accent hover:underline">
+                        PDF
+                      </a>
                     </td>
                   </tr>
                 ))}
@@ -563,7 +559,7 @@ export default function AdminBillingPage() {
                       {org.billingEmail || 'N/A'}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
                         {org.planTier}
                       </span>
                     </td>
@@ -594,75 +590,100 @@ export default function AdminBillingPage() {
 
         {/* Tab 4: GSTR-1 Outward Tax Supplies */}
         {activeTab === 'gstr1' && (
-          <div className="p-5 space-y-4">
+          <div className="p-5 space-y-6">
             <div className="p-4 rounded-md bg-paper border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
               <div>
-                <div className="font-bold text-ink text-sm flex items-center gap-2">
-                  <span>GSTR-1 Monthly Return Filing Summary</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    SAC 998314 Compliant
-                  </span>
-                </div>
+                <div className="font-bold text-ink text-sm">GSTR-1 outward supplies</div>
                 <div className="text-[11px] text-muted mt-0.5">
-                  Filing Period: {gstr1Data?.filingPeriod || 'FY 2025-26'} • Cloud SFU Hosting & Audio/Video Infrastructure
+                  {gstr1Data?.filingPeriod ?? 'Current financial year'}
+                  {gstr1Data?.sacCode ? `, SAC ${gstr1Data.sacCode}` : ''}. Totals are net of credit notes.
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-right">
+              <div className="flex items-center gap-6 text-right">
                 <div>
-                  <div className="text-[10px] text-slate-400 font-bold">Total Taxable</div>
-                  <div className="text-sm font-semibold text-ink">
-                    ₹{Number(gstr1Data?.summary?.totalTaxable || 0).toFixed(2)}
-                  </div>
+                  <div className="text-[10px] text-muted">Taxable value</div>
+                  <div className="text-sm font-semibold text-ink tabular">₹{Number(gstr1Data?.summary?.totalTaxable || 0).toFixed(2)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-slate-400 font-bold">GST Output Liability</div>
-                  <div className="text-sm font-semibold text-accent-deep">
-                    ₹{Number(gstr1Data?.summary?.totalTaxCollected || 0).toFixed(2)}
-                  </div>
+                  <div className="text-[10px] text-muted">GST output liability</div>
+                  <div className="text-sm font-semibold text-accent-deep tabular">₹{Number(gstr1Data?.summary?.totalTaxCollected || 0).toFixed(2)}</div>
                 </div>
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="ledger w-full text-left text-xs">
+              <h3 className="font-display text-base font-semibold mb-2">Invoices to registered buyers</h3>
+              <table className="ledger">
                 <thead>
                   <tr>
-                    <th className="py-3 px-4">Invoice #</th>
-                    <th className="py-3 px-4">Recipient Customer</th>
-                    <th className="py-3 px-4">Customer GSTIN</th>
-                    <th className="py-3 px-4">Place of Supply</th>
-                    <th className="py-3 px-4">Taxable Value</th>
-                    <th className="py-3 px-4">CGST (9%)</th>
-                    <th className="py-3 px-4">SGST (9%)</th>
-                    <th className="py-3 px-4">Invoice Total</th>
-                    <th className="py-3 px-4">Status</th>
+                    <th scope="col">Invoice</th>
+                    <th scope="col">Recipient</th>
+                    <th scope="col">GSTIN</th>
+                    <th scope="col">Place of supply</th>
+                    <th scope="col">Taxable</th>
+                    <th scope="col">CGST</th>
+                    <th scope="col">SGST</th>
+                    <th scope="col">IGST</th>
+                    <th scope="col">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-line font-medium text-ink">
-                  {(!gstr1Data?.b2b || gstr1Data.b2b.length === 0) ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-400">
-                        No B2B invoices recorded yet for this GSTR-1 period.
-                      </td>
+                <tbody>
+                  {(gstr1Data?.b2b ?? []).map((inv: TaxInvoice) => (
+                    <tr key={inv.id}>
+                      <td className="font-mono font-semibold text-accent-deep">{inv.invoiceNumber}</td>
+                      <td className="font-semibold text-ink">{inv.customerName}</td>
+                      <td className="font-mono text-[11px]">{inv.customerGstin}</td>
+                      <td>{inv.placeOfSupply}</td>
+                      <td>₹{Number(inv.taxableValue).toFixed(2)}</td>
+                      <td>₹{Number(inv.cgst).toFixed(2)}</td>
+                      <td>₹{Number(inv.sgst).toFixed(2)}</td>
+                      <td>₹{Number(inv.igst).toFixed(2)}</td>
+                      <td className="font-semibold">₹{Number(inv.totalInvoiceValue).toFixed(2)}</td>
                     </tr>
-                  ) : (
-                    gstr1Data.b2b.map((inv: TaxInvoice, i: number) => (
-                      <tr key={i} className="hover:bg-paper/50">
-                        <td className="py-3 px-4 font-mono font-bold text-accent-deep">{inv.invoiceNumber}</td>
-                        <td className="py-3 px-4 font-bold text-ink">{inv.customerName}</td>
-                        <td className="py-3 px-4 font-mono text-[11px] font-bold text-ink">{inv.customerGstin}</td>
-                        <td className="py-3 px-4 text-muted">{inv.placeOfSupply}</td>
-                        <td className="py-3 px-4 font-bold">₹{Number(inv.taxableValue).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-muted">₹{Number(inv.cgst).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-muted">₹{Number(inv.sgst).toFixed(2)}</td>
-                        <td className="py-3 px-4 font-semibold text-ink">₹{Number(inv.totalInvoiceValue).toFixed(2)}</td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            {inv.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                  ))}
+                  {(gstr1Data?.b2b ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="text-muted">No invoices to registered buyers yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="overflow-x-auto">
+              <h3 className="font-display text-base font-semibold mb-2">Credit notes to registered buyers</h3>
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th scope="col">Credit note</th>
+                    <th scope="col">Against invoice</th>
+                    <th scope="col">Recipient</th>
+                    <th scope="col">GSTIN</th>
+                    <th scope="col">Taxable</th>
+                    <th scope="col">CGST</th>
+                    <th scope="col">SGST</th>
+                    <th scope="col">IGST</th>
+                    <th scope="col">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(gstr1Data?.creditNotes ?? []).map((n) => (
+                    <tr key={n.id}>
+                      <td className="font-mono font-semibold text-accent-deep">{n.creditNoteNumber}</td>
+                      <td className="font-mono text-xs">{n.invoiceNumber}</td>
+                      <td className="font-semibold text-ink">{n.customerName}</td>
+                      <td className="font-mono text-[11px]">{n.customerGstin}</td>
+                      <td>₹{Number(n.taxableValue).toFixed(2)}</td>
+                      <td>₹{Number(n.cgst).toFixed(2)}</td>
+                      <td>₹{Number(n.sgst).toFixed(2)}</td>
+                      <td>₹{Number(n.igst).toFixed(2)}</td>
+                      <td className="font-semibold">₹{Number(n.total).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {(gstr1Data?.creditNotes ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="text-muted">No credit notes yet.</td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -671,58 +692,6 @@ export default function AdminBillingPage() {
         )}
 
         {/* Tab 5: GSTR-2 Inward Supplies & Input Tax Credit (ITC) */}
-        {activeTab === 'gstr2' && (
-          <div className="p-5 space-y-4">
-            <div className="p-4 rounded-md bg-paper border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-              <div>
-                <div className="font-bold text-ink text-sm flex items-center gap-2">
-                  <span>GSTR-2 Inward Supplies & Input Tax Credit (ITC)</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent/10 text-accent-deep border border-accent/30">
-                    Auto-Matched
-                  </span>
-                </div>
-                <div className="text-[11px] text-muted mt-0.5">
-                  Eligible ITC credit on upstream SFU cluster servers, GPU bare-metal & bandwidth transit providers.
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] text-slate-400 font-bold">Total Eligible ITC Credit</div>
-                <div className="text-lg font-semibold text-emerald-600">
-                  ₹{Number(gstr2Data?.summary?.totalInputTaxCredit || 10890.0).toFixed(2)}
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="ledger w-full text-left text-xs">
-                <thead>
-                  <tr>
-                    <th className="py-3 px-4">Supplier / Vendor</th>
-                    <th className="py-3 px-4">Supplier GSTIN</th>
-                    <th className="py-3 px-4">Invoice Ref</th>
-                    <th className="py-3 px-4">Nature of Supply</th>
-                    <th className="py-3 px-4">SAC Code</th>
-                    <th className="py-3 px-4">Taxable Value</th>
-                    <th className="py-3 px-4">Eligible ITC (18%)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line font-medium text-ink">
-                  {(gstr2Data?.itcEligible || []).map((row: Gstr2Row, i: number) => (
-                    <tr key={i} className="hover:bg-paper/50">
-                      <td className="py-3 px-4 font-bold text-ink">{row.vendorName}</td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-ink font-bold">{row.vendorGstin}</td>
-                      <td className="py-3 px-4 font-mono text-accent-deep">{row.invoiceNo}</td>
-                      <td className="py-3 px-4 text-muted">{row.natureOfSupply}</td>
-                      <td className="py-3 px-4 font-mono text-[11px]">{row.sacCode}</td>
-                      <td className="py-3 px-4 font-bold">₹{Number(row.taxableValue).toFixed(2)}</td>
-                      <td className="py-3 px-4 font-semibold text-emerald-600">₹{Number(row.itcAvailable).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

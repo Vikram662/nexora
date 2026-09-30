@@ -144,7 +144,7 @@ export default function AdminKycReviewPage() {
 
                     <td className="py-4 px-5">
                       {sub.verifiedViaDigiLocker ? (
-                        <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                        <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold px-2 py-0.5 rounded-sm text-[10px]">
                           DigiLocker Direct
                         </span>
                       ) : (
@@ -156,7 +156,7 @@ export default function AdminKycReviewPage() {
 
                     <td className="py-4 px-5">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        className={`px-2.5 py-0.5 rounded-sm text-[11px] font-bold ${
                           sub.status === 'VERIFIED'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : sub.status === 'PENDING_REVIEW'

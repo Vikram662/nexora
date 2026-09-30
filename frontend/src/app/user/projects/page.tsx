@@ -155,7 +155,7 @@ export default function UserProjectsPage() {
               <div>
                 <div className="font-bold text-ink text-sm flex items-center gap-2">
                   <span>{proj.name}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                  <span className={`text-[10px] px-2 py-0.5 rounded-sm font-semibold ${
                     proj.environment === 'PRODUCTION' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                   }`}>
                     {proj.environment}

@@ -213,7 +213,7 @@ export default function UserStoragePage() {
                       Region: {cfg.region || 'global'} • Encryption: AES-256-GCM
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1">
+                  <span className="px-2.5 py-1 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Connected
                   </span>
                 </div>

@@ -391,6 +391,32 @@ export async function mintRtcToken(params: {
   return res.json();
 }
 
+export interface UserProfile {
+  name: string | null;
+  email: string;
+  phone: string | null;
+  role: string;
+  organizationName: string;
+}
+
+export async function fetchProfile(): Promise<UserProfile> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/profile`, { credentials: 'include' });
+  if (!res.ok) throw new Error('Could not load your profile');
+  return (await res.json()).data;
+}
+
+export async function updateProfile(payload: { name?: string; phone?: string }): Promise<UserProfile> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/profile`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(Array.isArray(json.message) ? json.message.join(', ') : json.message || 'Could not save your profile');
+  return json.data;
+}
+
 export async function fetch2faSetup() {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/profile/2fa/setup`, {
     credentials: 'include',
@@ -626,13 +652,5 @@ export async function fetchGstr1Report() {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to generate GSTR-1 Report');
-  return res.json();
-}
-
-export async function fetchGstr2Report() {
-  const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/billing/gstr-2`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Failed to generate GSTR-2 Report');
   return res.json();
 }

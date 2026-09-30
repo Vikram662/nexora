@@ -162,7 +162,7 @@ export default function UserKycPage() {
                     <span className="font-semibold text-base text-ink">
                       DigiLocker Certified Organization
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1">
+                    <span className="text-[10px] px-2 py-0.5 rounded-sm bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1">
                       <Lock className="h-3 w-3" /> Permanently Locked
                     </span>
                   </div>
@@ -243,11 +243,11 @@ export default function UserKycPage() {
                   </p>
                 </div>
                 {orgData?.billingProfile?.gstin ? (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1">
+                  <span className="px-2.5 py-1 rounded-sm bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1">
                     <CheckCircle2 className="h-3.5 w-3.5" /> GSTIN Active
                   </span>
                 ) : (
-                  <span className="px-2.5 py-1 rounded-full bg-line text-ink text-[11px] font-bold">
+                  <span className="px-2.5 py-1 rounded-sm bg-line text-ink text-[11px] font-bold">
                     Not Added
                   </span>
                 )}

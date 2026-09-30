@@ -143,7 +143,7 @@ export default function AdminOffersPage() {
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
                       offer.isActive && !isExpired
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : 'bg-paper-deep text-muted'

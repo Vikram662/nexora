@@ -109,7 +109,7 @@ export default function UserTeamPage() {
                   <span className="text-[10px] text-slate-400">Owner Access</span>
                 </div>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-accent/10 text-accent-deep font-semibold text-[10px]">
+              <span className="px-2.5 py-0.5 rounded-sm bg-accent/10 text-accent-deep font-semibold text-[10px]">
                 OWNER
               </span>
               <span className="text-emerald-600 font-bold text-[10px]">Active</span>
@@ -123,7 +123,7 @@ export default function UserTeamPage() {
                   </div>
                   <span className="font-bold text-ink">{m.user?.email || 'Invited User'}</span>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-paper-deep text-ink font-semibold text-[10px]">
+                <span className="px-2.5 py-0.5 rounded-sm bg-paper-deep text-ink font-semibold text-[10px]">
                   {m.role}
                 </span>
                 <span className="text-muted font-medium text-[10px]">

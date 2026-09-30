@@ -158,10 +158,10 @@ export default function UserTicketsPage() {
                       Priority: <strong className="text-ink">{tk.priority}</strong> • {new Date(tk.createdAt).toLocaleString()}
                     </span>
                   </div>
-                  <span className="px-2.5 py-0.5 bg-paper-deep text-ink rounded-full font-medium text-[10px]">
+                  <span className="px-2.5 py-0.5 bg-paper-deep text-ink rounded-sm font-medium text-[10px]">
                     {tk.category}
                   </span>
-                  <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-bold text-[10px]">
+                  <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-sm font-bold text-[10px]">
                     {tk.status}
                   </span>
                 </div>

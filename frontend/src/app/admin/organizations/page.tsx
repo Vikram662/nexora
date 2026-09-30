@@ -115,7 +115,7 @@ export default function AdminOrganizationsPage() {
                     </td>
 
                     <td className="py-4 px-5">
-                      <span className="font-bold text-accent-deep bg-accent/10 border border-accent/30 px-2.5 py-0.5 rounded-full text-[10px]">
+                      <span className="font-bold text-accent-deep bg-accent/10 border border-accent/30 px-2.5 py-0.5 rounded-sm text-[10px]">
                         {org.planTier}
                       </span>
                     </td>
@@ -130,7 +130,7 @@ export default function AdminOrganizationsPage() {
 
                     <td className="py-4 px-5">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
                           org.kycVerification?.status === 'VERIFIED'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'

@@ -98,7 +98,7 @@ export default function AdminOverviewPage() {
           <div className="text-2xl font-semibold text-amber-600 flex items-center gap-2">
             <span>{loading ? '...' : data?.pendingKycCount || 0}</span>
             {(data?.pendingKycCount ?? 0) > 0 && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-amber-100 text-amber-800">
                 Action Req
               </span>
             )}
@@ -131,7 +131,7 @@ export default function AdminOverviewPage() {
               <Activity className="h-4 w-4 text-accent" />
               <span>Media SFU Node Cluster Status</span>
             </h2>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-paper-deep text-ink">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-paper-deep text-ink">
               Local Region (IN-BOM-1)
             </span>
           </div>

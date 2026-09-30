@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h1 className="font-semibold text-base text-ink">
               Operations center
             </h1>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-paper-deep text-ink font-semibold border border-line">
+            <span className="text-[10px] px-2 py-0.5 rounded-sm bg-paper-deep text-ink font-semibold border border-line">
               Staff Only
             </span>
           </div>

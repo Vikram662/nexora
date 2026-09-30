@@ -291,6 +291,12 @@ export default function UserBillingPage() {
                     >
                       <Download className="h-3 w-3" /> View or print
                     </button>
+                    <a
+                      href={`${getApiBaseUrl()}/v1/portal/invoices/${inv.id}/pdf`}
+                      className="px-2.5 py-1 border border-line hover:border-ink text-ink rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
+                    >
+                      PDF
+                    </a>
                   </div>
                 ))
               ) : (
@@ -328,6 +334,9 @@ export default function UserBillingPage() {
                         >
                           View or print
                         </button>
+                        <a href={`${getApiBaseUrl()}/v1/portal/credit-notes/${note.id}/pdf`} className="ml-3 text-xs font-semibold text-accent hover:underline">
+                          PDF
+                        </a>
                       </td>
                     </tr>
                   ))}

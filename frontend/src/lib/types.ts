@@ -29,6 +29,7 @@ export interface TaxInvoice {
   taxableValue?: Money;
   cgst?: Money;
   sgst?: Money;
+  igst?: Money;
   cgstAmount?: Money;
   sgstAmount?: Money;
   igstAmount?: Money;
@@ -83,25 +84,25 @@ export interface AdminBillingOverview {
   summary?: Record<string, Money>;
 }
 
+export interface Gstr1CreditNoteRow {
+  id: string;
+  creditNoteNumber: string;
+  invoiceNumber: string;
+  customerName?: string;
+  customerGstin?: string | null;
+  taxableValue: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  total: Money;
+}
+
 export interface Gstr1Report {
   filingPeriod?: string;
-  b2b?: TaxInvoice[];
-  summary?: { totalTaxCollected?: Money; totalTaxable?: Money };
-}
-
-export interface Gstr2Row {
-  invoiceNo?: string;
-  vendorName?: string;
-  vendorGstin?: string;
-  natureOfSupply?: string;
   sacCode?: string;
-  taxableValue?: Money;
-  itcAvailable?: Money;
-}
-
-export interface Gstr2Report {
-  itcEligible?: Gstr2Row[];
-  summary?: { totalInputTaxCredit?: Money };
+  b2b?: TaxInvoice[];
+  creditNotes?: Gstr1CreditNoteRow[];
+  summary?: { totalTaxCollected?: Money; totalTaxable?: Money };
 }
 
 export interface AdminOverview {
@@ -261,7 +262,6 @@ export interface AdminSettingsData {
   emailFromAddress: string;
   smsProvider: string;
   smsApiKeySet: boolean;
-  smsSenderId: string;
 }
 
 export interface UpdateSettingsPayload {

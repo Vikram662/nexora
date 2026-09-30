@@ -3,16 +3,20 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { User, Mail, Phone, Lock, Save, CheckCircle2, Smartphone, X } from 'lucide-react';
-import { fetchOrganizationData, OrganizationData, fetch2faSetup, verifyAndToggle2fa, errorMessage } from '@/lib/api';
+import { fetchOrganizationData, OrganizationData, fetch2faSetup, verifyAndToggle2fa, fetchProfile, updateProfile, errorMessage } from '@/lib/api';
 import { useToast } from '@/components/ToastProvider';
+import { QrCode } from '@/components/QrCode';
 
 export default function UserProfilePage() {
   const { success, error: toastError, confirm } = useToast();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [, setLoading] = useState(true);
-  const [name, setName] = useState('Lead Engineer');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [email, setEmail] = useState('developer@company.com');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('');
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Real 2FA state
@@ -25,27 +29,36 @@ export default function UserProfilePage() {
 
   const loadData = () => {
     fetchOrganizationData()
-      .then((data) => {
-        setOrgData(data);
-        if (data.billingEmail) setEmail(data.billingEmail);
-      })
+      .then((data) => setOrgData(data))
       .catch((e) => console.error(e))
       .finally(() => setLoading(false));
+
+    fetchProfile()
+      .then((p) => {
+        setName(p.name ?? '');
+        setEmail(p.email);
+        setPhone(p.phone ?? '');
+        setRole(p.role);
+      })
+      .catch(() => toastError('Could not load your profile. Refresh the page to try again.'))
+      .finally(() => setProfileLoaded(true));
 
     fetch2faSetup()
       .then((data) => {
         if (data) {
           setTwoFactorEnabled(Boolean(data.enabled));
-          setMfaSecret(data.secret || process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || '');
+          setMfaSecret(data.secret || '');
         }
       })
       .catch(() => {
-        setMfaSecret(process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || '');
+        setMfaSecret('');
       });
   };
 
   useEffect(() => {
     loadData();
+    // Loads once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleOpen2faModal = async () => {
@@ -56,12 +69,12 @@ export default function UserProfilePage() {
       if (setup && setup.secret) {
         setMfaSecret(setup.secret);
       } else {
-        setMfaSecret(process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || '');
+        setMfaSecret('');
       }
       setShowMfaModal(true);
     } catch (err) {
       console.warn('Backend 2FA setup endpoint notice:', err);
-      setMfaSecret(process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || '');
+      setMfaSecret('');
       setShowMfaModal(true);
     }
   };
@@ -102,11 +115,19 @@ export default function UserProfilePage() {
     }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    success('Profile updated successfully');
-    setTimeout(() => setSavedSuccess(false), 3000);
+    setSavingProfile(true);
+    try {
+      const saved = await updateProfile({ name: name.trim(), phone: phone.replace(/[\s-]/g, '') });
+      setName(saved.name ?? '');
+      setPhone(saved.phone ?? '');
+      success('Profile saved.');
+    } catch (err) {
+      toastError(errorMessage(err, 'Could not save your profile'));
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   return (
@@ -116,10 +137,10 @@ export default function UserProfilePage() {
         <div>
           <h1 className="text-xl font-bold text-ink tracking-tight flex items-center gap-2">
             <User className="h-5 w-5 text-accent" />
-            <span>Developer Account & Organization Profile</span>
+            <span>Profile</span>
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Manage your personal login credentials, organization identity, and security access.
+            Your name, phone number and sign-in security.
           </p>
         </div>
       </div>
@@ -127,7 +148,7 @@ export default function UserProfilePage() {
       {savedSuccess && (
         <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <span>Profile changes saved successfully!</span>
+          <span>Two-factor settings saved.</span>
         </div>
       )}
 
@@ -135,23 +156,23 @@ export default function UserProfilePage() {
       <div className="border-t-2 border-ink pt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="h-16 w-16 rounded-lg bg-console text-white flex items-center justify-center font-semibold text-2xl">
-            {orgData?.name ? orgData.name.substring(0, 2).toUpperCase() : 'ND'}
+            {(name || email || '?').substring(0, 2).toUpperCase()}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-ink">{name}</h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent-deep border border-accent/30">
-                Owner / Admin
+              <h2 className="text-base font-bold text-ink">{name || email}</h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-accent/10 text-accent-deep border border-accent/30">
+                {role ? role.charAt(0) + role.slice(1).toLowerCase() : '...'}
               </span>
             </div>
             <div className="text-xs text-muted mt-0.5 flex items-center gap-2">
-              <span>Organization: <strong>{orgData?.name || 'Nexora Technologies Inc'}</strong></span>
+              <span>Organization: <strong>{orgData?.name ?? '...'}</strong></span>
               <span>•</span>
               <span className="font-mono text-[11px]">{orgData?.id ? `ID: ${orgData.id.substring(0, 8)}...` : ''}</span>
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center gap-3">
               <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {email}</span>
-              <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {phone}</span>
+              <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {phone || 'No phone number'}</span>
             </div>
           </div>
         </div>
@@ -173,7 +194,7 @@ export default function UserProfilePage() {
         <div className="border-t-2 border-ink pt-5 space-y-4">
           <h3 className="font-bold text-sm text-ink flex items-center gap-2 border-b border-line pb-3">
             <User className="h-4 w-4 text-accent" />
-            Personal Contact Information
+            Your details
           </h3>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
@@ -189,31 +210,34 @@ export default function UserProfilePage() {
             </div>
 
             <div suppressHydrationWarning>
-              <label className="block font-semibold text-ink mb-1">Email Address</label>
+              <label className="block font-semibold text-ink mb-1">Email address</label>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
-                required
+                readOnly
+                className="w-full px-3 py-2 bg-paper-deep border border-line rounded-md font-medium text-muted"
               />
+              <span className="block text-muted mt-1">This is your sign-in email and cannot be changed here.</span>
             </div>
 
             <div>
-              <label className="block font-semibold text-ink mb-1">Mobile Phone (OTP / Alerts)</label>
+              <label className="block font-semibold text-ink mb-1">Mobile phone (SMS alerts)</label>
               <input
                 type="tel"
                 value={phone}
+                placeholder="+919876543210"
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
               />
+              <span className="block text-muted mt-1">Include the country code. Owners get SMS alerts here if they turn them on in Notifications.</span>
             </div>
 
             <button
               type="submit"
-              className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5"
+              disabled={!profileLoaded || savingProfile}
+              className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
-              <Save className="h-3.5 w-3.5" /> Save Changes
+              <Save className="h-3.5 w-3.5" /> {savingProfile ? 'Saving...' : 'Save changes'}
             </button>
           </form>
         </div>
@@ -262,7 +286,7 @@ export default function UserProfilePage() {
             <div className="p-3.5 rounded-md border border-line bg-paper/70 flex items-center justify-between">
               <div>
                 <div className="font-bold text-ink">Session Security</div>
-                <div className="text-[11px] text-muted">AES-256 HttpOnly encrypted cookie</div>
+                <div className="text-[11px] text-muted">Signed HttpOnly cookie</div>
               </div>
               <span className="font-bold text-accent-deep bg-accent/10 border border-accent/30 px-2 py-0.5 rounded text-[10px]">
                 ACTIVE
@@ -271,11 +295,11 @@ export default function UserProfilePage() {
 
             <div className="p-3.5 rounded-md border border-line bg-paper/70 flex items-center justify-between">
               <div>
-                <div className="font-bold text-ink">Role & Privileges</div>
-                <div className="text-[11px] text-muted">Tenant Owner & API Master</div>
+                <div className="font-bold text-ink">Your role</div>
+                <div className="text-[11px] text-muted">What you can do in this organization</div>
               </div>
               <span className="font-bold text-ink bg-paper-deep border border-line px-2 py-0.5 rounded text-[10px]">
-                FULL ADMIN
+                {role ? role.toUpperCase() : '...'}
               </span>
             </div>
           </div>
@@ -307,13 +331,12 @@ export default function UserProfilePage() {
             {/* QR Code Container */}
             <div className="flex flex-col items-center justify-center p-4 bg-paper rounded-lg border border-line space-y-3">
               <div className="p-2.5 bg-white rounded-md border border-line">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
-                    `otpauth://totp/${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || '')}:${encodeURIComponent(email)}?secret=${mfaSecret || process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || ''}&issuer=${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || '')}`
-                  )}`}
-                  alt="2FA TOTP QR Code"
-                  className="w-36 h-36 rounded-lg object-contain"
-                />
+                {mfaSecret && (
+                  <QrCode
+                    alt="2FA TOTP QR Code"
+                    value={`otpauth://totp/${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || 'Nexora')}:${encodeURIComponent(email)}?secret=${mfaSecret}&issuer=${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || 'Nexora')}`}
+                  />
+                )}
               </div>
 
               {/* Secret Key with copy */}
@@ -322,7 +345,7 @@ export default function UserProfilePage() {
                   Or enter secret key manually:
                 </span>
                 <span className="font-mono text-xs font-semibold text-accent-deep select-all bg-white px-3 py-1 rounded-lg border border-line mt-1 inline-block">
-                  {mfaSecret || process.env.NEXT_PUBLIC_DEFAULT_2FA_SECRET || ''}
+                  {mfaSecret}
                 </span>
               </div>
             </div>

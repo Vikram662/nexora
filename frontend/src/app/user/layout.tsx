@@ -36,7 +36,7 @@ const NAV_ITEMS = [
   { href: '/user/team', label: 'Team & RBAC', icon: Users2 },
   { href: '/user/audit', label: 'Zero-Storage Audit Trail', icon: ShieldCheck, badgeColor: 'text-emerald-600' },
   { href: '/user/tickets', label: 'Support & Tickets', icon: HelpCircle, badgeColor: 'text-accent' },
-  { href: '/user/notifications', label: 'Email & SMS Alerts', icon: Mail },
+  { href: '/user/notifications', label: 'Notifications', icon: Mail },
   { href: '/user/billing', label: 'Wallet & Payment Gateway', icon: CreditCard },
   { href: '/user/profile', label: 'Account & Org Profile', icon: Users2 },
 ];
@@ -170,7 +170,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             <h1 className="font-semibold text-base md:text-lg text-ink">
               {getPageTitle()}
             </h1>
-            <span className="hidden sm:inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="hidden sm:inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
               User Control Plane Online
             </span>
           </div>

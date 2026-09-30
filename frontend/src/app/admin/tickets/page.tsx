@@ -34,6 +34,8 @@ export default function AdminTicketsPage() {
 
   useEffect(() => {
     loadData();
+    // Runs once on mount; loadData reads the selected ticket only to refresh it after a reply.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSendReply = async (e: React.FormEvent) => {
@@ -108,7 +110,7 @@ export default function AdminTicketsPage() {
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-xs text-ink line-clamp-1">{t.subject}</span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
                           t.status === 'RESOLVED'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : t.status === 'IN_PROGRESS'
@@ -144,7 +146,7 @@ export default function AdminTicketsPage() {
                     </p>
                   </div>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    className={`px-2.5 py-0.5 rounded-sm text-xs font-bold ${
                       selectedTicket.status === 'RESOLVED'
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : 'bg-accent/10 text-accent-deep border border-accent/30'
