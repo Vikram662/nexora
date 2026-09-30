@@ -314,13 +314,6 @@ export async function revokeTeamInvite(id: string) {
   if (!res.ok) throw await readError(res, 'Failed to cancel the invitation');
 }
 
-/** Keeps the session token readable by the site, the same way sign-in does. */
-export function persistSession(token?: string) {
-  if (token && typeof document !== 'undefined') {
-    document.cookie = `nexora_auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
-  }
-}
-
 export interface InvitePreview {
   email: string;
   role: string;
@@ -343,9 +336,7 @@ export async function acceptInvite(token: string, password: string, name: string
     body: JSON.stringify({ token, password, name }),
   });
   if (!res.ok) throw await readError(res, 'Could not accept the invitation');
-  const json = await res.json();
-  persistSession(json.data?.token);
-  return json.data;
+  return (await res.json()).data;
 }
 
 export async function acceptInviteExisting(token: string) {
@@ -357,9 +348,7 @@ export async function acceptInviteExisting(token: string) {
   });
   if (res.status === 401) throw new Error('SIGN_IN_REQUIRED');
   if (!res.ok) throw await readError(res, 'Could not accept the invitation');
-  const json = await res.json();
-  persistSession(json.data?.token);
-  return json.data;
+  return (await res.json()).data;
 }
 
 export interface OrganizationChoice {
@@ -383,7 +372,6 @@ export async function switchOrganization(organizationId: string) {
     body: JSON.stringify({ organizationId }),
   });
   if (!res.ok) throw await readError(res, 'Could not switch organization');
-  persistSession((await res.json()).data?.token);
 }
 
 export async function fetchUsageAndRecordings() {

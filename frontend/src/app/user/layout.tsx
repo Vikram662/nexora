@@ -169,8 +169,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                   credentials: 'include',
                 });
               } catch (_) {}
-              document.cookie = 'nexora_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-              document.cookie = 'nexora_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
               router.replace('/login');
               router.refresh();
             }}
