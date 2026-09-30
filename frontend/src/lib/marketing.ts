@@ -35,7 +35,7 @@ export const API_SURFACE: ApiSurface[] = [
   {
     area: 'Event webhooks',
     routes: ['room.finished', 'participant.joined', 'recording.completed'],
-    note: 'HMAC-SHA256 signed, delivered to endpoints you register in the console.',
+    note: 'HMAC-SHA256 signed, delivered to public https endpoints you register in the console. Failed deliveries are retried after 1 minute, 5 minutes, 30 minutes and 2 hours, and can be resent from the console.',
     status: 'live',
   },
   {

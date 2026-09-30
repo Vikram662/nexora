@@ -55,7 +55,28 @@ export interface Project {
   maxTokenTtlSeconds: number;
   ipAllowlist?: string[];
   storageConfigs: StorageConfig[];
+  webhookEndpoints?: WebhookEndpointInfo[];
   createdAt: string;
+}
+
+export interface WebhookEndpointInfo {
+  id: string;
+  url: string;
+  events: string[];
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface WebhookDeliveryInfo {
+  id: string;
+  eventType: string;
+  attempt: number;
+  responseCode: number | null;
+  succeeded: boolean;
+  nextRetryAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  endpoint: { id: string; url: string; project: { name: string } };
 }
 
 export interface KycVerificationData {
@@ -197,6 +218,11 @@ export async function saveFirebase(projectId: string, data: { firebaseProjectId:
   return res.json();
 }
 
+async function readError(res: Response, fallback: string): Promise<Error> {
+  const json = await res.json().catch(() => ({}));
+  return new Error(Array.isArray(json.message) ? json.message.join(', ') : json.message || fallback);
+}
+
 export async function addWebhookEndpoint(projectId: string, data: { url: string; events: string[] }) {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/projects/${projectId}/webhooks`, {
     method: 'POST',
@@ -204,8 +230,29 @@ export async function addWebhookEndpoint(projectId: string, data: { url: string;
     body: JSON.stringify(data),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error('Failed to add webhook endpoint');
-  return res.json();
+  if (!res.ok) throw await readError(res, 'Failed to add webhook endpoint');
+  return res.json() as Promise<{ data: { endpoint: WebhookEndpointInfo; signingSecret: string } }>;
+}
+
+export async function deleteWebhookEndpoint(id: string) {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/webhooks/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!res.ok) throw await readError(res, 'Failed to delete the webhook endpoint');
+}
+
+export async function fetchWebhookDeliveries(): Promise<WebhookDeliveryInfo[]> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/webhooks/deliveries`, { credentials: 'include' });
+  if (!res.ok) throw await readError(res, 'Failed to load webhook deliveries');
+  return (await res.json()).data;
+}
+
+export async function resendWebhookDelivery(id: string): Promise<{ succeeded: boolean; responseCode: number; error: string | null }> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/webhooks/deliveries/${id}/resend`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw await readError(res, 'Failed to resend the delivery');
+  return (await res.json()).data;
 }
 
 export async function submitKycVerification(data: {
