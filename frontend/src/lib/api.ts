@@ -544,6 +544,64 @@ export async function updateProfile(payload: { name?: string; phone?: string }):
   return json.data;
 }
 
+export interface AutoRechargeStatus {
+  enabled: boolean;
+  threshold: number | null;
+  amount: number | null;
+  hasPaymentMethod: boolean;
+  failures: number;
+  lastError: string | null;
+  noticeSentAt: string | null;
+  noticeHours: number;
+  maxAmount: number;
+  maxFailures: number;
+}
+
+export async function fetchAutoRecharge(): Promise<AutoRechargeStatus> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/auto-recharge`, { credentials: 'include', cache: 'no-store' });
+  if (!res.ok) throw await readError(res, 'Could not load auto recharge');
+  return (await res.json()).data;
+}
+
+export async function saveAutoRecharge(settings: { enabled: boolean; threshold: number; amount: number }): Promise<AutoRechargeStatus> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/auto-recharge/settings`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw await readError(res, 'Could not save auto recharge');
+  return (await res.json()).data;
+}
+
+export async function startAutoRechargeSetup(amount: number): Promise<{ orderId: string; customerId: string; keyId: string; amount: number }> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/auto-recharge/setup`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify({ amount }),
+  });
+  if (!res.ok) throw await readError(res, 'Could not start saving the card');
+  return (await res.json()).data;
+}
+
+export async function confirmAutoRechargeSetup(data: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }): Promise<AutoRechargeStatus> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/auto-recharge/confirm`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw await readError(res, 'Could not save the card');
+  return (await res.json()).data;
+}
+
+export async function removeAutoRechargeCard(): Promise<AutoRechargeStatus> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/auto-recharge/method`, { method: 'DELETE', credentials: 'include' });
+  if (!res.ok) throw await readError(res, 'Could not remove the card');
+  return (await res.json()).data;
+}
+
 export async function fetch2faSetup() {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/profile/2fa/setup`, {
     credentials: 'include',

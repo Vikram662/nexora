@@ -7,6 +7,8 @@ import { useToast } from '@/components/ToastProvider';
 
 // Only emails the platform really sends. Each goes to the billing email of your organization.
 const EMAILS_WE_SEND = [
+  { title: 'Auto recharge notice', detail: 'Before we charge your saved card, so you can turn it off or change the amount.', critical: false },
+  { title: 'Auto recharge failed', detail: 'When a charge fails or auto recharge is switched off after repeated failures.', critical: true },
   { title: 'Wallet balance is low', detail: 'Once a day at most, when the balance falls below the alert level.', critical: true },
   { title: 'API secret rotated', detail: 'When a project secret is rotated, with the time the old secret stops working.', critical: true },
   { title: 'Repeated failed API sign-ins', detail: 'When wrong secrets lock a project key. Once a day at most.', critical: true },

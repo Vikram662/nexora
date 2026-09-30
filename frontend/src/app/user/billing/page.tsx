@@ -11,6 +11,7 @@ import {
   getApiBaseUrl, errorMessage } from '@/lib/api';
 import type { TaxInvoice, RazorpayResponse, CreditNote } from '@/lib/types';
 import { useToast } from '@/components/ToastProvider';
+import { AutoRecharge } from '@/components/AutoRecharge';
 
 export default function UserBillingPage() {
   const { success, error: toastError } = useToast();
@@ -195,6 +196,8 @@ export default function UserBillingPage() {
             ))}
           </div>
         </div>
+
+        <AutoRecharge onWalletChange={loadData} />
 
         {/* Custom Recharge Form */}
         <div className="p-4 rounded-md bg-paper border border-line max-w-md space-y-3 text-xs">
