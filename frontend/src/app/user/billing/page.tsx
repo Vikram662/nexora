@@ -9,7 +9,7 @@ import {
   updateCustomerBillingProfile,
   OrganizationData,
   getApiBaseUrl, errorMessage } from '@/lib/api';
-import type { PaymentOrder, TaxInvoice, RazorpayResponse } from '@/lib/types';
+import type { PaymentOrder, TaxInvoice, RazorpayResponse, CreditNote } from '@/lib/types';
 import { useToast } from '@/components/ToastProvider';
 
 export default function UserBillingPage() {
@@ -115,8 +115,8 @@ export default function UserBillingPage() {
             }
           },
           prefill: {
-            name: orgData?.name || 'Developer',
-            email: orgData?.billingEmail || 'developer@company.com',
+            name: orgData?.name || '',
+            email: orgData?.billingEmail || '',
           },
           theme: {
             color: '#2563eb',
@@ -300,6 +300,41 @@ export default function UserBillingPage() {
               )}
             </div>
           </div>
+
+          {orgData?.creditNotes && orgData.creditNotes.length > 0 && (
+            <div className="pt-4 space-y-2">
+              <div className="font-bold text-xs text-ink">Credit notes</div>
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th scope="col">Credit note</th>
+                    <th scope="col">Against invoice</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col"><span className="sr-only">Action</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgData.creditNotes.map((note: CreditNote) => (
+                    <tr key={note.id}>
+                      <td className="font-mono font-semibold text-accent-deep">{note.creditNoteNumber}</td>
+                      <td className="font-mono text-xs">{note.invoice?.invoiceNumber ?? '-'}</td>
+                      <td className="text-muted">{note.reason}</td>
+                      <td className="font-semibold">₹{Number(note.totalAmount).toFixed(2)}</td>
+                      <td>
+                        <button
+                          onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/credit-notes/${note.id}/print`, '_blank')}
+                          className="text-xs font-semibold text-accent hover:underline cursor-pointer"
+                        >
+                          View or print
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* GST Billing Details Form */}

@@ -1,4 +1,4 @@
-import type { AdminSettingsData, BillingProfile, LedgerTransaction, TaxInvoice, UpdateSettingsPayload } from './types';
+import type { AdminSettingsData, BillingProfile, CreditNote, LedgerTransaction, TaxInvoice, UpdateSettingsPayload } from './types';
 
 export function errorMessage(err: unknown, fallback = 'Something went wrong'): string {
   return err instanceof Error && err.message ? err.message : fallback;
@@ -77,6 +77,7 @@ export interface OrganizationData {
   projects: Project[];
   transactions: LedgerTransaction[];
   invoices?: TaxInvoice[];
+  creditNotes?: CreditNote[];
   kycVerification?: KycVerificationData | null;
   billingProfile?: BillingProfile | null;
 }
@@ -299,7 +300,10 @@ export async function createPaymentOrder(amount: number) {
     body: JSON.stringify({ amount }),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error('Failed to create payment order');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(Array.isArray(err.message) ? err.message.join(', ') : err.message || 'Failed to create payment order');
+  }
   return res.json();
 }
 
@@ -529,6 +533,31 @@ export async function generateInvoices(month: string, organizationId?: string): 
   if (!res.ok) {
     throw new Error(Array.isArray(json.message) ? json.message.join(', ') : json.message || 'Could not generate invoices');
   }
+  return json.data;
+}
+
+export async function issueCreditNote(payload: { invoiceId: string; amount: number; reason: string; creditToWallet: boolean }) {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/credit-notes`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(Array.isArray(json.message) ? json.message.join(', ') : json.message || 'Could not issue the credit note');
+  }
+  return json.data as CreditNote;
+}
+
+export async function processQueuedEmails(): Promise<{ sent: number; failed: number; retrying: number; skipped?: string }> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/notifications/process`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.message || 'Could not send queued emails');
   return json.data;
 }
 

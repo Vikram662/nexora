@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { CreditCard, TrendingUp, Receipt, DollarSign, Download, Search, ArrowUpRight, ShieldCheck, RefreshCw } from 'lucide-react';
-import { fetchAdminBillingOverview, fetchGstr1Report, fetchGstr2Report, getApiBaseUrl, errorMessage, generateInvoices } from '@/lib/api';
+import { fetchAdminBillingOverview, fetchGstr1Report, fetchGstr2Report, getApiBaseUrl, errorMessage, generateInvoices, issueCreditNote, processQueuedEmails } from '@/lib/api';
 import { useToast } from '@/components/ToastProvider';
-import type { AdminBillingOverview, Gstr1Report, Gstr2Report, Gstr2Row, LedgerTransaction, TaxInvoice, OrgSummary } from '@/lib/types';
+import type { AdminBillingOverview, Gstr1Report, Gstr2Report, Gstr2Row, LedgerTransaction, TaxInvoice, OrgSummary, CreditNote } from '@/lib/types';
 
 export default function AdminBillingPage() {
   const [data, setData] = useState<AdminBillingOverview | null>(null);
@@ -22,6 +22,49 @@ export default function AdminBillingPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
   const [generating, setGenerating] = useState(false);
+  const [creditFor, setCreditFor] = useState<TaxInvoice | null>(null);
+  const [creditAmount, setCreditAmount] = useState('');
+  const [creditReason, setCreditReason] = useState('');
+  const [creditToWallet, setCreditToWallet] = useState(true);
+  const [issuing, setIssuing] = useState(false);
+
+  const openCreditNote = (inv: TaxInvoice) => {
+    setCreditFor(inv);
+    setCreditAmount('');
+    setCreditReason('');
+    setCreditToWallet(true);
+  };
+
+  const handleIssueCreditNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creditFor) return;
+    setIssuing(true);
+    try {
+      const note = await issueCreditNote({
+        invoiceId: creditFor.id,
+        amount: Number(creditAmount),
+        reason: creditReason.trim(),
+        creditToWallet,
+      });
+      success(`Credit note ${note.creditNoteNumber} issued.`);
+      setCreditFor(null);
+      await loadData();
+    } catch (err) {
+      toastError(errorMessage(err, 'Could not issue the credit note'));
+    } finally {
+      setIssuing(false);
+    }
+  };
+
+  const handleSendEmails = async () => {
+    try {
+      const r = await processQueuedEmails();
+      if (r.skipped === 'not_configured') info('Email is not set up yet. Add SMTP_HOST and EMAIL_FROM to the server settings.');
+      else success(`Sent ${r.sent} email(s). ${r.retrying} will be retried, ${r.failed} failed.`);
+    } catch (err) {
+      toastError(errorMessage(err, 'Could not send queued emails'));
+    }
+  };
 
   const handleGenerateInvoices = async () => {
     setGenerating(true);
@@ -329,6 +372,13 @@ export default function AdminBillingPage() {
               >
                 {generating ? 'Generating...' : 'Generate invoices'}
               </button>
+              <button
+                type="button"
+                onClick={handleSendEmails}
+                className="px-4 py-2 border border-line hover:border-ink text-ink text-xs font-semibold rounded-md cursor-pointer"
+              >
+                Send queued emails
+              </button>
               <p className="text-[11px] text-muted max-w-sm">
                 Issues one GST tax invoice per customer for that month&rsquo;s charges. Available 24 hours after the month ends. Running it again never duplicates an invoice. Needs the company GSTIN and address saved in Settings, Tax invoice details.
               </p>
@@ -378,12 +428,114 @@ export default function AdminBillingPage() {
                         >
                           <Download className="h-3 w-3" /> View / PDF
                         </button>
+                        <button
+                          onClick={() => openCreditNote(inv)}
+                          className="ml-2 px-2.5 py-1 rounded-lg border border-line hover:border-ink text-ink text-[11px] font-bold cursor-pointer"
+                        >
+                          Credit note
+                        </button>
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+
+            <h3 className="font-display text-base font-semibold mt-10">Credit notes</h3>
+            <table className="ledger mt-3">
+              <thead>
+                <tr>
+                  <th scope="col">Credit note</th>
+                  <th scope="col">Organization</th>
+                  <th scope="col">Against invoice</th>
+                  <th scope="col">Reason</th>
+                  <th scope="col">Total</th>
+                  <th scope="col"><span className="sr-only">Action</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.creditNotes ?? []).map((note: CreditNote) => (
+                  <tr key={note.id}>
+                    <td className="font-mono font-semibold text-accent-deep">{note.creditNoteNumber}</td>
+                    <td className="font-semibold text-ink">{note.organization?.name}</td>
+                    <td className="font-mono text-xs">{note.invoice?.invoiceNumber}</td>
+                    <td className="text-muted">{note.reason}</td>
+                    <td className="font-semibold">₹{Number(note.totalAmount).toFixed(2)}</td>
+                    <td>
+                      <button
+                        onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/admin/credit-notes/${note.id}/print`, '_blank')}
+                        className="text-xs font-semibold text-accent hover:underline cursor-pointer"
+                      >
+                        View or print
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {(data?.creditNotes ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-muted">No credit notes yet. Use Credit note on an invoice above to issue one.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {creditFor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setCreditFor(null)}>
+            <form
+              role="dialog"
+              aria-modal="true"
+              aria-label="Issue credit note"
+              onClick={(e) => e.stopPropagation()}
+              onSubmit={handleIssueCreditNote}
+              className="w-full max-w-sm rounded-xl bg-white p-5 space-y-3 text-xs"
+            >
+              <h3 className="text-sm font-bold text-ink">Credit note for {creditFor.invoiceNumber}</h3>
+              <p className="text-muted">
+                Invoice total ₹{Number(creditFor.totalAmount).toFixed(2)}, GST included. The credit note reverses the tax in the same proportion.
+              </p>
+              <label className="block">
+                <span className="block font-semibold text-ink mb-1">Amount to credit (₹, GST included)</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(e.target.value)}
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md tabular"
+                />
+              </label>
+              <label className="block">
+                <span className="block font-semibold text-ink mb-1">Reason (printed on the credit note)</span>
+                <textarea
+                  required
+                  minLength={5}
+                  maxLength={500}
+                  rows={2}
+                  value={creditReason}
+                  onChange={(e) => setCreditReason(e.target.value)}
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md"
+                />
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={creditToWallet} onChange={(e) => setCreditToWallet(e.target.checked)} />
+                <span>Add the amount back to the customer&rsquo;s wallet</span>
+              </label>
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setCreditFor(null)} className="px-3 py-1.5 rounded-md border border-line text-muted cursor-pointer">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={issuing}
+                  className="px-3 py-1.5 rounded-md bg-accent hover:bg-accent-deep text-white font-bold disabled:opacity-50 cursor-pointer"
+                >
+                  {issuing ? 'Issuing...' : 'Issue credit note'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 

@@ -60,9 +60,25 @@ export interface OrgSummary {
   _count?: { projects?: number };
 }
 
+export interface CreditNote {
+  id: string;
+  creditNoteNumber: string;
+  invoiceId: string;
+  reason: string;
+  taxableAmount: Money;
+  cgstAmount?: Money;
+  sgstAmount?: Money;
+  igstAmount?: Money;
+  totalAmount: Money;
+  createdAt: string;
+  invoice?: { invoiceNumber: string };
+  organization?: { id: string; name: string };
+}
+
 export interface AdminBillingOverview {
   transactions?: LedgerTransaction[];
   invoices?: TaxInvoice[];
+  creditNotes?: CreditNote[];
   organizations?: OrgSummary[];
   summary?: Record<string, Money>;
 }
