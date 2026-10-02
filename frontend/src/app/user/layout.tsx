@@ -79,34 +79,40 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <div className="min-h-screen bg-paper flex text-ink selection:bg-accent selection:text-white font-sans">
+    <div className="min-h-screen bg-[#f4f6fa] flex text-ink selection:bg-accent selection:text-white font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-line flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen">
+      <aside className="w-64 bg-white/80 backdrop-blur-md border-r border-[#e2e7f0] flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen z-20">
         <div className="flex flex-col min-h-0">
           {/* Logo */}
-          <div className="p-6 border-b border-line flex items-center justify-between shrink-0">
-            <Link href="/user" className="block">
-              <span className="font-display text-xl font-semibold tracking-tight">
-                Nexora<span className="text-accent">.</span>rtc
-              </span>
-              <div className="font-mono text-[10px] text-muted">Console</div>
+          <div className="p-5 border-b border-[#e2e7f0]/80 flex items-center justify-between shrink-0">
+            <Link href="/user" className="flex items-center gap-2.5 group">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-accent to-indigo-500 flex items-center justify-center text-white shadow-md shadow-accent/20 group-hover:scale-105 transition-transform">
+                <Activity className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="font-display text-lg font-bold tracking-tight text-ink block leading-none">
+                  Nexora<span className="text-accent">.</span>rtc
+                </span>
+                <span className="text-[10px] font-mono text-muted tracking-wide uppercase">Developer Console</span>
+              </div>
             </Link>
           </div>
 
           {/* Org & Wallet Badge */}
-          <div className="p-4 mx-4 mt-4 rounded-md bg-paper border border-line space-y-1 shrink-0">
-            <div className="text-[11px] font-semibold text-muted">Organization</div>
+          <div className="p-3.5 mx-3 mt-3.5 rounded-xl bg-gradient-to-br from-white to-[#f4f6fa] border border-[#e2e7f0] shadow-xs space-y-2 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Organization</div>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
             {organizations.length > 1 ? (
               <select
                 aria-label="Switch organization"
                 value={organizations.find((o) => o.current)?.organizationId ?? ''}
                 onChange={async (e) => {
                   await switchOrganization(e.target.value);
-                  // A full load so every panel starts with the other organization's data.
-                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                   window.location.href = '/user';
                 }}
-                className="w-full -mx-1 px-1 py-0.5 bg-transparent text-sm font-bold text-ink truncate cursor-pointer"
+                className="w-full px-2 py-1 bg-white border border-[#e2e7f0] rounded-lg text-xs font-semibold text-ink truncate cursor-pointer hover:border-accent focus:border-accent"
               >
                 {organizations.map((o) => (
                   <option key={o.organizationId} value={o.organizationId}>
@@ -115,16 +121,19 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 ))}
               </select>
             ) : (
-              <div className="text-sm font-bold text-ink truncate">{orgData?.name ?? '—'}</div>
+              <div className="text-xs font-bold text-ink truncate">{orgData?.name ?? 'Loading...'}</div>
             )}
-            <div className="pt-1 text-xs text-muted">Wallet balance</div>
-            <div className="font-mono tabular text-lg font-semibold text-ink">
-              {orgData ? `₹${Number(orgData.walletBalance).toFixed(2)}` : '—'}
+            
+            <div className="pt-2 border-t border-[#e2e7f0]/60 flex items-baseline justify-between">
+              <span className="text-[11px] text-muted font-medium">Balance</span>
+              <span className="font-mono text-sm font-bold text-ink bg-white px-2 py-0.5 rounded-md border border-[#e2e7f0]">
+                {orgData ? `₹${Number(orgData.walletBalance).toFixed(2)}` : '—'}
+              </span>
             </div>
           </div>
 
           {/* Nav Items */}
-          <nav className="p-4 space-y-1 overflow-y-auto flex-1">
+          <nav className="p-3 space-y-0.5 overflow-y-auto flex-1 scrollbar-thin">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = item.exact
@@ -136,14 +145,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                   key={item.href}
                   href={item.href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`w-full flex items-center gap-3 pl-3 pr-3.5 py-2.5 border-l-2 text-xs font-semibold transition-colors ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
                     isActive
-                      ? 'border-accent bg-paper text-ink'
-                      : 'border-transparent text-muted hover:bg-paper hover:text-ink'
+                      ? 'bg-accent text-white shadow-xs font-semibold'
+                      : 'text-[#475569] hover:bg-[#f1f4f9] hover:text-ink'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${item.badgeColor || ''}`} />
-                  <span>{item.label}</span>
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-white' : item.badgeColor || 'text-slate-500'}`} />
+                  <span className="truncate">{item.label}</span>
                 </Link>
               );
             })}
@@ -151,14 +160,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* User Card */}
-        <div className="p-4 border-t border-line flex items-center justify-between shrink-0">
-          <Link href="/user/profile" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <div className="h-8 w-8 rounded-full bg-accent/15 text-accent-deep font-bold text-xs flex items-center justify-center">
+        <div className="p-3.5 border-t border-[#e2e7f0] flex items-center justify-between shrink-0 bg-white/50">
+          <Link href="/user/profile" className="flex items-center gap-2.5 hover:opacity-85 transition-opacity min-w-0">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-accent to-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
               {(email ?? '?').slice(0, 2).toUpperCase()}
             </div>
-            <div className="text-left">
-              <div className="text-xs font-bold text-ink max-w-36 truncate">{email ?? 'Signed in'}</div>
-              <div className="text-[10px] text-accent font-medium hover:underline">Manage profile</div>
+            <div className="text-left min-w-0">
+              <div className="text-xs font-semibold text-ink truncate max-w-[110px]">{email ?? 'Signed in'}</div>
+              <div className="text-[10px] text-accent font-medium hover:underline">Manage Profile</div>
             </div>
           </Link>
           <button
@@ -173,31 +182,33 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
               router.refresh();
             }}
             title="Log Out"
-            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-paper-deep transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
       </aside>
 
-
       {/* Main Panel Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-line px-6 flex items-center justify-between sticky top-0 z-30">
+        <header className="h-16 glass-header border-b border-[#e2e7f0] px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
           <div className="flex items-center gap-3">
-            <h1 className="font-semibold text-base md:text-lg text-ink">
+            <h1 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight">
               {getPageTitle()}
             </h1>
-            <span className="hidden sm:inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
-              User Control Plane Online
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Cluster Active
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="text-xs font-semibold text-muted hover:text-accent flex items-center gap-1"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-muted hover:text-accent flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#e2e7f0] bg-white hover:bg-slate-50 transition-colors shadow-2xs"
             >
               Public Site <ExternalLink className="h-3 w-3" />
             </Link>
@@ -205,7 +216,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 p-6 md:p-8 space-y-6 max-w-6xl w-full">
+        <main className="flex-1 p-6 md:p-8 space-y-6 max-w-7xl w-full">
           {children}
         </main>
       </div>

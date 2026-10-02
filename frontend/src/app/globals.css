@@ -90,23 +90,74 @@ h1, h2, h3 {
   background: transparent;
 }
 .ledger th {
-  padding: 0.5rem 1rem 0.5rem 0;
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 0.65rem 1rem 0.65rem 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--color-muted);
-  border-bottom: 1px solid var(--color-ink);
+  border-bottom: 1px solid var(--color-line);
   white-space: nowrap;
 }
 .ledger td {
-  padding: 0.75rem 1rem 0.75rem 0;
-  border-bottom: 1px solid var(--color-line);
-  vertical-align: top;
+  padding: 0.85rem 1rem 0.85rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-line) 60%, transparent);
+  vertical-align: middle;
   font-variant-numeric: tabular-nums;
+  transition: background-color 0.15s ease;
 }
-.ledger tbody tr:hover {
-  background: rgb(23 27 52 / 0.03);
+.ledger tbody tr:hover td {
+  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
 }
 .ledger th:last-child,
 .ledger td:last-child {
   padding-right: 0;
+}
+
+/* Modern Card & Panel Utilities */
+.panel-card {
+  background: #ffffff;
+  border: 1px solid #e3e6ed;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(16, 19, 43, 0.04), 0 6px 16px -4px rgba(16, 19, 43, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.panel-card:hover {
+  border-color: #d1d6e2;
+  box-shadow: 0 4px 12px rgba(16, 19, 43, 0.06), 0 12px 24px -6px rgba(16, 19, 43, 0.05);
+}
+
+.panel-card-dark {
+  background: #141733;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+}
+.panel-card-dark:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Glassmorphism Accents */
+.glass-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.glass-header-dark {
+  background: rgba(16, 19, 43, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Premium Badges */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
