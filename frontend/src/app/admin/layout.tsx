@@ -5,16 +5,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ShieldCheck, BadgeCheck, HelpCircle, Activity, CreditCard, Building2, Radio, ExternalLink, ShieldAlert, Settings, Menu, X } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api';
+import { STAFF_ROLE_LABELS, StaffSessionContext, areaForPath, staffCan, type StaffArea, type StaffRole } from '@/lib/staff-access';
 
-const ADMIN_NAV = [
-  { href: '/admin', label: 'Admin Overview', icon: Activity, exact: true },
-  { href: '/admin/billing', label: 'Billing & Revenue Reports', icon: CreditCard },
-  { href: '/admin/offers', label: 'Promo Offers & Coupons', icon: Radio },
-  { href: '/admin/kyc', label: 'KYC Document Review', icon: BadgeCheck },
-  { href: '/admin/organizations', label: 'Organizations & Rates', icon: Building2 },
-  { href: '/admin/tickets', label: 'Support Ticket Triage', icon: HelpCircle },
-  { href: '/admin/audit', label: 'Master Audit & Security', icon: ShieldCheck },
-  { href: '/admin/settings', label: 'Platform & Cluster Settings', icon: Settings },
+const ADMIN_NAV: { href: string; label: string; icon: typeof Activity; area: StaffArea; exact?: boolean }[] = [
+  { href: '/admin', label: 'Admin Overview', icon: Activity, area: 'overview', exact: true },
+  { href: '/admin/billing', label: 'Billing & Revenue Reports', icon: CreditCard, area: 'billing' },
+  { href: '/admin/offers', label: 'Promo Offers & Coupons', icon: Radio, area: 'offers' },
+  { href: '/admin/kyc', label: 'KYC Document Review', icon: BadgeCheck, area: 'kyc' },
+  { href: '/admin/organizations', label: 'Organizations & Rates', icon: Building2, area: 'organizations' },
+  { href: '/admin/tickets', label: 'Support Ticket Triage', icon: HelpCircle, area: 'tickets' },
+  { href: '/admin/audit', label: 'Master Audit & Security', icon: ShieldCheck, area: 'audit' },
+  { href: '/admin/settings', label: 'Platform & Cluster Settings', icon: Settings, area: 'settings' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [staffEmail, setStaffEmail] = useState<string | null>(null);
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   // Below md the sidebar is a drawer opened from the header.
   const [navOpen, setNavOpen] = useState(false);
 
@@ -42,9 +44,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return res.json();
       })
       .then((json) => {
-        if (json.data?.isStaff || json.data?.role === 'SUPER_ADMIN' || json.data?.role === 'STAFF') {
+        if (json.data?.isStaff) {
           setIsAuthorized(true);
           setStaffEmail(json.data?.email ?? null);
+          setStaffRole(json.data?.role ?? null);
         } else {
           setIsAuthorized(false);
           router.replace('/user');
@@ -115,8 +118,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div>
               <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase block">Staff Role</span>
               <span className="text-xs font-bold text-white flex items-center gap-1.5 mt-0.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Super Admin
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {staffRole ? STAFF_ROLE_LABELS[staffRole] ?? staffRole : 'Staff'}
               </span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-md bg-accent/20 text-white font-mono font-semibold border border-accent/30">
@@ -125,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <nav className="p-3 space-y-0.5 overflow-y-auto flex-1">
-            {ADMIN_NAV.map((item) => {
+            {ADMIN_NAV.filter((item) => staffCan(staffRole, item.area)).map((item) => {
               const Icon = item.icon;
               const isActive = item.exact
                 ? pathname === item.href
@@ -203,7 +206,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         <main className="flex-1 p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl w-full">
-          {children}
+          {staffCan(staffRole, areaForPath(pathname)) ? (
+            <StaffSessionContext.Provider value={{ email: staffEmail, role: staffRole }}>
+              {children}
+            </StaffSessionContext.Provider>
+          ) : (
+            <div className="panel-card p-8 max-w-lg space-y-3">
+              <ShieldAlert className="h-8 w-8 text-amber-600" />
+              <h2 className="font-display text-lg font-bold text-ink">This area is not part of your role</h2>
+              <p className="text-sm text-muted">
+                You are signed in as {staffRole ? STAFF_ROLE_LABELS[staffRole] ?? staffRole : 'staff'}. Ask a Super Admin if you need access.
+              </p>
+              <Link href="/admin" className="inline-block text-sm font-semibold text-accent hover:underline">
+                Back to the overview
+              </Link>
+            </div>
+          )}
         </main>
       </div>
     </div>

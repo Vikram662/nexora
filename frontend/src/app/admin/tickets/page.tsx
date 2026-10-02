@@ -56,7 +56,7 @@ export default function AdminTicketsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-ink tracking-tight flex items-center gap-2.5">
           <HelpCircle className="h-6 w-6 text-accent" />
@@ -124,7 +124,7 @@ export default function AdminTicketsPage() {
                     <div className="text-[11px] text-muted mt-1 line-clamp-2">{t.description}</div>
                     <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400">
                       <span>{t.organization?.name || 'Customer'}</span>
-                      <span>{new Date(t.createdAt).toLocaleDateString()}</span>
+                      <span>{new Date(t.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</span>
                     </div>
                   </div>
                 );
@@ -186,7 +186,7 @@ export default function AdminTicketsPage() {
                           {m.senderName || (isStaff ? 'Staff Support' : 'Customer')}
                         </span>
                         <span className="text-[10px] text-slate-400 font-normal">
-                          {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <p className="leading-relaxed">{m.message}</p>

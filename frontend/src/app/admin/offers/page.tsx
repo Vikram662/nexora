@@ -196,7 +196,7 @@ export default function AdminOffersPage() {
               <div className="mt-5 pt-3 border-t border-line flex items-center justify-between text-xs">
                 <div className="text-[11px] text-slate-400 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Until {new Date(offer.validUntil).toLocaleDateString()}
+                  Until {new Date(offer.validUntil).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
                 </div>
                 <button
                   onClick={() => handleToggle(offer.id)}

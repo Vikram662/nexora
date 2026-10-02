@@ -661,7 +661,7 @@ export default function ActiveCallRoom({
                   className={`flex flex-col ${m.isSelf ? 'items-end' : 'items-start'}`}
                 >
                   <span className="text-[10px] text-slate-400 mb-0.5 px-1 font-medium">
-                    {m.isSelf ? 'You' : m.sender} • {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {m.isSelf ? 'You' : m.sender} • {new Date(m.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   <div
                     className={`max-w-[85%] rounded-lg px-3 py-2 text-xs font-medium ${

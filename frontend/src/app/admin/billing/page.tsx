@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { CreditCard, TrendingUp, Receipt, DollarSign, Download, Search, ArrowUpRight, ShieldCheck, RefreshCw } from 'lucide-react';
 import { fetchAdminBillingOverview, fetchGstr1Report, getApiBaseUrl, errorMessage, generateInvoices, issueCreditNote, processQueuedEmails } from '@/lib/api';
 import { useToast } from '@/components/ToastProvider';
+import { formatSignedInr, signedAmount } from '@/lib/ledger';
 import type { AdminBillingOverview, Gstr1Report, LedgerTransaction, TaxInvoice, OrgSummary, CreditNote } from '@/lib/types';
 
 export default function AdminBillingPage() {
@@ -315,8 +316,8 @@ export default function AdminBillingPage() {
                           {tx.type}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-bold text-ink">
-                        ₹{Number(tx.amount).toFixed(2)}
+                      <td className={`py-3 px-4 font-bold font-mono whitespace-nowrap ${signedAmount(tx) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {formatSignedInr(signedAmount(tx))}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
@@ -328,7 +329,7 @@ export default function AdminBillingPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-slate-400 text-[11px]">
-                        {new Date(tx.createdAt).toLocaleString()}
+                        {new Date(tx.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                       </td>
                     </tr>
                   ))
@@ -399,7 +400,7 @@ export default function AdminBillingPage() {
                         {inv.organization?.name || 'Enterprise'}
                       </td>
                       <td className="py-3 px-4 text-slate-400 text-[11px]">
-                        {new Date(inv.periodStart).toLocaleDateString()} - {new Date(inv.periodEnd).toLocaleDateString()}
+                        {new Date(inv.periodStart).toLocaleDateString('en-IN', { dateStyle: 'medium' })} - {new Date(inv.periodEnd).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
                       </td>
                       <td className="py-3 px-4">₹{Number(inv.subtotal).toFixed(2)}</td>
                       <td className="py-3 px-4 text-muted">

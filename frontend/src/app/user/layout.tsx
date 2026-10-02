@@ -236,10 +236,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             <h1 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight truncate">
               {getPageTitle()}
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Cluster Active
-            </span>
           </div>
 
           <div className="flex items-center gap-3">

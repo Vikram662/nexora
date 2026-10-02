@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Script from 'next/script';
 import { CreditCard, CheckCircle2, Receipt, Building2, Download, Save } from 'lucide-react';
 import {
   fetchOrganizationData,
@@ -11,6 +12,7 @@ import {
   getApiBaseUrl, errorMessage } from '@/lib/api';
 import type { TaxInvoice, RazorpayResponse, CreditNote } from '@/lib/types';
 import { useToast } from '@/components/ToastProvider';
+import { formatSignedInr, signedAmount } from '@/lib/ledger';
 import { AutoRecharge } from '@/components/AutoRecharge';
 
 export default function UserBillingPage() {
@@ -139,6 +141,8 @@ export default function UserBillingPage() {
 
   return (
     <div className="space-y-6">
+      {/* Razorpay Checkout is only needed on this page (top-ups and saving a card for auto recharge). */}
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <div className="border-t-2 border-ink pt-5 space-y-6">
         <div>
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
@@ -237,8 +241,7 @@ export default function UserBillingPage() {
                 </thead>
                 <tbody>
                   {orgData.transactions.map((tx) => {
-                    // Usage deductions are stored as positive amounts but take money out of the wallet.
-                    const amount = tx.type === 'USAGE_DEDUCTION' ? -Math.abs(Number(tx.amount)) : Number(tx.amount);
+                    const amount = signedAmount(tx);
                     return (
                       <tr key={tx.id}>
                         <td className="font-mono text-xs text-muted">{tx.gatewayPaymentId || tx.id.substring(0, 16)}</td>
@@ -246,7 +249,7 @@ export default function UserBillingPage() {
                           <span className="px-2 py-0.5 rounded bg-accent/10 text-accent-deep text-[10px] font-bold">{tx.type}</span>
                         </td>
                         <td className={`text-right font-mono font-bold ${amount < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                          {amount < 0 ? '−' : '+'}₹{Math.abs(amount).toFixed(2)}
+                          {formatSignedInr(amount)}
                         </td>
                         <td className={`text-right text-[10px] font-bold ${tx.status === 'SUCCESS' ? 'text-emerald-700' : tx.status === 'FAILED' ? 'text-red-600' : 'text-muted'}`}>
                           {tx.status}

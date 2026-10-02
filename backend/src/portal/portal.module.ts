@@ -3,6 +3,7 @@ import { PortalController } from './portal.controller.js';
 import { KycGatewayService } from './kyc-gateway.service.js';
 import { PaymentService } from './payment.service.js';
 import { AutoRechargeService } from './auto-recharge.service.js';
+import { SystemHealthService } from './system-health.service.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { CryptoModule } from '../crypto/crypto.module.js';
 import { AuthModule } from '../auth/auth.module.js';
@@ -14,7 +15,7 @@ import { SettingsModule } from '../settings/settings.module.js';
 @Module({
   imports: [PrismaModule, CryptoModule, AuthModule, SettingsModule, InvoicingModule, NotificationsModule, LivekitModule],
   controllers: [PortalController],
-  providers: [KycGatewayService, PaymentService, AutoRechargeService],
+  providers: [KycGatewayService, PaymentService, AutoRechargeService, SystemHealthService],
   exports: [KycGatewayService, PaymentService, AutoRechargeService],
 })
 export class PortalModule {}

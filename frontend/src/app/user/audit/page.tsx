@@ -63,7 +63,7 @@ export default function UserAuditPage() {
                   <td className="p-3 font-sans font-bold text-ink">{log.targetType}</td>
                   <td className="p-3 text-accent-deep">{log.actor}</td>
                   <td className="p-3">{log.purpose}</td>
-                  <td className="p-3 text-[11px] text-slate-400">{new Date(log.createdAt).toLocaleString()}</td>
+                  <td className="p-3 text-[11px] text-slate-400">{new Date(log.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</td>
                 </tr>
               ))}
             </tbody>

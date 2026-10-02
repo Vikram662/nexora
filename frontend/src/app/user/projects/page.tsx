@@ -100,7 +100,7 @@ export default function UserProjectsPage() {
         key: 'Rotated Secret',
         secret: res.newSecret,
       });
-      info(`New Secret Generated. Previous secret expires at ${new Date(res.graceWindowExpiresAt).toLocaleString()}`);
+      info(`New Secret Generated. Previous secret expires at ${new Date(res.graceWindowExpiresAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`);
       loadData();
     } catch (err) {
       toastError(errorMessage(err,'Failed to rotate secret'));

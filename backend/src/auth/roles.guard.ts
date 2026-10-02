@@ -6,12 +6,17 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { StaffRole } from '@prisma/client';
 
 export const ROLES_KEY = 'roles';
 export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);
 
 export const REQUIRE_STAFF_KEY = 'require_staff';
-export const RequireStaff = () => SetMetadata(REQUIRE_STAFF_KEY, true);
+/**
+ * Staff-only route. With no roles any staff member may call it; with roles only those staff roles may.
+ * SUPER_ADMIN may always call it.
+ */
+export const RequireStaff = (...roles: StaffRole[]) => SetMetadata(REQUIRE_STAFF_KEY, roles);
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -23,7 +28,7 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    const requireStaff = this.reflector.getAllAndOverride<boolean>(REQUIRE_STAFF_KEY, [
+    const staffRoles = this.reflector.getAllAndOverride<StaffRole[] | undefined>(REQUIRE_STAFF_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -34,8 +39,13 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User context missing. JwtAuthGuard must be used before RolesGuard.');
     }
 
-    if (requireStaff && !user.isStaff) {
-      throw new ForbiddenException('Staff privileges required to access this endpoint.');
+    if (staffRoles) {
+      if (!user.isStaff) {
+        throw new ForbiddenException('Staff privileges required to access this endpoint.');
+      }
+      if (staffRoles.length > 0 && user.role !== 'SUPER_ADMIN' && !staffRoles.includes(user.role)) {
+        throw new ForbiddenException('Your staff role does not have access to this area.');
+      }
     }
 
     if (!requiredRoles || requiredRoles.length === 0) {

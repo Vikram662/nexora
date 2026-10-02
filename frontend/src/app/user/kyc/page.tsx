@@ -177,7 +177,7 @@ export default function UserKycPage() {
                 </span>
                 {kycVerifiedAt && (
                   <span className="text-[10px] text-slate-400 mt-1 block">
-                    Verified on {new Date(kycVerifiedAt).toLocaleDateString()}
+                    Verified on {new Date(kycVerifiedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
                   </span>
                 )}
               </div>

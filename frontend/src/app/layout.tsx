@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Familjen_Grotesk, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
-import Script from 'next/script';
 import { siteUrl } from '@/lib/seo';
 
 const familjen = Familjen_Grotesk({ subsets: ['latin'], variable: '--font-familjen' });
@@ -36,9 +35,6 @@ import { ToastProvider } from '@/components/ToastProvider';
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="light" suppressHydrationWarning>
-      <head>
-        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
-      </head>
       <body
         className={`${familjen.variable} ${instrument.variable} ${jetbrains.variable} font-sans bg-paper text-ink antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning

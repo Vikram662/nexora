@@ -61,7 +61,7 @@ export default function AdminKycReviewPage() {
   });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-ink tracking-tight flex items-center gap-2.5">
@@ -174,7 +174,7 @@ export default function AdminKycReviewPage() {
                     </td>
 
                     <td className="py-4 px-5 text-muted text-[11px]">
-                      {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : 'N/A'}
+                      {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'N/A'}
                     </td>
 
                     <td className="py-4 px-5 text-right">

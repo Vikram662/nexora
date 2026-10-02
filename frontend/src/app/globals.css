@@ -144,3 +144,15 @@ h1, h2, h3 {
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+
+/* Entry animation for toasts, dialogs and notices: combine animate-in with fade-in, zoom-in-95 or slide-in-from-bottom-5. */
+@keyframes enter {
+  from {
+    opacity: var(--enter-opacity, 1);
+    transform: translate3d(0, var(--enter-translate-y, 0), 0) scale(var(--enter-scale, 1));
+  }
+}
+.animate-in { animation: enter 0.18s ease-out; }
+.fade-in { --enter-opacity: 0; }
+.zoom-in-95 { --enter-scale: 0.95; }
+.slide-in-from-bottom-5 { --enter-translate-y: 1.25rem; }

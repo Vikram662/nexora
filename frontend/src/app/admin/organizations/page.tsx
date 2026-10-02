@@ -4,12 +4,14 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { Building2, CreditCard, CheckCircle2 } from 'lucide-react';
 import { fetchAdminOrganizations, adjustOrgBalance, errorMessage } from '@/lib/api';
+import { useStaffCan } from '@/lib/staff-access';
 import type { OrgSummary } from '@/lib/types';
 import { useToast } from '@/components/ToastProvider';
 
 export default function AdminOrganizationsPage() {
   const { success, error: toastError } = useToast();
   const [orgs, setOrgs] = useState<OrgSummary[]>([]);
+  const canAdjust = useStaffCan('adjustBalance');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +43,7 @@ export default function AdminOrganizationsPage() {
     setSuccessMsg(null);
     try {
       await adjustOrgBalance(selectedOrg.id, Number(adjustAmount), adjustReason);
-      success(`Successfully credited ₹${adjustAmount} to ${selectedOrg.name}!`);
+      success(`${adjustAmount < 0 ? 'Debited' : 'Credited'} ₹${Math.abs(adjustAmount)} ${adjustAmount < 0 ? 'from' : 'to'} ${selectedOrg.name}.`);
       setSelectedOrg(null);
       loadData();
     } catch (err) {
@@ -52,7 +54,7 @@ export default function AdminOrganizationsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-ink tracking-tight flex items-center gap-2.5">
@@ -141,16 +143,20 @@ export default function AdminOrganizationsPage() {
                     </td>
 
                     <td className="py-4 px-5 text-muted text-[11px]">
-                      {new Date(org.createdAt).toLocaleDateString()}
+                      {new Date(org.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
                     </td>
 
                     <td className="py-4 px-5 text-right">
-                      <button
-                        onClick={() => setSelectedOrg(org)}
-                        className="px-3 py-1.5 bg-console hover:bg-console-line text-white rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                      >
-                        <CreditCard className="h-3 w-3" /> Adjust Balance
-                      </button>
+                      {canAdjust ? (
+                        <button
+                          onClick={() => setSelectedOrg(org)}
+                          className="px-3 py-1.5 bg-console hover:bg-console-line text-white rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                        >
+                          <CreditCard className="h-3 w-3" /> Adjust Balance
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-muted">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -161,7 +167,7 @@ export default function AdminOrganizationsPage() {
       </div>
 
       {/* Adjust Balance Modal */}
-      {selectedOrg && (
+      {canAdjust && selectedOrg && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6 border border-line space-y-5 animate-in fade-in zoom-in-95">
             <div>

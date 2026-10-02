@@ -6,6 +6,14 @@ import { fetchSupportTickets, createSupportTicket, errorMessage } from '@/lib/ap
 import type { SupportTicket } from '@/lib/types';
 import { useToast } from '@/components/ToastProvider';
 
+const TICKET_STATUS_STYLE: Record<string, string> = {
+  OPEN: 'bg-amber-50 text-amber-800 border-amber-200',
+  IN_PROGRESS: 'bg-accent/10 text-accent-deep border-accent/30',
+  WAITING_ON_CUSTOMER: 'bg-red-50 text-red-700 border-red-200',
+  RESOLVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  CLOSED: 'bg-slate-100 text-slate-700 border-slate-200',
+};
+
 export default function UserTicketsPage() {
   const { success, error: toastError } = useToast();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -139,39 +147,48 @@ export default function UserTicketsPage() {
         {/* Tickets List */}
         <div className="space-y-3">
           <div className="font-bold text-xs text-ink">Your Support Tickets</div>
-          <div className="border border-line rounded-md overflow-hidden divide-y divide-line text-xs">
-            <div className="p-3 bg-paper font-semibold text-muted flex justify-between text-[10px]">
-              <span>Ticket # / Subject</span>
-              <span>Category</span>
-              <span>Status</span>
+          {tickets.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th scope="col">Ticket</th>
+                    <th scope="col">Category</th>
+                    <th scope="col" className="text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((tk) => (
+                    <tr key={tk.id}>
+                      <td>
+                        <div className="font-semibold text-ink flex flex-wrap items-center gap-x-2">
+                          <span className="font-mono text-accent">{tk.ticketNumber}</span>
+                          <span>{tk.subject}</span>
+                        </div>
+                        <span className="text-[11px] text-muted block mt-0.5">
+                          Priority: <strong className="text-ink">{tk.priority}</strong> • {new Date(tk.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="px-2.5 py-0.5 bg-paper-deep text-ink rounded-sm font-medium text-[10px] whitespace-nowrap">
+                          {tk.category}
+                        </span>
+                      </td>
+                      <td className="text-right">
+                        <span className={`px-2.5 py-0.5 border rounded-sm font-bold text-[10px] whitespace-nowrap ${TICKET_STATUS_STYLE[tk.status] ?? TICKET_STATUS_STYLE.CLOSED}`}>
+                          {tk.status.replaceAll('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
-            {tickets.length > 0 ? (
-              tickets.map((tk) => (
-                <div key={tk.id} className="p-3.5 flex justify-between items-center hover:bg-paper/50">
-                  <div>
-                    <div className="font-bold text-ink flex items-center gap-2">
-                      <span className="font-mono text-accent">{tk.ticketNumber}</span>
-                      <span>{tk.subject}</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">
-                      Priority: <strong className="text-ink">{tk.priority}</strong> • {new Date(tk.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <span className="px-2.5 py-0.5 bg-paper-deep text-ink rounded-sm font-medium text-[10px]">
-                    {tk.category}
-                  </span>
-                  <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-sm font-bold text-[10px]">
-                    {tk.status}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="p-6 text-center text-slate-400 italic">
-                No open tickets. Need help? Use the form above to reach support engineers.
-              </div>
-            )}
-          </div>
+          ) : (
+            <p className="p-6 text-center text-muted text-xs">
+              No tickets yet. Need help? Use the form above to reach support engineers.
+            </p>
+          )}
         </div>
       </div>
     </div>

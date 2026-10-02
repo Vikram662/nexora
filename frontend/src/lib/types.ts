@@ -113,6 +113,30 @@ export interface AdminOverview {
   recentTransactions: LedgerTransaction[];
 }
 
+export interface ServiceHealth {
+  name: string;
+  target: string;
+  state: 'UP' | 'DOWN' | 'NOT_CONFIGURED';
+  latencyMs: number | null;
+  error?: string;
+}
+
+export interface SystemHealth {
+  checkedAt: string;
+  services: ServiceHealth[];
+}
+
+export interface AdminAuditEntry {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  reason?: string | null;
+  ipAddress?: string | null;
+  createdAt: string;
+  staffUser?: { email: string; role: string } | null;
+}
+
 export interface KycSubmission {
   id: string;
   documentType?: string;

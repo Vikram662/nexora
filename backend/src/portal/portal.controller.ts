@@ -28,6 +28,7 @@ import { InvoiceService } from '../invoicing/invoice.service.js';
 import { OutboundWebhookService } from '../livekit/outbound-webhook.service.js';
 import { TeamInviteService } from '../team/team-invite.service.js';
 import { AutoRechargeService } from './auto-recharge.service.js';
+import { SystemHealthService } from './system-health.service.js';
 import { signInviteToken } from '../team/invite-token.js';
 import { assertPublicWebhookUrl, WebhookUrlError } from '../livekit/webhook-url.js';
 import { CreditNoteService } from '../invoicing/credit-note.service.js';
@@ -76,6 +77,7 @@ export class PortalController {
     private readonly webhooks: OutboundWebhookService,
     private readonly invitesService: TeamInviteService,
     private readonly autoRecharge: AutoRechargeService,
+    private readonly systemHealth: SystemHealthService,
   ) {}
 
   // Helper: Sanitize Project object so apiSecretHash is never leaked to frontend
@@ -933,6 +935,13 @@ export class PortalController {
   // MASTER ADMIN / OPS CONSOLE ENDPOINTS (STAFF GUARDED)
   // ==========================================
 
+  // Records a staff action for the admin audit log.
+  private logStaffAction(req: Request, action: string, targetType: string, targetId: string, reason?: string | null) {
+    return this.prisma.adminActionLog.create({
+      data: { staffUserId: req.user!.userId, action, targetType, targetId, reason: reason ?? null, ipAddress: req.ip },
+    });
+  }
+
   @Get('admin/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireStaff()
@@ -970,16 +979,22 @@ export class PortalController {
         pendingKycCount,
         openTicketsCount,
         totalSystemWalletBalance,
-        liveNodesActive: 1,
-        livekitStatus: 'HEALTHY',
         recentTransactions,
       },
     };
   }
 
-  @Get('admin/kyc')
+  // Live checks of the database, LiveKit and TURN. Each check gives up after a few seconds.
+  @Get('admin/system-health')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireStaff()
+  async getSystemHealth() {
+    return { status: 'success', data: { checkedAt: new Date().toISOString(), services: await this.systemHealth.check() } };
+  }
+
+  @Get('admin/kyc')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff('KYC_REVIEWER')
   async getAdminKycList() {
     const submissions = await this.prisma.kycVerification.findMany({
       orderBy: { submittedAt: 'desc' },
@@ -1022,7 +1037,7 @@ export class PortalController {
 
   @Post('admin/kyc/:id/review')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('KYC_REVIEWER')
   async reviewKycSubmission(
     @Param('id') id: string,
     @Body() body: ReviewKycDto,
@@ -1046,6 +1061,7 @@ export class PortalController {
       body.action === 'APPROVE' ? 'KYC_APPROVED' : 'KYC_REJECTED',
       { reason: updated.rejectionReason },
     );
+    await this.logStaffAction(req, body.action === 'APPROVE' ? 'KYC_APPROVED' : 'KYC_REJECTED', 'KycVerification', id, updated.rejectionReason);
 
     return { status: 'success', data: updated };
   }
@@ -1076,7 +1092,7 @@ export class PortalController {
 
   @Post('admin/organizations/:id/adjust-balance')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async adjustOrgBalance(
     @Param('id') id: string,
     @Body() body: AdjustBalanceDto,
@@ -1130,7 +1146,7 @@ export class PortalController {
 
   @Get('admin/tickets')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('SUPPORT')
   async getAdminTickets() {
     const tickets = await this.prisma.supportTicket.findMany({
       orderBy: { createdAt: 'desc' },
@@ -1144,7 +1160,7 @@ export class PortalController {
 
   @Post('admin/tickets/:id/reply')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('SUPPORT')
   async adminReplyTicket(
     @Param('id') id: string,
     @Body() body: ReplyTicketDto,
@@ -1167,13 +1183,20 @@ export class PortalController {
         data: { status: body.status },
       });
     }
+    await this.logStaffAction(
+      req,
+      'TICKET_REPLY',
+      'SupportTicket',
+      ticket.ticketNumber,
+      body.status && body.status !== ticket.status ? `Status ${ticket.status} -> ${body.status}` : null,
+    );
 
     return { status: 'success', data: newMsg };
   }
 
   @Get('admin/billing/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async getAdminBillingOverview() {
     const [organizations, transactions, invoices, creditNotes, usageLogs] = await Promise.all([
       this.prisma.organization.findMany({
@@ -1270,7 +1293,7 @@ export class PortalController {
 
   @Get('admin/invoices/:id/pdf')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async getAdminInvoicePdf(@Param('id') id: string, @Res() res: Response) {
     return this.sendInvoicePdf({ id }, res);
   }
@@ -1293,7 +1316,7 @@ export class PortalController {
 
   @Get('admin/invoices/:id/print')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async getAdminInvoicePrintable(@Param('id') id: string, @Res() res: Response) {
     return this.sendInvoice({ id }, res);
   }
@@ -1301,7 +1324,7 @@ export class PortalController {
   // Issues GST tax invoices for a closed billing month. Safe to repeat: existing invoices are never duplicated.
   @Post('admin/invoices/generate')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async generateInvoices(@Body() body: GenerateInvoicesDto, @Req() req: Request) {
     const [year, month] = body.month.split('-').map(Number);
     const { start, end } = monthRange(year, month - 1);
@@ -1359,7 +1382,7 @@ export class PortalController {
 
   @Get('admin/credit-notes/:id/pdf')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async getAdminCreditNotePdf(@Param('id') id: string, @Res() res: Response) {
     return this.sendCreditNotePdf({ id }, res);
   }
@@ -1372,7 +1395,7 @@ export class PortalController {
 
   @Get('admin/credit-notes/:id/print')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async getAdminCreditNotePrintable(@Param('id') id: string, @Res() res: Response) {
     return this.sendCreditNote({ id }, res);
   }
@@ -1380,7 +1403,7 @@ export class PortalController {
   // Issues a credit note against a tax invoice and, by default, adds the amount back to the customer's wallet.
   @Post('admin/credit-notes')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async issueCreditNote(@Body() body: IssueCreditNoteDto, @Req() req: Request) {
     const note = await this.creditNotes.issue({
       invoiceId: body.invoiceId,
@@ -1405,7 +1428,7 @@ export class PortalController {
   // Sends any queued emails now instead of waiting for the next automatic run.
   @Post('admin/notifications/process')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async processNotifications() {
     return { status: 'success', data: await this.notifications.processQueue() };
   }
@@ -1413,7 +1436,7 @@ export class PortalController {
   // Admin Settings: Return SAFE configuration without raw secrets or SMTP passwords
   @Get('admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('SUPER_ADMIN')
   async getAdminSettings() {
     const { contact, brand, social, billing, plans, rates } = await this.siteSettings.getSnapshot();
     return {
@@ -1454,7 +1477,7 @@ export class PortalController {
 
   @Post('admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('SUPER_ADMIN')
   async updateAdminSettings(@Body() body: UpdateSiteSettingsDto, @Req() req: Request) {
     const data = await this.siteSettings.update(body);
     await this.prisma.adminActionLog.create({
@@ -1471,7 +1494,7 @@ export class PortalController {
 
   @Get('admin/billing/gstr-1')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async getGstr1Report() {
     const [invoices, creditNotes, billing] = await Promise.all([
       this.prisma.invoice.findMany({
@@ -1543,7 +1566,7 @@ export class PortalController {
 
   @Get('admin/offers')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async getAdminOffers() {
     const offers = await this.prisma.walletOffer.findMany({
       orderBy: { createdAt: 'desc' },
@@ -1554,7 +1577,7 @@ export class PortalController {
 
   @Post('admin/offers')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
+  @RequireStaff('BILLING_OPS')
   async createAdminOffer(@Body() body: CreateOfferDto, @Req() req: Request) {
     const now = new Date();
     const validUntil = new Date(now.getTime() + (body.validDays || 30) * 86400 * 1000);
@@ -1574,14 +1597,15 @@ export class PortalController {
         isActive: true,
       },
     });
+    await this.logStaffAction(req, 'CREATE_OFFER', 'WalletOffer', offer.id, offer.title);
 
     return { status: 'success', data: offer };
   }
 
   @Post('admin/offers/:id/toggle')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireStaff()
-  async toggleAdminOffer(@Param('id') id: string) {
+  @RequireStaff('BILLING_OPS')
+  async toggleAdminOffer(@Param('id') id: string, @Req() req: Request) {
     const existing = await this.prisma.walletOffer.findUnique({ where: { id } });
     if (!existing) throw new BadRequestException('Offer not found');
 
@@ -1589,7 +1613,21 @@ export class PortalController {
       where: { id },
       data: { isActive: !existing.isActive },
     });
+    await this.logStaffAction(req, updated.isActive ? 'ENABLE_OFFER' : 'DISABLE_OFFER', 'WalletOffer', id, existing.title);
 
     return { status: 'success', data: updated };
+  }
+
+  // Latest staff actions, newest first.
+  @Get('admin/audit-log')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireStaff('SECURITY_ADMIN')
+  async getAdminAuditLog() {
+    const entries = await this.prisma.adminActionLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { staffUser: { select: { email: true, role: true } } },
+    });
+    return { status: 'success', data: entries };
   }
 }

@@ -4,27 +4,36 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Activity, BadgeCheck, Server, CreditCard, Building2, RefreshCw } from 'lucide-react';
-import { fetchAdminOverview } from '@/lib/api';
-import type { AdminOverview, LedgerTransaction } from '@/lib/types';
+import { fetchAdminOverview, fetchSystemHealth } from '@/lib/api';
+import { useStaffCan } from '@/lib/staff-access';
+import { formatSignedInr, signedAmount } from '@/lib/ledger';
+import type { AdminOverview, LedgerTransaction, ServiceHealth, SystemHealth } from '@/lib/types';
 
 const INR = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Usage deductions are stored as positive amounts but take money out of the wallet.
-function signedAmount(tx: LedgerTransaction): number {
-  const amount = Number(tx.amount);
-  return tx.type === 'USAGE_DEDUCTION' ? -Math.abs(amount) : amount;
-}
-
-const CLUSTER_NODES = [
-  { name: 'LiveKit SFU Engine (Windows Standalone)', detail: '127.0.0.1:7880 • TCP:7881 • UDP:50000-60000', status: 'HEALTHY', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { name: 'Coturn STUN / TURN Server (Prod Config)', detail: 'Port 3478 (UDP/TCP) • TLS 5349', status: 'CONFIG READY', dot: 'bg-accent', badge: 'bg-accent/10 text-accent-deep border-accent/20' },
-  { name: 'MySQL Database (Prisma ORM)', detail: '3306 • nexora_rtc (XAMPP Native)', status: 'CONNECTED', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-];
+const HEALTH_STYLE: Record<ServiceHealth['state'], { label: string; dot: string; badge: string }> = {
+  UP: { label: 'UP', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  DOWN: { label: 'DOWN', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-200' },
+  NOT_CONFIGURED: { label: 'NOT SET', dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-700 border-slate-200' },
+};
 
 export default function AdminOverviewPage() {
   const [data, setData] = useState<AdminOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
+  const canKyc = useStaffCan('kyc');
+  const canBilling = useStaffCan('billing');
+
+  const loadHealth = () => {
+    fetchSystemHealth()
+      .then((res) => {
+        setHealth(res);
+        setHealthError(null);
+      })
+      .catch((err) => setHealthError(err.message));
+  };
 
   const loadData = () => {
     fetchAdminOverview()
@@ -38,20 +47,31 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     loadData();
+    loadHealth();
     const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
+    const healthInterval = setInterval(loadHealth, 30000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(healthInterval);
+    };
   }, []);
 
   const pendingKyc = data?.pendingKycCount ?? 0;
+  const down = health?.services.filter((sv) => sv.state === 'DOWN') ?? [];
+  const banner = !health
+    ? { text: healthError ? 'Health check unavailable' : 'Checking services…', cls: 'bg-white/10 border-white/20 text-slate-200', dot: 'bg-slate-300' }
+    : down.length === 0
+      ? { text: 'All services up', cls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300', dot: 'bg-emerald-400' }
+      : { text: `${down.map((sv) => sv.name).join(', ')} down`, cls: 'bg-red-500/15 border-red-500/40 text-red-200', dot: 'bg-red-400' };
 
   return (
     <div className="space-y-8">
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-console text-white border border-console-line">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold mb-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>SFU Node 100% Operational</span>
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold mb-2 ${banner.cls}`}>
+            <span className={`h-2 w-2 rounded-full ${banner.dot}`} />
+            <span>{banner.text}</span>
           </div>
           <h1 className="text-xl md:text-2xl font-bold font-display tracking-tight">
             Cluster Telemetry & Infrastructure Ops
@@ -62,7 +82,10 @@ export default function AdminOverviewPage() {
         </div>
 
         <button
-          onClick={loadData}
+          onClick={() => {
+            loadData();
+            loadHealth();
+          }}
           className="self-start md:self-auto px-4 py-2 bg-accent hover:bg-accent-deep text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-2"
         >
           <RefreshCw className="h-3.5 w-3.5" /> Refresh Telemetry
@@ -123,9 +146,13 @@ export default function AdminOverviewPage() {
             )}
           </div>
           <div className="mt-4 pt-3 border-t border-line text-[11px]">
-            <Link href="/admin/kyc" className="text-accent hover:underline font-semibold">
-              Review submissions →
-            </Link>
+            {canKyc ? (
+              <Link href="/admin/kyc" className="text-accent hover:underline font-semibold">
+                Review submissions →
+              </Link>
+            ) : (
+              <span className="text-muted">Business verification queue</span>
+            )}
           </div>
         </div>
 
@@ -152,28 +179,39 @@ export default function AdminOverviewPage() {
           <div className="flex items-center justify-between border-b border-line pb-3">
             <h2 className="text-sm font-bold text-ink flex items-center gap-2">
               <Activity className="h-4 w-4 text-accent" />
-              <span>Media SFU Node Cluster Status</span>
+              <span>Service Health</span>
             </h2>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-paper-deep text-ink">
-              Local Region (IN-BOM-1)
+              {health
+                ? `Checked ${new Date(health.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                : 'Checking…'}
             </span>
           </div>
 
+          {healthError && !health && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">Could not run the health check: {healthError}</div>
+          )}
+
           <div className="space-y-3 text-xs">
-            {CLUSTER_NODES.map((node) => (
-              <div key={node.name} className="p-3.5 rounded-lg border border-line bg-paper/60 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${node.dot}`} />
-                  <div className="min-w-0">
-                    <div className="font-bold text-ink">{node.name}</div>
-                    <div className="text-[11px] text-muted font-mono">{node.detail}</div>
+            {health?.services.map((sv) => {
+              const style = HEALTH_STYLE[sv.state];
+              return (
+                <div key={sv.name} className="p-3.5 rounded-lg border border-line bg-paper/60 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${style.dot}`} />
+                    <div className="min-w-0">
+                      <div className="font-bold text-ink">{sv.name}</div>
+                      <div className="text-[11px] text-muted font-mono break-all">{sv.target || 'Not configured'}</div>
+                      {sv.error && <div className="text-[11px] text-red-700 mt-0.5 break-words">{sv.error}</div>}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`font-semibold border px-2 py-0.5 rounded-full text-[10px] ${style.badge}`}>{style.label}</span>
+                    {sv.latencyMs !== null && <div className="text-[10px] text-muted font-mono mt-1">{sv.latencyMs} ms</div>}
                   </div>
                 </div>
-                <span className={`font-semibold border px-2 py-0.5 rounded-full text-[10px] shrink-0 ${node.badge}`}>
-                  {node.status}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -184,9 +222,11 @@ export default function AdminOverviewPage() {
               <CreditCard className="h-4 w-4 text-emerald-600" />
               <span>Recent Wallet Transactions</span>
             </h2>
-            <Link href="/admin/billing" className="text-xs text-accent hover:underline font-semibold">
-              View full ledger →
-            </Link>
+            {canBilling && (
+              <Link href="/admin/billing" className="text-xs text-accent hover:underline font-semibold">
+                View full ledger →
+              </Link>
+            )}
           </div>
 
           <div className="space-y-2 text-xs">
@@ -203,7 +243,7 @@ export default function AdminOverviewPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <span className={`whitespace-nowrap font-bold font-mono tabular ${amount < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {amount < 0 ? '−' : '+'}{INR(Math.abs(amount))}
+                        {formatSignedInr(amount)}
                       </span>
                       <div className={`text-[10px] font-mono uppercase ${tx.status === 'FAILED' ? 'text-red-600' : 'text-muted'}`}>{tx.status}</div>
                     </div>

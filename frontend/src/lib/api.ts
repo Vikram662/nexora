@@ -1,4 +1,4 @@
-import type { AdminSettingsData, BillingProfile, CreditNote, LedgerTransaction, TaxInvoice, UpdateSettingsPayload } from './types';
+import type { AdminAuditEntry, AdminSettingsData, BillingProfile, CreditNote, LedgerTransaction, SystemHealth, TaxInvoice, UpdateSettingsPayload } from './types';
 
 export function errorMessage(err: unknown, fallback = 'Something went wrong'): string {
   return err instanceof Error && err.message ? err.message : fallback;
@@ -656,6 +656,26 @@ export async function fetchAdminOverview() {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to load admin overview metrics');
+  const json = await res.json();
+  return json.data;
+}
+
+export async function fetchSystemHealth(): Promise<SystemHealth> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/system-health`, {
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to check system health');
+  const json = await res.json();
+  return json.data;
+}
+
+export async function fetchAdminAuditLog(): Promise<AdminAuditEntry[]> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/portal/admin/audit-log`, {
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to load the audit log');
   const json = await res.json();
   return json.data;
 }

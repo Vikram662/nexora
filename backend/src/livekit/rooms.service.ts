@@ -56,6 +56,11 @@ export class RoomsService implements OnModuleInit {
     this.roomService = new RoomServiceClient(httpHost, apiKey, apiSecret);
   }
 
+  /** Health check: an authenticated API call that asks for one room name that never exists. */
+  async ping(): Promise<void> {
+    await this.roomService.listRooms(['__nexora_health_check__']);
+  }
+
   private getNamespacedRoom(projectId: string, roomName: string): string {
     return `${projectId}__${roomName}`;
   }
