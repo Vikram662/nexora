@@ -20,6 +20,8 @@ import {
   LogOut,
   ExternalLink,
   BookOpen,
+  Menu,
+  X,
 } from 'lucide-react';
 import { fetchOrganizationData, fetchOrganizations, switchOrganization, OrganizationData, OrganizationChoice, getApiBaseUrl } from '@/lib/api';
 
@@ -47,6 +49,15 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<OrganizationChoice[]>([]);
+  // Below md the sidebar is a drawer opened from the header.
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navOpen]);
 
   useEffect(() => {
     fetchOrganizationData()
@@ -80,8 +91,16 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-[#f4f6fa] flex text-ink selection:bg-accent selection:text-white font-sans">
+      {navOpen && (
+        <div className="fixed inset-0 z-40 bg-ink/40 md:hidden" onClick={() => setNavOpen(false)} aria-hidden="true" />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white/80 backdrop-blur-md border-r border-[#e2e7f0] flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen z-20">
+      <aside
+        id="console-nav"
+        onClick={(e) => { if ((e.target as HTMLElement).closest('a')) setNavOpen(false); }}
+        className={`fixed inset-y-0 left-0 z-50 h-screen w-64 flex flex-col justify-between shrink-0 transition-transform duration-200 md:sticky md:top-0 md:z-20 md:translate-x-0 ${navOpen ? 'translate-x-0' : '-translate-x-full'} bg-white md:bg-white/80 md:backdrop-blur-md border-r border-[#e2e7f0]`}
+      >
         <div className="flex flex-col min-h-0">
           {/* Logo */}
           <div className="p-5 border-b border-[#e2e7f0]/80 flex items-center justify-between shrink-0">
@@ -96,6 +115,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 <span className="text-[10px] font-mono text-muted tracking-wide uppercase">Developer Console</span>
               </div>
             </Link>
+            <button
+              type="button"
+              onClick={() => setNavOpen(false)}
+              aria-label="Close menu"
+              className="md:hidden p-1.5 rounded-lg text-muted hover:text-ink hover:bg-paper-deep cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           {/* Org & Wallet Badge */}
@@ -194,9 +221,19 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       {/* Main Panel Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 glass-header border-b border-[#e2e7f0] px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          <div className="flex items-center gap-3">
-            <h1 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight">
+        <header className="h-16 glass-header border-b border-[#e2e7f0] px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 sticky top-0 z-30 shadow-xs">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={navOpen}
+              aria-controls="console-nav"
+              className="md:hidden -ml-1 p-2 rounded-lg text-muted hover:text-ink hover:bg-paper-deep cursor-pointer"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <h1 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight truncate">
               {getPageTitle()}
             </h1>
             <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -210,7 +247,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
               href="/"
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-semibold text-muted hover:text-accent flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#e2e7f0] bg-white hover:bg-slate-50 transition-colors shadow-2xs"
+              className="shrink-0 text-xs font-semibold text-muted hover:text-accent flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#e2e7f0] bg-white hover:bg-slate-50 transition-colors shadow-2xs"
             >
               Public Site <ExternalLink className="h-3 w-3" />
             </Link>
@@ -218,7 +255,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 p-6 md:p-8 space-y-6 max-w-7xl w-full">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl w-full">
           {children}
         </main>
       </div>

@@ -201,8 +201,8 @@ export default function AdminOverviewPage() {
                         {new Date(tx.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} • {tx.type}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`font-bold font-mono tabular ${amount < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    <div className="text-right shrink-0">
+                      <span className={`whitespace-nowrap font-bold font-mono tabular ${amount < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                         {amount < 0 ? '−' : '+'}{INR(Math.abs(amount))}
                       </span>
                       <div className={`text-[10px] font-mono uppercase ${tx.status === 'FAILED' ? 'text-red-600' : 'text-muted'}`}>{tx.status}</div>

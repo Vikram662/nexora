@@ -103,7 +103,7 @@ export default async function PricingPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted">Max Concurrency / Room</span>
-                        <span className="font-mono font-bold text-ink">{plan.maxParticipants} participants</span>
+                        <span className="font-mono font-bold text-ink">{/^\d+$/.test(String(plan.maxParticipants)) ? `${plan.maxParticipants} participants` : plan.maxParticipants}</span>
                       </div>
                     </div>
 
@@ -155,7 +155,10 @@ export default async function PricingPage() {
         )}
 
         <div className="mt-8 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-muted">
-          <span>Rates are in INR excluding GST. 18% GST (SAC Code 998313) is automatically itemized on monthly tax invoices.</span>
+          <span>
+            Rates are in INR excluding GST.
+            {site ? ` ${site.gstPercent}% GST (SAC ${site.sacCode}) is added to each session's charge and shown on monthly tax invoices.` : ''}
+          </span>
           <Link href="/user/billing" className="text-accent font-semibold hover:underline shrink-0">
             View Live Rate Card in Console →
           </Link>

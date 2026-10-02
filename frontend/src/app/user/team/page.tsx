@@ -88,13 +88,13 @@ export default function UserTeamPage() {
         )}
 
         {/* Invite Form */}
-        <form onSubmit={handleInviteMember} className="flex gap-2 max-w-xl text-xs">
+        <form onSubmit={handleInviteMember} className="flex flex-col sm:flex-row gap-2 max-w-xl text-xs">
           <input
             type="email"
             placeholder="colleague@yourcompany.com"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
-            className="flex-1 px-3 py-2 bg-paper border border-line rounded-md"
+            className="flex-1 min-w-0 px-3 py-2 bg-paper border border-line rounded-md"
             required
           />
           <select

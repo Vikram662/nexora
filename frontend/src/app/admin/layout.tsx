@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ShieldCheck, BadgeCheck, HelpCircle, Activity, CreditCard, Building2, Radio, ExternalLink, ShieldAlert, Settings } from 'lucide-react';
+import { ShieldCheck, BadgeCheck, HelpCircle, Activity, CreditCard, Building2, Radio, ExternalLink, ShieldAlert, Settings, Menu, X } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api';
 
 const ADMIN_NAV = [
@@ -22,6 +22,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [staffEmail, setStaffEmail] = useState<string | null>(null);
+  // Below md the sidebar is a drawer opened from the header.
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navOpen]);
 
   // Double Lock: Verify authentic staff session from backend /v1/auth/me
   useEffect(() => {
@@ -69,8 +78,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-paper flex text-ink font-sans selection:bg-accent selection:text-white">
+      {navOpen && (
+        <div className="fixed inset-0 z-40 bg-ink/40 md:hidden" onClick={() => setNavOpen(false)} aria-hidden="true" />
+      )}
+
       {/* Admin Sidebar */}
-      <aside className="w-64 bg-console border-r border-console-line text-white flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen z-20">
+      <aside
+        id="console-nav"
+        onClick={(e) => { if ((e.target as HTMLElement).closest('a')) setNavOpen(false); }}
+        className={`fixed inset-y-0 left-0 z-50 h-screen w-64 flex flex-col justify-between shrink-0 transition-transform duration-200 md:sticky md:top-0 md:z-20 md:translate-x-0 ${navOpen ? 'translate-x-0' : '-translate-x-full'} bg-console border-r border-console-line text-white`}
+      >
         <div className="flex flex-col min-h-0">
           <div className="p-5 border-b border-white/10 flex items-center justify-between">
             <Link href="/admin" className="flex items-center gap-2.5 group">
@@ -84,6 +101,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <span className="font-mono text-[10px] text-slate-400 uppercase tracking-widest">Control Center</span>
               </div>
             </Link>
+            <button
+              type="button"
+              onClick={() => setNavOpen(false)}
+              aria-label="Close menu"
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="p-3 mx-3 mt-3.5 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
@@ -144,27 +169,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 glass-header border-b border-line px-6 md:px-8 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <h1 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight">
-              Platform Operations Center
+        <header className="h-16 glass-header border-b border-line px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 sticky top-0 z-30">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={navOpen}
+              aria-controls="console-nav"
+              className="md:hidden -ml-1 p-2 rounded-lg text-muted hover:text-ink hover:bg-paper-deep cursor-pointer"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <h1 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight truncate">
+              <span className="sm:hidden">Operations</span>
+              <span className="hidden sm:inline">Platform Operations Center</span>
             </h1>
-            <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold border border-red-200">
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold border border-red-200">
               <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
               Restricted Area
             </span>
           </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-3 text-xs shrink-0">
             <Link
               href="/user"
               className="px-3 py-1.5 rounded-lg border border-line bg-white hover:bg-paper text-muted hover:text-ink transition-colors flex items-center gap-1.5 font-medium"
             >
-              Switch to Developer View <ExternalLink className="h-3 w-3" />
+              <span className="hidden sm:inline">Switch to Developer View</span>
+              <span className="sm:hidden">User view</span>
+              <ExternalLink className="h-3 w-3" />
             </Link>
           </div>
         </header>
 
-        <main className="flex-1 p-6 md:p-8 space-y-6 max-w-7xl w-full">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl w-full">
           {children}
         </main>
       </div>
