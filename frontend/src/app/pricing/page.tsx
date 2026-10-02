@@ -4,7 +4,7 @@ import { SiteShell } from '@/components/site/SiteShell';
 import { getPublicSite } from '@/lib/site';
 import { BILLING_FAQ, rateFormat } from '@/lib/marketing';
 import { Faq } from '@/components/site/Faq';
-import { Check, Zap, Sparkles, ArrowRight, ShieldCheck, Wallet, RefreshCw } from 'lucide-react';
+import { Check, Sparkles, ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Pricing & Transparent Plans',

@@ -114,43 +114,26 @@ h1, h2, h3 {
   padding-right: 0;
 }
 
-/* Modern Card & Panel Utilities */
+/* Card panels used by the console dashboards. */
 .panel-card {
   background: #ffffff;
-  border: 1px solid #e3e6ed;
+  border: 1px solid var(--color-line);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(16, 19, 43, 0.04), 0 6px 16px -4px rgba(16, 19, 43, 0.03);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgb(23 27 52 / 0.04), 0 6px 16px -4px rgb(23 27 52 / 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .panel-card:hover {
-  border-color: #d1d6e2;
-  box-shadow: 0 4px 12px rgba(16, 19, 43, 0.06), 0 12px 24px -6px rgba(16, 19, 43, 0.05);
+  border-color: color-mix(in srgb, var(--color-line) 70%, var(--color-ink));
+  box-shadow: 0 4px 12px rgb(23 27 52 / 0.06), 0 12px 24px -6px rgb(23 27 52 / 0.05);
 }
 
-.panel-card-dark {
-  background: #141733;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
-  transition: all 0.2s ease;
-}
-.panel-card-dark:hover {
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-/* Glassmorphism Accents */
+/* Translucent sticky header. */
 .glass-header {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.glass-header-dark {
-  background: rgba(16, 19, 43, 0.85);
+  background: rgb(255 255 255 / 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Premium Badges */
 .badge-pill {
   display: inline-flex;
   align-items: center;

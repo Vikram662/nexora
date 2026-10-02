@@ -110,6 +110,8 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 value={organizations.find((o) => o.current)?.organizationId ?? ''}
                 onChange={async (e) => {
                   await switchOrganization(e.target.value);
+                  // A full load so every panel starts with the other organization's data.
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                   window.location.href = '/user';
                 }}
                 className="w-full px-2 py-1 bg-white border border-[#e2e7f0] rounded-lg text-xs font-semibold text-ink truncate cursor-pointer hover:border-accent focus:border-accent"
@@ -133,7 +135,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           {/* Nav Items */}
-          <nav className="p-3 space-y-0.5 overflow-y-auto flex-1 scrollbar-thin">
+          <nav className="p-3 space-y-0.5 overflow-y-auto flex-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = item.exact

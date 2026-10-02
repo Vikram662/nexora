@@ -62,36 +62,37 @@ export default function LoginPage() {
         <AuthField id="password" label="Password" type="password" value={password} onChange={setPassword} icon={Lock} autoComplete="current-password" />
         <AuthSubmit loading={loading} idle="Sign in" busy="Signing in…" />
 
-        {/* 1-Click Quick Demo Login */}
-        <div className="pt-3 border-t border-[#e2e7f0] space-y-2">
-          <div className="text-[11px] font-semibold text-muted text-center uppercase tracking-wider">
-            Quick 1-Click Fill Demo Credentials
+        {/* Seeded demo accounts, development builds only. Assumes SEED_STAFF_PASSWORD=password123. */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="pt-3 border-t border-line space-y-2">
+            <div className="text-[11px] font-semibold text-muted text-center uppercase tracking-wider">
+              Fill demo credentials (dev only)
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('superadmin@nexora.io');
+                  setPassword('password123');
+                }}
+                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-ink text-xs font-semibold rounded-lg border border-slate-200 transition-colors text-center cursor-pointer"
+              >
+                🛡️ Fill Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('founder@nexora.io');
+                  setPassword('password123');
+                }}
+                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-ink text-xs font-semibold rounded-lg border border-slate-200 transition-colors text-center cursor-pointer"
+              >
+                👤 Fill Developer
+              </button>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('superadmin@nexora.io');
-                setPassword('password123');
-              }}
-              className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-ink text-xs font-semibold rounded-lg border border-slate-200 transition-colors text-center cursor-pointer"
-            >
-              🛡️ Fill Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('founder@nexora.io');
-                setPassword('password123');
-              }}
-              className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-ink text-xs font-semibold rounded-lg border border-slate-200 transition-colors text-center cursor-pointer"
-            >
-              👤 Fill Developer
-            </button>
-          </div>
-        </div>
+        )}
       </form>
     </AuthShell>
   );
 }
-

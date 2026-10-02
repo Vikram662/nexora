@@ -224,31 +224,42 @@ export default function UserBillingPage() {
         {/* Recent Transactions Table */}
         <div className="space-y-3 pt-2">
           <span className="font-bold text-xs text-ink">Recent Wallet Transactions</span>
-          <div className="border border-line rounded-md overflow-hidden text-xs">
-            <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between text-[10px]">
-              <span>Transaction Ref</span>
-              <span>Type</span>
-              <span>Amount</span>
-              <span>Status</span>
+          {orgData?.transactions && orgData.transactions.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th scope="col">Transaction ref</th>
+                    <th scope="col">Type</th>
+                    <th scope="col" className="text-right">Amount</th>
+                    <th scope="col" className="text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgData.transactions.map((tx) => {
+                    // Usage deductions are stored as positive amounts but take money out of the wallet.
+                    const amount = tx.type === 'USAGE_DEDUCTION' ? -Math.abs(Number(tx.amount)) : Number(tx.amount);
+                    return (
+                      <tr key={tx.id}>
+                        <td className="font-mono text-xs text-muted">{tx.gatewayPaymentId || tx.id.substring(0, 16)}</td>
+                        <td>
+                          <span className="px-2 py-0.5 rounded bg-accent/10 text-accent-deep text-[10px] font-bold">{tx.type}</span>
+                        </td>
+                        <td className={`text-right font-mono font-bold ${amount < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {amount < 0 ? '−' : '+'}₹{Math.abs(amount).toFixed(2)}
+                        </td>
+                        <td className={`text-right text-[10px] font-bold ${tx.status === 'SUCCESS' ? 'text-emerald-700' : tx.status === 'FAILED' ? 'text-red-600' : 'text-muted'}`}>
+                          {tx.status}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-
-            <div className="divide-y divide-line font-mono">
-              <div className="p-3 flex justify-between items-center hover:bg-paper/50">
-                <span className="text-muted">pay_seed_init_1001</span>
-                <span className="px-2 py-0.5 rounded bg-accent/10 text-accent-deep font-sans text-[10px] font-bold">WALLET_TOPUP</span>
-                <span className="text-emerald-600 font-bold">+₹500.00</span>
-                <span className="text-emerald-700 font-bold text-[10px] font-sans">SUCCESS</span>
-              </div>
-              {orgData?.transactions?.map((tx) => (
-                <div key={tx.id} className="p-3 flex justify-between items-center hover:bg-paper/50">
-                  <span className="text-muted">{tx.gatewayPaymentId || tx.id.substring(0, 16)}</span>
-                  <span className="px-2 py-0.5 rounded bg-accent/10 text-accent-deep font-sans text-[10px] font-bold">{tx.type}</span>
-                  <span className="text-emerald-600 font-bold">+₹{Number(tx.amount).toFixed(2)}</span>
-                  <span className="text-emerald-700 font-bold text-[10px] font-sans">{tx.status}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          ) : (
+            <p className="text-muted text-xs">No wallet transactions yet.</p>
+          )}
         </div>
 
         {/* GST Billing Invoices Table */}
@@ -261,44 +272,51 @@ export default function UserBillingPage() {
             <span className="text-[10px] text-slate-400">Monthly billing receipts with GST input tax credit (ITC)</span>
           </div>
 
-          <div className="border border-line rounded-md overflow-hidden text-xs">
-            <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between text-[10px]">
-              <span>Invoice #</span>
-              <span>Billing Cycle</span>
-              <span>Amount</span>
-              <span className="text-right">Action</span>
+          {orgData?.invoices && orgData.invoices.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th scope="col">Invoice #</th>
+                    <th scope="col">Billing cycle</th>
+                    <th scope="col" className="text-right">Amount</th>
+                    <th scope="col" className="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgData.invoices.map((inv: TaxInvoice) => (
+                    <tr key={inv.id}>
+                      <td className="font-mono font-bold text-accent-deep">{inv.invoiceNumber}</td>
+                      <td className="text-muted text-[11px]">
+                        {new Date(inv.periodStart).toLocaleDateString('en-IN')} - {new Date(inv.periodEnd).toLocaleDateString('en-IN')}
+                      </td>
+                      <td className="text-right font-bold text-ink">₹{Number(inv.totalAmount).toFixed(2)}</td>
+                      <td className="text-right">
+                        <span className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/invoices/${inv.id}/print`, '_blank')}
+                            className="px-2.5 py-1 bg-accent/10 hover:bg-accent/15 text-accent-deep rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-accent/30"
+                          >
+                            <Download className="h-3 w-3" /> View or print
+                          </button>
+                          <a
+                            href={`${getApiBaseUrl()}/v1/portal/invoices/${inv.id}/pdf`}
+                            className="px-2.5 py-1 border border-line hover:border-ink text-ink rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
+                          >
+                            PDF
+                          </a>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
-            <div className="divide-y divide-line font-medium">
-              {orgData?.invoices && orgData.invoices.length > 0 ? (
-                orgData.invoices.map((inv: TaxInvoice) => (
-                  <div key={inv.id} className="p-3 flex justify-between items-center hover:bg-paper/50">
-                    <span className="font-mono font-bold text-accent-deep">{inv.invoiceNumber}</span>
-                    <span className="text-muted text-[11px]">
-                      {new Date(inv.periodStart).toLocaleDateString()} - {new Date(inv.periodEnd).toLocaleDateString()}
-                    </span>
-                    <span className="font-bold text-ink">₹{Number(inv.totalAmount).toFixed(2)}</span>
-                    <button
-                      onClick={() => window.open(`${getApiBaseUrl()}/v1/portal/invoices/${inv.id}/print`, '_blank')}
-                      className="px-2.5 py-1 bg-accent/10 hover:bg-accent/15 text-accent-deep rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors border border-accent/30"
-                    >
-                      <Download className="h-3 w-3" /> View or print
-                    </button>
-                    <a
-                      href={`${getApiBaseUrl()}/v1/portal/invoices/${inv.id}/pdf`}
-                      className="px-2.5 py-1 border border-line hover:border-ink text-ink rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
-                    >
-                      PDF
-                    </a>
-                  </div>
-                ))
-              ) : (
-                <p className="p-3 text-muted text-xs">
-                  No tax invoices yet. Invoices are issued after each billing month closes, for the sessions charged in that month.
-                </p>
-              )}
-            </div>
-          </div>
+          ) : (
+            <p className="text-muted text-xs">
+              No tax invoices yet. Invoices are issued after each billing month closes, for the sessions charged in that month.
+            </p>
+          )}
 
           {orgData?.creditNotes && orgData.creditNotes.length > 0 && (
             <div className="pt-4 space-y-2">

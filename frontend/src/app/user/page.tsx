@@ -153,9 +153,11 @@ export default function UserOverviewPage() {
             <tbody>
               {orgData?.projects.map((proj) => (
                 <tr key={proj.id}>
-                  <td className="font-semibold text-ink flex items-center gap-2 py-3">
-                    <span className="h-2 w-2 rounded-full bg-accent" />
-                    <span>{proj.name}</span>
+                  <td className="font-semibold text-ink">
+                    <span className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-accent shrink-0" />
+                      <span>{proj.name}</span>
+                    </span>
                   </td>
                   <td>
                     <span className={`badge-pill ${proj.environment === 'PRODUCTION' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>

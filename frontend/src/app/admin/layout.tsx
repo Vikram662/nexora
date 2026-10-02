@@ -68,9 +68,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1021] flex text-slate-100 font-sans selection:bg-accent selection:text-white">
+    <div className="min-h-screen bg-paper flex text-ink font-sans selection:bg-accent selection:text-white">
       {/* Admin Sidebar */}
-      <aside className="w-64 bg-[#10132b]/90 backdrop-blur-xl border-r border-white/10 text-white flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen z-20">
+      <aside className="w-64 bg-console border-r border-console-line text-white flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen z-20">
         <div className="flex flex-col min-h-0">
           <div className="p-5 border-b border-white/10 flex items-center justify-between">
             <Link href="/admin" className="flex items-center gap-2.5 group">
@@ -94,12 +94,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 Super Admin
               </span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-md bg-accent/20 text-accent-light font-mono font-semibold border border-accent/30">
+            <span className="text-[10px] px-2 py-0.5 rounded-md bg-accent/20 text-white font-mono font-semibold border border-accent/30">
               STAFF
             </span>
           </div>
 
-          <nav className="p-3 space-y-0.5 overflow-y-auto flex-1 scrollbar-thin">
+          <nav className="p-3 space-y-0.5 overflow-y-auto flex-1">
             {ADMIN_NAV.map((item) => {
               const Icon = item.icon;
               const isActive = item.exact
@@ -144,20 +144,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 glass-header-dark border-b border-white/10 px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-md">
+        <header className="h-16 glass-header border-b border-line px-6 md:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
-            <h1 className="font-display font-bold text-lg md:text-xl text-white tracking-tight">
+            <h1 className="font-display font-bold text-lg md:text-xl text-ink tracking-tight">
               Platform Operations Center
             </h1>
-            <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 font-semibold border border-red-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold border border-red-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
               Restricted Area
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
             <Link
               href="/user"
-              className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 font-medium"
+              className="px-3 py-1.5 rounded-lg border border-line bg-white hover:bg-paper text-muted hover:text-ink transition-colors flex items-center gap-1.5 font-medium"
             >
               Switch to Developer View <ExternalLink className="h-3 w-3" />
             </Link>
