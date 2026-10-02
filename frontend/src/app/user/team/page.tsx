@@ -10,7 +10,7 @@ export default function UserTeamPage() {
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'ADMIN' | 'DEVELOPER' | 'BILLING'>('DEVELOPER');
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -115,63 +115,81 @@ export default function UserTeamPage() {
         </form>
 
         {/* Members Table */}
-        <div className="border border-line rounded-md overflow-hidden text-xs">
-          <div className="p-3 bg-paper border-b border-line font-semibold text-muted flex justify-between text-[10px]">
-            <span>Member Email</span>
-            <span>Role</span>
-            <span>Status</span>
-          </div>
-
-          <div className="divide-y divide-line">
-            {teamMembers.map((m) => (
-              <div key={m.id} className="p-3.5 flex justify-between items-center hover:bg-paper/50">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-7 w-7 rounded-full bg-paper-deep text-ink font-bold text-xs flex items-center justify-center">
-                    {m.user?.email ? m.user.email[0].toUpperCase() : 'U'}
-                  </div>
-                  <span className="font-bold text-ink">{m.user?.email || 'Invited User'}</span>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-sm bg-paper-deep text-ink font-semibold text-[10px]">
-                  {m.role}
-                </span>
-                <span className="text-muted font-medium text-[10px]">
-                  {m.acceptedAt ? 'Active' : 'Pending'}
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className="overflow-x-auto">
+          <table className="ledger">
+            <thead>
+              <tr>
+                <th scope="col">Member</th>
+                <th scope="col">Role</th>
+                <th scope="col" className="text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamMembers.map((m) => (
+                <tr key={m.id}>
+                  <td>
+                    <span className="flex items-center gap-2.5">
+                      <span className="h-7 w-7 shrink-0 rounded-full bg-paper-deep text-ink font-bold text-xs flex items-center justify-center">
+                        {m.user?.email ? m.user.email[0].toUpperCase() : 'U'}
+                      </span>
+                      <span className="font-semibold text-ink break-all">{m.user?.email || 'Invited User'}</span>
+                    </span>
+                  </td>
+                  <td>
+                    <span className="px-2.5 py-0.5 rounded-sm bg-paper-deep text-ink font-semibold text-[10px]">
+                      {m.role}
+                    </span>
+                  </td>
+                  <td className={`text-right text-[11px] font-semibold ${m.acceptedAt ? 'text-emerald-700' : 'text-muted'}`}>
+                    {m.acceptedAt ? 'Active' : 'Pending'}
+                  </td>
+                </tr>
+              ))}
+              {!loading && teamMembers.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="py-8 text-center text-muted text-xs">
+                    No team members yet. Invite someone above.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {pendingInvites.length > 0 && (
           <section aria-labelledby="pending-heading" className="pt-2">
             <h3 id="pending-heading" className="font-display text-base font-semibold">Pending invitations</h3>
-            <table className="ledger mt-2">
-              <thead>
-                <tr>
-                  <th scope="col">Email</th>
-                  <th scope="col">Role</th>
-                  <th scope="col">Expires</th>
-                  <th scope="col"><span className="sr-only">Action</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingInvites.map((inv) => (
-                  <tr key={inv.id}>
-                    <td className="font-semibold text-ink">{inv.email}</td>
-                    <td>{inv.role}</td>
-                    <td className="text-muted">{new Date(inv.expiresAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</td>
-                    <td>
-                      <button onClick={() => handleCopy(inv.token)} className="text-xs font-semibold text-accent hover:underline cursor-pointer mr-4">
-                        Copy link
-                      </button>
-                      <button onClick={() => handleRevoke(inv.id)} className="text-xs font-semibold text-red-700 hover:underline cursor-pointer">
-                        Cancel
-                      </button>
-                    </td>
+            <div className="overflow-x-auto mt-2">
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Expires</th>
+                    <th scope="col"><span className="sr-only">Action</span></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pendingInvites.map((inv) => (
+                    <tr key={inv.id}>
+                      <td className="font-semibold text-ink break-all">{inv.email}</td>
+                      <td>{inv.role}</td>
+                      <td className="text-muted">{new Date(inv.expiresAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</td>
+                      <td>
+                        <span className="flex flex-col items-start gap-1.5 sm:flex-row sm:gap-4">
+                          <button onClick={() => handleCopy(inv.token)} className="whitespace-nowrap text-xs font-semibold text-accent hover:underline cursor-pointer">
+                            Copy link
+                          </button>
+                          <button onClick={() => handleRevoke(inv.id)} className="whitespace-nowrap text-xs font-semibold text-red-700 hover:underline cursor-pointer">
+                            Cancel
+                          </button>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         )}
       </div>
