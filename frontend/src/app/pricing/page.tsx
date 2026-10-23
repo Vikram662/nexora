@@ -1,219 +1,144 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SiteShell } from '@/components/site/SiteShell';
+import { Faq } from '@/components/site/Faq';
+import { CostExample } from '@/components/site/CostExample';
 import { getPublicSite } from '@/lib/site';
 import { BILLING_FAQ, rateFormat } from '@/lib/marketing';
-import { Faq } from '@/components/site/Faq';
-import { Check, Sparkles, ArrowRight } from 'lucide-react';
+import type { PublicPlan } from '@/lib/types';
+import { pageMetadata, softwareJsonLd } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Pricing & Transparent Plans',
-  alternates: { canonical: '/pricing' },
-  description: 'Pay-as-you-go WebRTC pricing with a prepaid rupee wallet, BYOS storage, and full Indian GST compliance.',
-};
+export const metadata: Metadata = pageMetadata({
+  title: 'Pricing',
+  path: '/pricing',
+  description: 'Per-minute rates in rupees, a prepaid wallet topped up by UPI, netbanking or card, and GST invoices every month.',
+});
+
+const WALLET_STEPS = [
+  { lead: 'First,', body: 'you add money through Razorpay. All of it lands in your balance, with nothing skimmed off.' },
+  { lead: 'Then,', body: 'each live call sets aside its first few minutes. When people leave, anything unused goes back.' },
+  { lead: 'Each month,', body: 'you download a GST invoice (CGST+SGST or IGST) and any credit notes from the dashboard.' },
+];
+
+const isCount = (value: string) => /^\d+$/.test(value.trim());
+
+function capacity(plan: PublicPlan) {
+  if (isCount(plan.maxRooms) && isCount(plan.maxParticipants)) {
+    return `Up to ${plan.maxRooms} rooms at once, ${plan.maxParticipants} people per room`;
+  }
+  return `Rooms at once: ${plan.maxRooms} · People per room: ${plan.maxParticipants}`;
+}
+
+function PlanCard({ plan, popular }: { plan: PublicPlan; popular: boolean }) {
+  const custom = plan.videoRatePerMinute === null;
+  const muted = popular ? 'text-sage' : 'text-bark-muted';
+
+  return (
+    <article className={`flex flex-col rounded-xl p-[30px] ${popular ? 'bg-forest text-sand' : 'bg-cream'}`}>
+      {popular && <p className="mb-2 text-[13px] font-semibold text-sage">Most popular</p>}
+      <h2 className={`text-[28px] ${popular ? 'text-cream' : ''}`}>{plan.name}</h2>
+      <p className="mt-6">
+        <span className={`font-serif text-5xl tracking-[-0.02em] ${popular ? 'text-cream' : ''}`}>
+          {custom ? 'Let’s talk' : `₹${rateFormat.format(plan.videoRatePerMinute as number)}`}
+        </span>{' '}
+        {!custom && <span className={`text-[15px] ${muted}`}>per person, per minute of video</span>}
+      </p>
+      <ul className={`mt-[22px] mb-7 pl-[18px] list-disc text-[15px] leading-[1.9] ${popular ? 'text-[#e3ede6]' : 'text-bark-soft'}`}>
+        <li>Platform fee: {plan.platformFee}</li>
+        <li>{capacity(plan)}</li>
+        <li>{plan.includes}</li>
+      </ul>
+      <Link
+        href={custom ? '/contact' : '/signup'}
+        className={`mt-auto self-start px-[22px] py-[13px] rounded-full font-medium transition-colors ${
+          popular
+            ? 'bg-cream text-forest font-semibold hover:bg-white'
+            : 'border-[1.5px] border-bark hover:bg-bark hover:text-cream'
+        }`}
+      >
+        {custom ? 'Write to us' : 'Start with this'}
+      </Link>
+    </article>
+  );
+}
 
 export default async function PricingPage() {
   const site = await getPublicSite();
   const plans = site?.plans ?? [];
+  const hasGrowth = plans.some((p) => p.tier === 'GROWTH');
+  const isPopular = (plan: PublicPlan, index: number) => (hasGrowth ? plan.tier === 'GROWTH' : plans.length > 2 && index === 1);
 
   return (
-    <SiteShell>
-      {/* Hero Header */}
-      <section className="relative overflow-hidden pt-20 pb-16 px-6 text-center">
-        <div className="max-w-4xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-semibold">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Prepaid Rupee Wallet • Zero Overages</span>
-          </div>
-
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-ink">
-            Predictable pricing for <br className="hidden sm:inline" />
-            <span className="bg-gradient-to-r from-accent to-indigo-600 bg-clip-text text-transparent">
-              high-scale WebRTC
-            </span>
-          </h1>
-
-          <p className="text-muted text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-            Mint tokens on your own infrastructure with zero markups on video egress. Top up via UPI, NetBanking or Cards with automatic Indian GST tax invoices.
-          </p>
-        </div>
+    <SiteShell crumb={{ name: 'Pricing', path: '/pricing' }} structuredData={(s, brand) => [softwareJsonLd(s, brand)]}>
+      <section className="max-w-[1180px] mx-auto px-4 sm:px-6 pt-14 pb-12">
+        <h1 className="max-w-[820px] text-[42px] sm:text-[60px] leading-[1.04] tracking-[-0.02em]">
+          Pay by the minute, in rupees. Top up when you need to.
+        </h1>
+        <p className="mt-5 max-w-[620px] text-lg sm:text-[19px] leading-relaxed text-bark-soft">
+          No monthly bill that surprises you. Add money to a wallet with UPI, netbanking or a card, and each call is
+          taken from it. Testing in the sandbox is free.
+        </p>
       </section>
 
-      {/* Pricing Cards Grid */}
-      <section className="max-w-6xl mx-auto px-6 pb-20">
+      <section aria-label="Plans" className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-[72px]">
         {plans.length === 0 ? (
-          <div className="p-8 text-center panel-card">
-            <p className="text-sm text-muted">
-              Custom enterprise pricing is customized to your cluster needs.{' '}
-              <Link href="/contact" className="text-accent font-semibold hover:underline">
+          <div className="rounded-xl bg-cream p-8">
+            <p className="text-[17px] leading-relaxed text-bark-soft">
+              Rates for your setup are agreed with you directly.{' '}
+              <Link href="/contact" className="text-moss font-semibold underline underline-offset-4">
                 Contact our engineering team
-              </Link>.
+              </Link>
+              .
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-            {plans.map((plan, index) => {
-              const isPopular = plan.tier === 'GROWTH' || index === 1;
-              return (
-                <div
-                  key={plan.tier}
-                  className={`relative flex flex-col justify-between rounded-2xl p-7 transition-all duration-200 ${
-                    isPopular
-                      ? 'bg-white border-2 border-accent shadow-xl shadow-accent/10 scale-100 md:-translate-y-2'
-                      : 'panel-card hover:border-slate-300'
-                  }`}
-                >
-                  {isPopular && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-0.5 rounded-full bg-accent text-white text-[11px] font-bold tracking-wide uppercase shadow-sm">
-                      Most Popular
-                    </div>
-                  )}
-
-                  <div>
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-display text-xl font-bold text-ink">{plan.name}</h3>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold uppercase">
-                        {plan.tier}
-                      </span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="mt-5 pb-5 border-b border-[#e2e7f0]">
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-display text-4xl font-extrabold text-ink tracking-tight">
-                          {plan.videoRatePerMinute === null
-                            ? 'Custom'
-                            : `₹${rateFormat.format(plan.videoRatePerMinute)}`}
-                        </span>
-                        {plan.videoRatePerMinute !== null && (
-                          <span className="text-xs text-muted font-medium">/ video participant min</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted mt-1 font-medium">
-                        Platform fee: <span className="font-semibold text-ink">{plan.platformFee}</span>
-                      </div>
-                    </div>
-
-                    {/* Capacity Specs */}
-                    <div className="py-5 space-y-3 border-b border-[#e2e7f0] text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted">Concurrent Rooms</span>
-                        <span className="font-mono font-bold text-ink">{plan.maxRooms}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted">Max Concurrency / Room</span>
-                        <span className="font-mono font-bold text-ink">{/^\d+$/.test(String(plan.maxParticipants)) ? `${plan.maxParticipants} participants` : plan.maxParticipants}</span>
-                      </div>
-                    </div>
-
-                    {/* Features List */}
-                    <div className="pt-5 space-y-3">
-                      <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">
-                        Included Features
-                      </span>
-                      <ul className="space-y-2.5 text-xs text-[#334155]">
-                        <li className="flex items-start gap-2.5">
-                          <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>{plan.includes}</span>
-                        </li>
-                        <li className="flex items-start gap-2.5">
-                          <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>Customer Cloud BYOS (S3/R2/GCS direct egress)</span>
-                        </li>
-                        <li className="flex items-start gap-2.5">
-                          <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>Signed HMAC Webhook notifications</span>
-                        </li>
-                        {isPopular && (
-                          <li className="flex items-start gap-2.5">
-                            <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                            <span>Priority TURN NAT traversal server</span>
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* CTA */}
-                  <div className="mt-8 pt-4">
-                    <Link
-                      href="/signup"
-                      className={`w-full py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
-                        isPopular
-                          ? 'bg-accent hover:bg-accent-deep text-white shadow-md shadow-accent/20'
-                          : 'bg-slate-100 hover:bg-slate-200 text-ink'
-                      }`}
-                    >
-                      Get Started with {plan.name} <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-5 items-stretch">
+            {plans.map((plan, index) => (
+              <PlanCard key={plan.tier} plan={plan} popular={isPopular(plan, index)} />
+            ))}
           </div>
         )}
-
-        <div className="mt-8 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-muted">
-          <span>
-            Rates are in INR excluding GST.
-            {site ? ` ${site.gstPercent}% GST (SAC ${site.sacCode}) is added to each session's charge and shown on monthly tax invoices.` : ''}
-          </span>
-          <Link href="/user/billing" className="text-accent font-semibold hover:underline shrink-0">
-            View Live Rate Card in Console →
-          </Link>
-        </div>
+        <p className="mt-10 max-w-[760px] text-[15px] leading-relaxed text-bark-muted">
+          Prices are in rupees and don’t include GST.{' '}
+          {site
+            ? `${site.gstPercent}% GST (SAC ${site.sacCode}) is added to each call and shows on your monthly tax invoice.`
+            : 'GST is added to each call and shows on your monthly tax invoice.'}{' '}
+          Every plan lets you use your own storage and get signed updates.
+        </p>
       </section>
 
-      {/* How Wallet Works - Process Steps */}
-      <section aria-labelledby="billing-heading" className="border-t border-[#e2e7f0] bg-white py-20 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 id="billing-heading" className="font-display text-3xl font-bold tracking-tight text-ink">
-              How the Prepaid Ledger Works
+      <section aria-labelledby="cost-heading" className="bg-cream">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-16 sm:py-[88px] flex flex-wrap items-center gap-x-[72px] gap-y-12">
+          <div className="flex-[1_1_380px] min-w-0 max-w-[460px]">
+            <h2 id="cost-heading" className="text-[34px] sm:text-[44px] leading-[1.08] tracking-[-0.015em]">
+              What does a real call cost?
             </h2>
-            <p className="text-muted text-sm mt-2">
-              Transparent, atomic, and safe. Zero unexpected month-end surprises.
+            <p className="mt-4 text-[17px] leading-relaxed text-bark-soft">
+              Take a 30-minute consult: a doctor and a patient, both on video. That’s 60 person-minutes. Part-minutes
+              count as a full minute.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="panel-card p-6 space-y-3 relative group">
-              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-sm">
-                1
-              </div>
-              <h3 className="font-display font-bold text-base text-ink">Prepaid Top-Up</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Add funds securely using Razorpay (UPI, NetBanking, Cards). 100% of your payment is credited directly into your organization balance without gateway fee cuts.
-              </p>
-            </div>
-
-            <div className="panel-card p-6 space-y-3 relative group">
-              <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold text-sm">
-                2
-              </div>
-              <h3 className="font-display font-bold text-base text-ink">Atomic Block Reservation</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Minting a production token reserves the initial block. When participants leave the room, unused minutes are refunded back to your balance automatically.
-              </p>
-            </div>
-
-            <div className="panel-card p-6 space-y-3 relative group">
-              <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold text-sm">
-                3
-              </div>
-              <h3 className="font-display font-bold text-base text-ink">Compliant Tax Invoices</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Download gap-free monthly GST tax invoices (CGST+SGST / IGST) and credit notes directly from the console for seamless accounting and input tax credits.
-              </p>
-            </div>
+          <div className="flex-[1_1_360px] min-w-0 flex justify-center">
+            <CostExample site={site} variant="pricing" />
           </div>
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <Faq items={BILLING_FAQ} heading="Frequently Asked Billing Questions" />
+      <section aria-labelledby="wallet-heading" className="max-w-[1180px] mx-auto px-4 sm:px-6 py-16 sm:py-[88px]">
+        <h2 id="wallet-heading" className="text-[34px] sm:text-[44px] leading-[1.08] tracking-[-0.015em]">
+          How the wallet works
+        </h2>
+        <div className="mt-9 grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-x-10 gap-y-8">
+          {WALLET_STEPS.map((step) => (
+            <div key={step.lead}>
+              <p className="font-serif italic text-[34px] text-moss">{step.lead}</p>
+              <p className="mt-1.5 text-[17px] leading-relaxed text-bark-soft">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Faq items={BILLING_FAQ} heading="Money questions" />
     </SiteShell>
   );
 }
-

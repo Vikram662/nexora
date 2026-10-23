@@ -9,54 +9,42 @@ export interface ApiSurface {
 
 export const API_SURFACE: ApiSurface[] = [
   {
-    area: 'Room tokens',
+    area: 'Passes to join a call',
     routes: ['POST /v1/tokens'],
-    note: 'Your backend mints a short-lived token; the client joins the SFU directly. Restrict a listener to the microphone with canPublishSources.',
+    note: 'Your server asks for a short-lived pass; the app uses it to join your media server. You can limit someone to voice only.',
     status: 'live',
   },
   {
-    area: 'Rooms and participants',
-    routes: ['POST /v1/rooms', 'GET /v1/rooms/{room}/participants', 'DELETE …/participants/{id}', 'PATCH …/permissions'],
-    note: 'Create, list and close rooms. Kick, mute, or promote a viewer to speaker mid-broadcast. Room names are scoped per project, so two customers can both use "standup".',
+    area: 'Rooms and the people in them',
+    routes: ['/v1/rooms', '…/participants', '…/permissions'],
+    note: 'Open and close rooms, see who’s there, mute or remove someone, let a viewer speak. Two customers can both call a room “standup” without clashing.',
     status: 'live',
   },
   {
-    area: 'Messaging',
+    area: 'Messages into a call',
     routes: ['POST /v1/rooms/{room}/messages'],
-    note: 'Push a system message to everyone or to named identities. Peer chat rides the data channel; nothing is written to a database.',
+    note: 'Send a note to everyone in a room, or to named people. Chat between people stays inside the call and isn’t saved.',
+    status: 'live',
+  },
+  {
+    area: 'Signed updates to your server',
+    routes: ['room.finished', 'participant.joined', 'recording.completed'],
+    note: 'We tell you when someone joins, a room ends or a recording is ready. If your server is down we try again after 1 minute, 5, 30 and 2 hours.',
     status: 'live',
   },
   {
     area: 'Recording',
     routes: ['POST …/recording/start', 'POST …/recording/stop', 'GET /v1/recordings'],
-    note: 'Room composite egress uploads to the S3, R2 or GCS bucket you connected in the console. Status and duration arrive by signed webhook.',
+    note: 'Start and stop recording a room; the file is uploaded to your S3, R2 or Google Cloud bucket. You can use it now; we’re still testing it.',
     status: 'testing',
   },
   {
-    area: 'Event webhooks',
-    routes: ['room.finished', 'participant.joined', 'recording.completed'],
-    note: 'HMAC-SHA256 signed, delivered to public https endpoints you register in the console. Failed deliveries are retried after 1 minute, 5 minutes, 30 minutes and 2 hours, and can be resent from the console.',
-    status: 'live',
-  },
-  {
-    area: 'RTMP restream and OBS ingest',
+    area: 'Streaming in from OBS, restreaming out over RTMP',
     routes: ['POST /v1/ingress'],
-    note: 'Designed in the blueprint, not built yet.',
+    note: 'Designed, not built yet. We’ll say so here when it is.',
     status: 'planned',
   },
 ];
-
-export const STATUS_LABEL: Record<Availability, string> = {
-  live: 'Live',
-  testing: 'In testing',
-  planned: 'Planned',
-};
-
-export const STATUS_STYLE: Record<Availability, string> = {
-  live: 'text-emerald-800 bg-emerald-50 border-emerald-200',
-  testing: 'text-amber-800 bg-amber-50 border-amber-200',
-  planned: 'text-muted bg-paper-deep border-line',
-};
 
 export const TOKEN_REQUEST = `curl -X POST $NEXORA_API/v1/tokens \\
   -H "x-api-key: pk_live_…" \\
@@ -80,10 +68,10 @@ export const TOKEN_RESPONSE = `{
 export const SOCIAL_LABELS = { linkedin: 'LinkedIn', twitter: 'X', github: 'GitHub', youtube: 'YouTube' } as const;
 
 export const NAV_LINKS = [
-  { href: '/features', label: 'Features' },
+  { href: '/features', label: 'What it does' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/security', label: 'Data & security' },
-  { href: '/docs', label: 'Reference' },
+  { href: '/security', label: 'Your data' },
+  { href: '/docs', label: 'Docs' },
   { href: '/contact', label: 'Contact' },
 ] as const;
 
@@ -91,26 +79,18 @@ export const FOOTER_GROUPS = [
   {
     heading: 'Product',
     links: [
-      { href: '/features', label: 'Features' },
+      { href: '/features', label: 'What it does' },
       { href: '/pricing', label: 'Pricing' },
-      { href: '/security', label: 'Data & security' },
+      { href: '/security', label: 'Your data' },
     ],
   },
   {
     heading: 'Developers',
     links: [
-      { href: '/docs', label: 'API reference' },
+      { href: '/docs', label: 'Docs' },
       { href: '/user/sandbox', label: 'Sandbox' },
-      { href: '/login', label: 'Sign in' },
-      { href: '/signup', label: 'Create an account' },
-    ],
-  },
-  {
-    heading: 'Legal',
-    links: [
-      { href: '/privacy', label: 'Privacy policy' },
-      { href: '/terms', label: 'Terms of service' },
-      { href: '/contact', label: 'Contact' },
+      { href: '/login', label: 'Log in' },
+      { href: '/signup', label: 'Start free' },
     ],
   },
 ] as const;
@@ -119,45 +99,52 @@ export interface Step { title: string; body: string }
 
 export const HOW_IT_WORKS: Step[] = [
   {
-    title: 'Your backend asks for a token',
-    body: 'POST /v1/tokens with your project key and secret. The secret never ships in an app; the token lifetime defaults to 10 minutes.',
+    title: 'Your app asks your server for a pass.',
+    body: 'Your server asks Nexora, using a secret key that never leaves it. The pass is good for ten minutes.',
   },
   {
-    title: 'The client joins your media server',
-    body: 'The web, Android, iOS or Flutter app connects to your LiveKit node with that token. Audio, video and data channels go peer-to-server, not through Nexora.',
+    title: 'The phone or browser joins your media server.',
+    body: 'Sound and video go there directly. They never pass through us.',
   },
   {
-    title: 'You control the room from the server',
-    body: 'Kick or mute a participant, promote a viewer to speaker, push a message, start a recording. Every call is scoped to your project.',
+    title: 'You stay in charge of the room.',
+    body: 'Mute someone, remove them, let a viewer speak, send a message, start recording.',
   },
   {
-    title: 'Events come back signed',
-    body: 'room.finished, participant.joined and recording.completed arrive at your endpoint with an HMAC-SHA256 signature you can verify.',
+    title: 'We tell you when things happen.',
+    body: 'Someone joined, the room ended, the recording is ready. Each message is signed so you know it came from us.',
   },
 ];
 
-export interface UseCase { name: string; detail: string; recipe: string }
+export interface UseCase { name: string; detail: string; image: ImageSlotKey }
 
 export const USE_CASES: UseCase[] = [
   {
-    name: 'Doctor and patient consults',
-    detail: 'One-to-one video with an optional recording written to the clinic’s own bucket.',
-    recipe: 'Video token for each side, recording/start when the consult begins, recording.completed to file the link.',
+    name: 'Clinics',
+    detail: 'One doctor, one patient, one private room. If the consult is recorded, the file goes straight to the clinic’s own storage.',
+    image: 'useClinic',
   },
   {
-    name: 'Live classes and webinars',
-    detail: 'A teacher publishes; students watch and can be promoted to speak for a question.',
-    recipe: 'Host token with canPublish, audience tokens with canPublish false, PATCH permissions to raise a hand.',
+    name: 'Classrooms and webinars',
+    detail: 'The teacher speaks, students watch. When someone raises a hand, you let them talk for a moment, then put them back.',
+    image: 'useClassroom',
   },
   {
-    name: 'Support hotlines',
-    detail: 'Audio-only calls that cannot turn a camera on, billed at the audio rate.',
-    recipe: 'Token with canPublishSources ["microphone"]; the API bills it as an audio session.',
+    name: 'Support lines',
+    detail: 'Voice-only calls where nobody can switch a camera on by accident, charged at the cheaper audio rate.',
+    image: 'useSupport',
   },
+];
+
+export interface CallKind { name: string; detail: string; image: ImageSlotKey }
+
+export const CALL_KINDS: CallKind[] = [
+  { name: 'Video call', detail: 'Camera, mic and screen sharing. Charged at the video rate.', image: 'kindVideo' },
+  { name: 'Voice call', detail: 'Microphone only; the camera can’t be switched on. Charged at the audio rate.', image: 'kindVoice' },
   {
-    name: 'In-app announcements',
-    detail: 'Send a system message into a running room without a chat server.',
-    recipe: 'POST /v1/rooms/{room}/messages to everyone or to named identities.',
+    name: 'Broadcast',
+    detail: 'One host talks, everyone else watches; any viewer can be invited to speak. Charged at the broadcast rate.',
+    image: 'kindBroadcast',
   },
 ];
 
@@ -165,94 +152,169 @@ export interface FaqItem { q: string; a: string }
 
 export const FAQ: FaqItem[] = [
   {
-    q: 'Do I have to run LiveKit myself?',
-    a: 'Yes. Nexora is the control plane: tokens, rooms, billing, webhooks and the console. You host LiveKit, Coturn and the egress worker; a Docker Compose file for all three is in the repository.',
+    q: 'Do I need to run my own media server?',
+    a: 'Yes. You run LiveKit, Coturn and the recording worker, and there’s a ready-made Docker Compose file for all three. Nexora handles the passes, rooms, billing and dashboard.',
   },
   {
-    q: 'Where do recordings go?',
-    a: 'Into the S3, R2 or GCS bucket you connect in the console. We store a metadata row (room, object key, duration, size, status), never the file.',
+    q: 'Where do recordings end up?',
+    a: 'In the S3, R2 or Google Cloud bucket you connect. We only keep a note that the file exists, never the file itself.',
   },
   {
-    q: 'Can a client app start a recording?',
-    a: 'No. Recording, room deletion and permission changes are server-to-server calls with your project secret, so a leaked app build cannot trigger billable actions.',
+    q: 'Could someone start a recording from a hacked app?',
+    a: 'No. Recording, closing rooms and changing permissions can only be done from your server with your secret key.',
   },
   {
-    q: 'How does billing work?',
-    a: 'Production projects draw from a prepaid rupee wallet at the per-minute rate for your plan. Each token reserves up to the first 10 minutes; if the wallet cannot cover it, the token request is rejected. Sandbox projects are not billed.',
+    q: 'Is chat saved?',
+    a: 'No. Messages travel inside the call and aren’t written down anywhere. If you need a history, save it on your side.',
+  },
+];
+
+export const BILLING_FAQ: FaqItem[] = [
+  {
+    q: 'What happens if my wallet runs low?',
+    a: 'Each new pass sets aside up to the first 10 minutes. If the wallet can’t cover that, the pass is refused, so you never end up owing money. Sandbox projects are never charged.',
   },
   {
-    q: 'Is chat history stored?',
-    a: 'No. Messages ride the LiveKit data channel and are not written to a database. If you need history, store it in your own system from the data events.',
-  },
-  {
-    q: 'Which client SDKs do I use?',
-    a: 'The official LiveKit SDKs for web, Android, iOS and Flutter. Nexora only issues the tokens they connect with; integration guides are in the API reference.',
+    q: 'Do you store chat?',
+    a: 'No. Messages travel inside the call and aren’t written down.',
   },
   {
     q: 'Are you SOC 2 or HIPAA certified?',
-    a: 'No. We are working toward SOC 2 readiness and have not been audited. Talk to us before relying on Nexora for HIPAA or DPDP obligations.',
+    a: 'Not yet. We’re working toward SOC 2 and haven’t been audited. If you need HIPAA or DPDP, talk to us first.',
   },
 ];
 
-export interface SdkTarget { platform: string; package: string; note: string }
-
-export const CLIENT_SDKS: SdkTarget[] = [
-  { platform: 'Web / React', package: 'livekit-client', note: 'Browser and React apps, including screen share.' },
-  { platform: 'Android', package: 'io.livekit:livekit-android', note: 'Kotlin, camera and microphone permissions included in the guide.' },
-  { platform: 'iOS', package: 'client-sdk-swift', note: 'Swift and SwiftUI, with a call-manager example.' },
-  { platform: 'Flutter', package: 'livekit_client', note: 'One codebase for both mobile platforms.' },
-];
+export const CLIENT_PLATFORMS = ['Web and React', 'Android', 'iPhone and iPad', 'Flutter'];
 
 export interface SecuritySection { title: string; points: string[] }
 
 export const SECURITY_SECTIONS: SecuritySection[] = [
   {
-    title: 'Credentials and secrets',
+    title: 'Keys and passwords',
     points: [
-      'Bucket keys are encrypted with AES-256-GCM and decrypted only when a recording starts.',
-      'Project API secrets are stored as bcrypt hashes and shown once, at creation or rotation.',
-      'Rotating a secret keeps the old one valid for a grace window so deployments do not break.',
-      'The server refuses to start without its encryption key and LiveKit credentials; there are no built-in fallback secrets.',
+      'Project secrets are stored as bcrypt hashes and shown to you once.',
+      'When you swap a secret, the old one keeps working for a short while so nothing breaks.',
+      'The server won’t start at all without its encryption key and LiveKit credentials.',
     ],
   },
   {
-    title: 'Isolation between customers',
+    title: 'Keeping customers apart',
     points: [
-      'Room names are prefixed with the project id on the media server, so two projects can both use "standup".',
-      'Every console and API call is scoped to the authenticated organisation or project.',
-      'Staff-only operations sit behind a separate role check.',
+      'Every room name is tagged with its project on the media server.',
+      'Every request is checked against the organisation or project that made it.',
+      'Staff-only tools sit behind a separate role check.',
     ],
   },
   {
-    title: 'Sessions and abuse limits',
+    title: 'Logins and limits',
     points: [
-      'Console sessions are signed JWTs in HttpOnly, SameSite cookies that expire after 24 hours.',
-      'Login and signup are rate-limited per IP; all endpoints have a global request limit.',
-      'A per-project ceiling on token lifetime and on rooms created through the API.',
+      'Dashboard sessions use secure, HttpOnly cookies that expire after 24 hours.',
+      'Login and sign-up are rate-limited; so is every endpoint.',
+      'Each project has caps on pass lifetime and on rooms created through the API.',
     ],
   },
   {
-    title: 'Webhooks and payments',
+    title: 'Updates and payments',
     points: [
-      'Outbound events are signed with HMAC-SHA256 so your server can verify the sender.',
-      'Payment webhooks are verified against the raw request body and are idempotent by payment id.',
-      'Wallet deductions are atomic, so concurrent token requests cannot overdraw a balance.',
+      'Every update we send is signed (HMAC-SHA256) so your server can check it’s really us.',
+      'Payment notifications are verified and only ever counted once.',
+      'Wallet charges can’t overlap, so two calls at once can’t overdraw your balance.',
     ],
   },
 ];
 
-export const CONSOLE_AREAS = [
-  'Projects and API keys, with secret rotation',
-  'Storage buckets: S3, Cloudflare R2, Google Cloud',
-  'Outbound webhook endpoints and event filters',
-  'Wallet top-ups, GST profile and invoices',
-  'Team members and roles',
-  'Business KYC submission',
-  'Usage logs and recordings list',
-  'Audit trail and support tickets',
-  'Email and SMS alert preferences',
-];
+/**
+ * Photo slots on the public pages. `src` is a file in public/ (e.g. '/images/home-hero.jpg'); to use your
+ * own photo, replace that file or point `src` at a new one, and update `alt` to describe it. An empty `src`
+ * shows a labelled placeholder built from `hint`. Current photos are free stock under the Unsplash License
+ * (commercial use allowed, no attribution required); `source` records where each came from.
+ */
+export interface ImageSlotSpec { src: string; alt: string; hint: string; source: string }
 
-export const BILLING_FAQ: FaqItem[] = FAQ.filter((item) => item.q.startsWith('How does billing') || item.q.startsWith('Is chat') || item.q.startsWith('Are you SOC'));
+const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}`;
+
+export const SITE_IMAGES = {
+  homeHero: {
+    src: '/images/home-hero.jpg',
+    alt: 'A doctor talking with a patient over a video call on a laptop',
+    hint: 'a doctor on a video consult with a patient',
+    source: unsplash('1758691461932-d0aa0ebf6b31'),
+  },
+  useClinic: {
+    src: '/images/use-clinic.jpg',
+    alt: 'A doctor in a clinic consulting a patient over a laptop video call',
+    hint: 'clinic consult',
+    source: unsplash('1758691462743-f9fc9e430d39'),
+  },
+  useClassroom: {
+    src: '/images/use-classroom.jpg',
+    alt: 'A teacher working on a laptop in front of a chalkboard',
+    hint: 'teacher running a live class',
+    source: unsplash('1758685848174-e061c6486651'),
+  },
+  useSupport: {
+    src: '/images/use-support.jpg',
+    alt: 'Support agents wearing headsets at their desks',
+    hint: 'support agent on a headset',
+    source: unsplash('1626863905121-3b0c0ed7b94c'),
+  },
+  homeTeam: {
+    src: '/images/home-team.jpg',
+    alt: 'A small team gathered around a laptop in an office',
+    hint: 'the team, or a customer’s office',
+    source: unsplash('1572021335469-31706a17aaef'),
+  },
+  featuresHero: {
+    src: '/images/features-hero.jpg',
+    alt: 'A developer testing an app on a phone next to a laptop',
+    hint: 'developer testing a call on phone and laptop',
+    source: unsplash('1563986768609-322da13575f3'),
+  },
+  kindVideo: {
+    src: '/images/kind-video.jpg',
+    alt: 'A woman waving during a video call on her laptop',
+    hint: 'two people on video',
+    source: unsplash('1758521541324-d304c5303fe5'),
+  },
+  kindVoice: {
+    src: '/images/kind-voice.jpg',
+    alt: 'A woman smiling while talking on her phone',
+    hint: 'voice call on a phone',
+    source: unsplash('1758876201450-cf77ab8b95bc'),
+  },
+  kindBroadcast: {
+    src: '/images/kind-broadcast.jpg',
+    alt: 'An audience watching a speaker on a large bright screen',
+    hint: 'one speaker, many viewers',
+    source: unsplash('1627931539006-d5c4677e05ea'),
+  },
+  securityHero: {
+    src: '/images/security-hero.jpg',
+    alt: 'A server rack with rows of green status lights',
+    hint: 'your own servers',
+    source: unsplash('1762163516269-3c143e04175c'),
+  },
+  contactHero: {
+    src: '/images/contact-hero.jpg',
+    alt: 'A smiling support agent wearing a headset at her computer',
+    hint: 'someone from the support team',
+    source: unsplash('1766066014237-00645c74e9c6'),
+  },
+  signIn: {
+    src: '/images/sign-in.jpg',
+    alt: 'A woman on a phone call at her laptop in a bright room',
+    hint: 'someone on a call in a bright office',
+    source: unsplash('1758611974917-f7f7a58b74b0'),
+  },
+  signUp: {
+    src: '/images/sign-up.jpg',
+    alt: 'A small team trying something out together on a laptop',
+    hint: 'a small team trying their first call',
+    source: unsplash('1603201667141-5a2d4c673378'),
+  },
+} satisfies Record<string, ImageSlotSpec>;
+
+export type ImageSlotKey = keyof typeof SITE_IMAGES;
 
 export const rateFormat = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+export const inrFormat = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

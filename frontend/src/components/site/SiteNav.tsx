@@ -8,7 +8,7 @@ export function SiteNav() {
   const pathname = usePathname();
 
   return (
-    <ul className="flex items-center gap-x-6 gap-y-2 text-sm overflow-x-auto">
+    <ul className="flex gap-1.5 text-[15px] overflow-x-auto">
       {NAV_LINKS.map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
@@ -16,11 +16,9 @@ export function SiteNav() {
             <Link
               href={link.href}
               aria-current={active ? 'page' : undefined}
-              className={
-                active
-                  ? 'text-ink font-medium underline underline-offset-[10px] decoration-accent decoration-2'
-                  : 'text-muted hover:text-ink transition-colors'
-              }
+              className={`inline-block px-3.5 py-2.5 rounded-full transition-colors ${
+                active ? 'bg-sand-deep text-bark font-medium' : 'text-bark-muted hover:text-bark'
+              }`}
             >
               {link.label}
             </Link>

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Mail, Lock } from 'lucide-react';
 import { loginUser } from '@/lib/api';
 import { AuthShell, AuthField, AuthError, AuthSubmit } from '@/components/AuthShell';
 
@@ -37,6 +36,8 @@ export default function LoginPage() {
 
   return (
     <AuthShell
+      image="signIn"
+      side="left"
       title="Sign in"
       lede="Project keys, storage buckets, webhooks and the wallet live in the console."
       aside={{
@@ -50,22 +51,22 @@ export default function LoginPage() {
       footer={
         <>
           New here?{' '}
-          <Link href="/signup" className="font-medium text-accent hover:text-accent-deep underline underline-offset-4">
+          <Link href="/signup" className="font-semibold text-moss underline underline-offset-4">
             Create an account
           </Link>
         </>
       }
     >
       {errorMsg && <AuthError message={errorMsg} />}
-      <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
-        <AuthField id="email" label="Work email" type="email" value={email} onChange={setEmail} placeholder="name@company.com" icon={Mail} autoComplete="email" />
-        <AuthField id="password" label="Password" type="password" value={password} onChange={setPassword} icon={Lock} autoComplete="current-password" />
+      <form onSubmit={handleSubmit} className="space-y-[18px]" suppressHydrationWarning>
+        <AuthField id="email" label="Work email" type="email" value={email} onChange={setEmail} placeholder="name@company.com" autoComplete="email" />
+        <AuthField id="password" label="Password" type="password" value={password} onChange={setPassword} autoComplete="current-password" />
         <AuthSubmit loading={loading} idle="Sign in" busy="Signing in…" />
 
         {/* Seeded demo accounts, development builds only. Assumes SEED_STAFF_PASSWORD=password123. */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="pt-3 border-t border-line space-y-2">
-            <div className="text-[11px] font-semibold text-muted text-center uppercase tracking-wider">
+          <div className="pt-3 border-t border-crust space-y-2">
+            <div className="text-[11px] font-semibold text-bark-muted text-center uppercase tracking-wider">
               Fill demo credentials (dev only)
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -75,7 +76,7 @@ export default function LoginPage() {
                   setEmail('superadmin@nexora.io');
                   setPassword('password123');
                 }}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-ink text-xs font-semibold rounded-lg border border-slate-200 transition-colors text-center cursor-pointer"
+                className="py-1.5 px-2 bg-cream hover:bg-sand-deep text-bark text-xs font-semibold rounded-lg border border-crust transition-colors text-center cursor-pointer"
               >
                 🛡️ Fill Admin
               </button>
@@ -85,7 +86,7 @@ export default function LoginPage() {
                   setEmail('founder@nexora.io');
                   setPassword('password123');
                 }}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-ink text-xs font-semibold rounded-lg border border-slate-200 transition-colors text-center cursor-pointer"
+                className="py-1.5 px-2 bg-cream hover:bg-sand-deep text-bark text-xs font-semibold rounded-lg border border-crust transition-colors text-center cursor-pointer"
               >
                 👤 Fill Developer
               </button>

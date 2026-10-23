@@ -63,33 +63,36 @@ export function MintDemo({ ratePerMinute }: { ratePerMinute: number | null }) {
 
   return (
     <figure
-      aria-label="Example: request a room token, then the session meter starts"
-      className="rounded-lg bg-console text-slate-200 border border-console-line overflow-hidden"
+      aria-label="Example: your server requests a pass, then the call meter starts"
+      className="m-0 min-w-0 rounded-[10px] bg-bark text-sand overflow-hidden"
     >
-      <figcaption className="flex items-center justify-between gap-4 px-4 py-2.5 border-b border-console-line font-mono text-[11px] text-slate-400">
-        <span>POST /v1/tokens</span>
-        <span className="flex items-center gap-2 tabular">
-          {live ? <span className="onair-dot" aria-hidden="true" /> : <span className="h-2 w-2 rounded-full bg-slate-600" aria-hidden="true" />}
-          <span className={live ? 'text-slate-100' : ''}>{live ? 'LIVE' : 'idle'}</span>
-          <span aria-hidden="true">{timecode(seconds)}</span>
-          {charged !== null && live && <span aria-hidden="true" className="text-indigo-300">₹{rateFormat.format(charged)}</span>}
+      <figcaption className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[#4a3c30] font-plex text-xs text-taupe">
+        <span>Step 1, for your developer</span>
+        <span className="inline-flex items-center gap-2 tabular">
+          <span
+            className={`h-2 w-2 rounded-full ${live ? 'bg-[#e07a4f] motion-safe:animate-pulse' : 'bg-[#6b5d4f]'}`}
+            aria-hidden="true"
+          />
+          {live ? 'live' : 'idle'} · <span aria-hidden="true">{timecode(seconds)}</span>
+          {charged !== null && live && <span aria-hidden="true">· ₹{rateFormat.format(charged)} so far</span>}
         </span>
       </figcaption>
 
-      <pre className="p-4 font-mono text-[12px] leading-relaxed overflow-x-auto min-h-[10.5rem]" aria-hidden="true">
+      <pre className="m-0 p-5 font-plex text-[13px] leading-[1.7] overflow-x-auto min-h-[12rem]" aria-hidden="true">
         <code>{TOKEN_REQUEST.slice(0, typed)}</code>
       </pre>
       <p className="sr-only">{TOKEN_REQUEST}</p>
 
-      <div className={`transition-opacity duration-500 ${live ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="border-t border-console-line px-4 py-2 font-mono text-[11px] text-slate-500">200 OK</div>
-        <pre className="px-4 pb-4 font-mono text-[12px] leading-relaxed text-indigo-200/90 overflow-x-auto">
-          <code>{TOKEN_RESPONSE}</code>
-        </pre>
-      </div>
+      <pre
+        className={`m-0 px-5 pb-5 font-plex text-[13px] leading-[1.7] text-amber-code overflow-x-auto transition-opacity duration-500 ${
+          live ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <code>{`→ ${TOKEN_RESPONSE}`}</code>
+      </pre>
 
-      <p className="border-t border-console-line px-4 py-2 text-[11px] text-slate-500">
-        Billed per started minute{charged === null ? '' : ', at the lowest plan video rate'}.
+      <p className="border-t border-[#4a3c30] px-5 py-2.5 text-xs text-taupe">
+        Charged per started minute{charged === null ? '' : ', at the lowest plan’s video rate'}.
       </p>
     </figure>
   );

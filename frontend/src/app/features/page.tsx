@@ -1,137 +1,116 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SiteShell } from '@/components/site/SiteShell';
-import { API_SURFACE, CLIENT_SDKS, CONSOLE_AREAS, STATUS_LABEL, STATUS_STYLE } from '@/lib/marketing';
+import { ImageSlot, SLOT_SIZES } from '@/components/site/ImageSlot';
+import { API_SURFACE, CALL_KINDS, CLIENT_PLATFORMS } from '@/lib/marketing';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Features',
-  alternates: { canonical: '/features' },
+  path: '/features',
   description:
     'What the Nexora API covers today: room tokens, rooms and participants, messaging, recording and signed webhooks, with the status of each.',
-};
+});
+
+const H2 = 'text-[34px] sm:text-[44px] leading-[1.08] tracking-[-0.015em]';
 
 export default function FeaturesPage() {
+  const ready = API_SURFACE.filter((item) => item.status === 'live');
+  const testing = API_SURFACE.filter((item) => item.status === 'testing');
+  const planned = API_SURFACE.filter((item) => item.status === 'planned');
+
   return (
-    <SiteShell>
-      <div className="max-w-6xl mx-auto px-6 py-16 grid lg:grid-cols-[0.8fr_1.2fr] gap-12">
-        <div className="lg:sticky lg:top-8 self-start">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">What the API covers today</h1>
-          <p className="mt-4 text-muted leading-relaxed">
-            Calling, broadcast, messaging and recording, called from your backend. Project keys, storage buckets,
-            webhook endpoints and billing are set up in the console, not through the API.
+    <SiteShell crumb={{ name: 'Features', path: '/features' }}>
+      <section className="max-w-[1180px] mx-auto px-4 sm:px-6 pt-12 pb-[72px] flex flex-wrap items-center gap-x-16 gap-y-10">
+        <div className="flex-[1_1_420px] min-w-0 max-w-[540px]">
+          <h1 className="text-[42px] sm:text-[58px] leading-[1.04] tracking-[-0.02em]">
+            What it does today, and what’s still on the workbench
+          </h1>
+          <p className="mt-5 text-lg sm:text-[19px] leading-relaxed text-bark-soft">
+            We’d rather tell you what’s ready than oversell. Everything below is called from your own server. Keys,
+            storage and billing are set up in the dashboard.
           </p>
-          <p className="mt-4 text-sm text-muted">Status is shown per row so you know what you can ship against.</p>
-          <Link
-            href="/docs"
-            className="mt-6 inline-block text-sm font-medium underline underline-offset-4 decoration-accent hover:text-accent transition-colors"
-          >
-            Full request and response examples
-          </Link>
         </div>
+        <ImageSlot slot="featuresHero" eager className="flex-[1_1_380px] min-h-[300px] sm:min-h-[380px]" />
+      </section>
 
-        <ol className="divide-y divide-line border-y border-line">
-          {API_SURFACE.map((item) => (
-            <li key={item.area} className="py-6 grid sm:grid-cols-[1fr_auto] gap-x-6 gap-y-2">
-              <div>
-                <h2 className="font-semibold">{item.area}</h2>
-                <p className="mt-1.5 text-sm text-muted leading-relaxed">{item.note}</p>
-                <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-ink/80">
-                  {item.routes.map((route) => (
-                    <span key={route}>{route}</span>
-                  ))}
-                </p>
-              </div>
-              <span
-                className={`self-start justify-self-start sm:justify-self-end text-[11px] font-medium px-2 py-0.5 rounded border ${STATUS_STYLE[item.status]}`}
-              >
-                {STATUS_LABEL[item.status]}
-              </span>
-            </li>
+      <section aria-labelledby="ready-heading" className="bg-cream">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-16 sm:py-20 grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-x-10 gap-y-12">
+          <h2 id="ready-heading" className={`${H2} col-span-full`}>
+            Ready to use
+          </h2>
+          {ready.map((item) => (
+            <article key={item.area} className="border-t-2 border-moss pt-[18px]">
+              <h3 className="text-[25px]">{item.area}</h3>
+              <p className="mt-2 text-base leading-relaxed text-bark-soft">{item.note}</p>
+              <p className="mt-3 font-plex text-xs text-bark-muted">{item.routes.join(' · ')}</p>
+            </article>
           ))}
-        </ol>
-      </div>
-
-      <section aria-labelledby="calltypes-heading" className="border-t border-line bg-paper-deep">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <h2 id="calltypes-heading" className="font-display text-3xl font-semibold tracking-tight">
-            Three kinds of session, one token endpoint
-          </h2>
-          <p className="mt-3 max-w-2xl text-muted leading-relaxed">
-            The kind of session is decided by the grants in the token. Billing reads the same grants, so a caller cannot
-            ask for a cheaper tariff than the token allows.
-          </p>
-          <dl className="mt-10 grid md:grid-cols-3 gap-x-10 gap-y-8">
-            <div className="border-t-2 border-ink pt-4">
-              <dt className="font-display text-xl font-semibold">Video call</dt>
-              <dd className="mt-2 text-sm text-muted leading-relaxed">
-                Default grants: publish and subscribe to camera, microphone and screen share, plus the data channel.
-                Billed at the video rate.
-              </dd>
+        </div>
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-16 sm:pb-20 flex flex-wrap gap-x-10 gap-y-8">
+          {testing.map((item) => (
+            <div key={item.area} className="flex-[1_1_320px] rounded-[10px] bg-sand px-7 py-[26px]">
+              <p className="inline-flex items-center gap-2 text-sm font-semibold text-ember">
+                <span className="h-2 w-2 rounded-full bg-[#c9772f]" aria-hidden="true" />
+                Being tested
+              </p>
+              <h3 className="mt-2.5 text-[25px]">{item.area}</h3>
+              <p className="mt-2 text-base leading-relaxed text-bark-soft">{item.note}</p>
             </div>
-            <div className="border-t-2 border-ink pt-4">
-              <dt className="font-display text-xl font-semibold">Audio call</dt>
-              <dd className="mt-2 text-sm text-muted leading-relaxed">
-                Add <code className="font-mono text-xs">canPublishSources: [&quot;microphone&quot;]</code> and the participant
-                cannot publish a camera or screen. Billed at the audio rate.
-              </dd>
+          ))}
+          {planned.map((item) => (
+            <div key={item.area} className="flex-[1_1_320px] rounded-[10px] border-[1.5px] border-dashed border-taupe px-7 py-[26px]">
+              <p className="text-sm font-semibold text-bark-muted">Coming later</p>
+              <h3 className="mt-2.5 text-[25px]">{item.area}</h3>
+              <p className="mt-2 text-base leading-relaxed text-bark-soft">{item.note}</p>
             </div>
-            <div className="border-t-2 border-ink pt-4">
-              <dt className="font-display text-xl font-semibold">Broadcast</dt>
-              <dd className="mt-2 text-sm text-muted leading-relaxed">
-                Host tokens publish; viewer tokens set <code className="font-mono text-xs">canPublish: false</code> and are billed
-                at the broadcast rate. Promote a viewer to speaker later with a permissions call.
-              </dd>
-            </div>
-          </dl>
+          ))}
         </div>
       </section>
 
-      <section aria-labelledby="sdk-heading" className="max-w-6xl mx-auto px-6 py-16">
-        <h2 id="sdk-heading" className="font-display text-3xl font-semibold tracking-tight">
-          Client apps use the LiveKit SDKs
+      <section aria-labelledby="kinds-heading" className="max-w-[1180px] mx-auto px-4 sm:px-6 py-16 sm:py-[88px]">
+        <h2 id="kinds-heading" className={`${H2} max-w-[720px]`}>
+          Three kinds of call. The pass decides which, and what it costs.
         </h2>
-        <p className="mt-3 max-w-2xl text-muted leading-relaxed">
-          Nexora issues the token; the official LiveKit SDKs do the rest. Copy-paste guides for each platform are in the{' '}
-          <Link href="/docs" className="underline underline-offset-4 decoration-accent hover:text-accent">
-            API reference
-          </Link>
-          . Thin Nexora wrappers are planned, not shipped.
-        </p>
-        <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
-            <caption className="sr-only">Supported client platforms</caption>
-            <thead>
-              <tr className="border-b border-ink/70 text-xs text-muted">
-                <th scope="col" className="py-3 pr-4 font-medium">Platform</th>
-                <th scope="col" className="py-3 pr-4 font-medium">Package</th>
-                <th scope="col" className="py-3 font-medium">Notes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {CLIENT_SDKS.map((sdk) => (
-                <tr key={sdk.platform}>
-                  <th scope="row" className="py-3.5 pr-4 font-semibold">{sdk.platform}</th>
-                  <td className="py-3.5 pr-4 font-mono text-xs">{sdk.package}</td>
-                  <td className="py-3.5 text-muted">{sdk.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mt-10 grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-8">
+          {CALL_KINDS.map((kind, index) => (
+            <article key={kind.name}>
+              <ImageSlot slot={kind.image} tone={(index % 3) as 0 | 1 | 2} label="plain" sizes={SLOT_SIZES.third} className="aspect-[3/2]" />
+              <h3 className="mt-[18px] text-[25px]">{kind.name}</h3>
+              <p className="mt-1.5 text-base leading-relaxed text-bark-soft">{kind.detail}</p>
+            </article>
+          ))}
         </div>
       </section>
 
-      <section aria-labelledby="console-heading" className="border-t border-line bg-paper-deep">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <h2 id="console-heading" className="font-display text-3xl font-semibold tracking-tight">
-            Set up in the console, not through the API
-          </h2>
-          <ul className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-3 text-sm text-muted">
-            {CONSOLE_AREAS.map((item) => (
-              <li key={item} className="border-l-2 border-accent/50 pl-3">
-                {item}
-              </li>
-            ))}
-          </ul>
+      <section className="bg-cream">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-16 sm:py-20 flex flex-wrap gap-x-[72px] gap-y-10">
+          <div className="flex-[1_1_380px] min-w-0">
+            <h2 className="text-[32px] sm:text-[40px] leading-[1.1] tracking-[-0.015em]">Works in the apps you already build</h2>
+            <p className="mt-3.5 text-[17px] leading-relaxed text-bark-soft">
+              Your app uses the free LiveKit libraries; Nexora just hands out the passes. Step-by-step guides for each
+              are in the{' '}
+              <Link href="/docs" className="underline underline-offset-4 hover:text-moss">
+                docs
+              </Link>
+              .
+            </p>
+            <ul className="mt-6 flex flex-wrap gap-2.5">
+              {CLIENT_PLATFORMS.map((platform) => (
+                <li key={platform} className="px-[18px] py-2.5 rounded-full bg-sand text-[15px]">
+                  {platform}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex-[1_1_380px] min-w-0">
+            <h2 className="text-[32px] sm:text-[40px] leading-[1.1] tracking-[-0.015em]">Set up in the dashboard</h2>
+            <p className="mt-3.5 text-[17px] leading-[1.75] text-bark-soft">
+              Projects and keys (and swapping them out), your storage bucket, where we send updates, wallet top-ups and
+              GST details, your team, business KYC, call logs and recordings, the audit trail, support tickets, and
+              email or SMS alerts.
+            </p>
+          </div>
         </div>
       </section>
     </SiteShell>

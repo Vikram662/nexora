@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Building } from 'lucide-react';
 import { signupUser } from '@/lib/api';
 import { AuthShell, AuthField, AuthError, AuthSubmit } from '@/components/AuthShell';
 
@@ -31,31 +30,44 @@ export default function SignupPage() {
 
   return (
     <AuthShell
+      image="signUp"
+      side="right"
       title="Create an account"
       lede="Create the account, then add a project in the console to get API keys. The wallet starts at ₹0."
       aside={{
         heading: 'Sandbox first, production once the wallet is funded.',
         points: [
-          'Sandbox and production projects get separate keys.',
-          'Connect S3, R2 or GCS in the console before you record.',
-          'Production calls draw from a prepaid wallet; each top-up gets a GST invoice.',
+          'Each project gets its own API key and secret.',
+          'Connect your own storage bucket for recordings.',
+          'Top up in rupees when you are ready to go live.',
         ],
       }}
       footer={
         <>
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-accent hover:text-accent-deep underline underline-offset-4">
+          <Link href="/login" className="font-semibold text-moss underline underline-offset-4">
             Sign in
           </Link>
         </>
       }
     >
       {errorMsg && <AuthError message={errorMsg} />}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <AuthField id="org" label="Company name" type="text" value={orgName} onChange={setOrgName} placeholder="Acme Health" icon={Building} autoComplete="organization" />
-        <AuthField id="email" label="Work email" type="email" value={email} onChange={setEmail} placeholder="name@company.com" icon={Mail} autoComplete="email" />
-        <AuthField id="password" label="Password" type="password" value={password} onChange={setPassword} placeholder="At least 8 characters" icon={Lock} autoComplete="new-password" minLength={8} />
+      <form onSubmit={handleSubmit} className="space-y-[18px]">
+        <AuthField id="org" label="Company name" type="text" value={orgName} onChange={setOrgName} placeholder="Acme Health" autoComplete="organization" />
+        <AuthField id="email" label="Work email" type="email" value={email} onChange={setEmail} placeholder="name@company.com" autoComplete="email" />
+        <AuthField id="password" label="Password" type="password" value={password} onChange={setPassword} placeholder="At least 8 characters" autoComplete="new-password" minLength={8} />
         <AuthSubmit loading={loading} idle="Create account" busy="Creating…" />
+        <p className="text-[13px] leading-relaxed text-bark-muted">
+          By creating an account you agree to the{' '}
+          <Link href="/terms" className="underline underline-offset-[3px] hover:text-bark">
+            terms
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="underline underline-offset-[3px] hover:text-bark">
+            privacy policy
+          </Link>
+          .
+        </p>
       </form>
     </AuthShell>
   );

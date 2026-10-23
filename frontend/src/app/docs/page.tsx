@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchOrganizationData, getApiBaseUrl, getLivekitWsUrl, Project } from '@/lib/api';
-import { Smartphone, Radio, Video, Mic, MessageSquare, Copy, Check, Cpu } from 'lucide-react';
 
 type SdkTab = 'android' | 'flutter' | 'ios' | 'web';
 type FeatureTab = 'video' | 'voice' | 'broadcast' | 'messaging';
@@ -43,12 +42,12 @@ export default function DocumentationPage() {
   };
 
 interface ApiDocItem {
+  short: string;
   title: string;
   endpoint: string;
   badge?: string;
   desc: string;
   link?: { href: string; label: string };
-  flow: string;
   request: string;
   response: string;
 }
@@ -56,10 +55,10 @@ interface ApiDocItem {
   // FULL APPLICATION-FACING APIS FOR CALL, VIDEO, BROADCAST, AND CHAT
   const APPLICATION_APIS: ApiDocItem[] = [
     {
-      title: '1. Video Call Token Minting (1:1 & Multi-Party Mesh)',
+      short: 'Video call pass',
+      title: 'Get a pass for a video call',
       endpoint: 'POST /v1/tokens',
-      desc: 'Your mobile/web backend calls this to generate an authentic room access token for a video participant. Grants camera, mic, and screen sharing permissions.',
-      flow: 'Client App -> Your Backend -> Nexora /v1/tokens -> Returns Signed JWT -> Client connects to LiveKit SFU',
+      desc: 'A short-lived pass with camera, mic and screen sharing. The app joins your LiveKit server with it.',
       request: `curl -X POST "${apiBaseUrl}/v1/tokens" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${selectedApiKey}" \\
@@ -86,10 +85,10 @@ interface ApiDocItem {
 }`,
     },
     {
-      title: '2. Low-Latency Voice / Audio Call Token',
+      short: 'Voice call pass',
+      title: 'Get a pass for a voice call',
       endpoint: 'POST /v1/tokens',
-      desc: 'Optimized for high-fidelity audio calls, customer support hotline, or walkie-talkie mode. Bandwidth is streamlined with adaptive Opus codec and hardware echo cancellation.',
-      flow: 'Microphone track only. Video camera publishing is strictly blocked on token level via canPublishSources: ["microphone"] for maximum security & battery efficiency.',
+      desc: 'Add canPublishSources: ["microphone"] and the camera stays off. Charged at the audio rate.',
       request: `curl -X POST "${apiBaseUrl}/v1/tokens" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${selectedApiKey}" \\
@@ -117,10 +116,10 @@ interface ApiDocItem {
 }`,
     },
     {
-      title: '3. Interactive Live Broadcasting (Host vs Audience / Viewer)',
+      short: 'Broadcast passes',
+      title: 'Passes for a broadcast',
       endpoint: 'POST /v1/tokens',
-      desc: 'Sub-second interactive live stream. Host gets publishing grants (video/mic) while audience members receive subscriber-only tokens (canPublish: false) with unlimited scalability.',
-      flow: 'Host broadcasts 1080p/720p stream -> SFU edge relays -> Millions of audience members watch with <300ms sub-second latency.',
+      desc: 'The host can publish; viewers get canPublish: false and are charged at the broadcast rate.',
       request: `// A. HOST TOKEN (Can publish live video and mic)
 curl -X POST "${apiBaseUrl}/v1/tokens" \\
   -H "Content-Type: application/json" \\
@@ -161,10 +160,10 @@ curl -X POST "${apiBaseUrl}/v1/tokens" \\
 }`,
     },
     {
-      title: '4. Room Management API (Create, Inspect, List & Close Rooms)',
+      short: 'Rooms',
+      title: 'Open, list and close rooms',
       endpoint: 'POST /v1/rooms | GET /v1/rooms | GET /v1/rooms/{room} | DELETE /v1/rooms/{room}',
-      desc: 'Server-side room lifecycle controls. Pre-create structured rooms with participant limits and empty timeouts, retrieve real-time participant counts, or explicitly close rooms.',
-      flow: `Your Backend -> POST /v1/rooms -> Nexora provisions room configuration. DELETE /v1/rooms/{room} terminates room and immediately disconnects all peers.`,
+      desc: 'Room names belong to your project, so they never clash with another customer’s.',
       request: `// A. Explicitly Create or Configure a Room
 curl -X POST "${apiBaseUrl}/v1/rooms" \\
   -H "Content-Type: application/json" \\
@@ -206,10 +205,10 @@ curl -X DELETE "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991" \\
 }`,
     },
     {
-      title: '5. Participant Control & Moderation API (List, Kick, Mute, Permissions)',
+      short: 'People in a room',
+      title: 'See, mute or remove people',
       endpoint: 'GET .../participants | DELETE .../participants/{id} | POST .../mute | PATCH .../permissions',
-      desc: 'In-call server-side moderation. Inspect active publishing tracks, kick unruly participants, remotely mute microphones/cameras, or toggle publish/subscribe grants.',
-      flow: `Your Backend -> DELETE /v1/rooms/{room}/participants/{id} disconnects participant. POST .../mute mutes their specific track.`,
+      desc: 'Moderate a live room, or let a viewer speak.',
       request: `// A. List Connected Participants in Room
 curl -X GET "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/participants" \\
   -H "x-api-key: ${selectedApiKey}" \\
@@ -263,10 +262,10 @@ curl -X DELETE "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/participants/p
 }`,
     },
     {
-      title: '6. Server-to-Client WebRTC Messaging (DataChannel Broadcast)',
+      short: 'Send a message',
+      title: 'Send a message into a room',
       endpoint: 'POST /v1/rooms/{room}/messages',
-      desc: 'Inject reliable server-side signals, alerts, polls, or live actions directly into connected participant WebRTC clients via DataChannels without establishing WebSocket connections.',
-      flow: `Your Backend -> POST /v1/rooms/{room}/messages -> Nexora SFU pushes payload over SCTP DataChannel -> Clients trigger on(RoomEvent.DataReceived).`,
+      desc: 'Reach everyone in the room, or only the people you name.',
       request: `curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/messages" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${selectedApiKey}" \\
@@ -285,10 +284,10 @@ curl -X DELETE "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/participants/p
 }`,
     },
     {
-      title: '7. Real-time In-Room Text Chat (Client P2P DataChannel)',
+      short: 'In-room chat',
+      title: 'Chat between people in a call',
       endpoint: 'WebRTC P2P DataChannel Protocol',
-      desc: 'Direct sub-10ms peer-to-peer data channel packet delivery. Requires zero separate chat server or database! Messages are delivered over established encrypted SCTP channels.',
-      flow: 'Sender client calls localParticipant.publishData(payload, { reliable: true }) -> LiveKit SFU relays payload -> All connected room participants trigger on(RoomEvent.DataReceived).',
+      desc: 'Chat stays inside the call and is never saved.',
       request: `// JSON Payload format sent over DataChannel:
 {
   "type": "CHAT_MESSAGE",
@@ -306,11 +305,12 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
 });`,
     },
     {
-      title: '8. Server-to-Server Recording & Egress API (Start, Stop & Status)',
+      short: 'Recording',
+      title: 'Start and stop recording',
       endpoint: 'POST /v1/rooms/{room}/recording/start | POST .../stop | GET .../status',
-      desc: 'Server-side room compositing and track egress. Recordings are saved to the bucket connected in User Panel → Storage. Files stream directly to your private AWS S3, Cloudflare R2, or Google Cloud Storage.',
-      link: { href: '/user/storage', label: 'Configure storage bucket in User Panel → Storage' },
-      flow: `Your Backend -> POST ${apiBaseUrl}/v1/rooms/{room}/recording/start -> Nexora Egress Controller streams directly into your private connected bucket. Check room state with GET .../status (returns isRecording: true/false).`,
+      desc: 'The file goes to the bucket you connected in the dashboard.',
+      badge: 'being tested',
+      link: { href: '/user/storage', label: 'Connect a storage bucket in the dashboard' },
       request: `// A. Start Room Recording (Server-to-Server)
 curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/start" \\
   -H "Content-Type: application/json" \\
@@ -359,10 +359,10 @@ curl -X POST "${apiBaseUrl}/v1/rooms/dr-sharma-consultation-991/recording/stop" 
 }`,
     },
     {
-      title: '9. Project Recording Archive & Audit API',
+      short: 'Past recordings',
+      title: 'List past recordings',
       endpoint: 'GET /v1/recordings',
-      desc: 'Retrieve paginated recording history, bucket object keys, transcoding status, and duration metrics for your project.',
-      flow: `Your Backend -> GET ${apiBaseUrl}/v1/recordings -> Returns list of completed and active room recordings.`,
+      desc: 'Room, file name, length, size and status for each recording.',
       request: `curl -X GET "${apiBaseUrl}/v1/recordings" \\
   -H "x-api-key: ${selectedApiKey}" \\
   -H "x-api-secret: sk_live_your_project_secret"`,
@@ -893,284 +893,205 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant) => {
     },
   };
 
+  const guide = SDK_GUIDES[activeSdk][activeFeature];
+  const guideKey = `sdk-${activeSdk}-${activeFeature}`;
+
   return (
-    <div className="min-h-screen bg-paper text-ink flex flex-col selection:bg-accent selection:text-white">
-      <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur border-b border-line px-6 h-16">
-        <nav aria-label="Docs" className="max-w-7xl mx-auto h-full flex items-center justify-between">
-          <div className="flex items-baseline gap-3">
-            <Link href="/" className="font-display text-xl font-semibold tracking-tight">
-              Nexora<span className="text-accent">.</span>rtc
-            </Link>
-            <span className="font-mono text-[11px] text-muted">Reference</span>
-          </div>
+    <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pt-8 pb-[88px] flex flex-wrap items-start gap-x-14 gap-y-8">
+      <nav aria-label="Docs" className="flex-[1_1_220px] rounded-[10px] bg-cream px-[22px] pt-[22px] pb-[18px] text-[15px] lg:sticky lg:top-6">
+        <p className="text-[13px] font-semibold text-bark-muted">From your server</p>
+        <ol className="mt-2">
+          {APPLICATION_APIS.map((api, index) => (
+            <li key={api.title}>
+              <a href={`#api-${index + 1}`} className="block py-1.5 text-bark hover:text-moss transition-colors">
+                {api.short}
+              </a>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-[18px] text-[13px] font-semibold text-bark-muted">In your app</p>
+        <a href="#sdks" className="block mt-2 py-1.5 text-bark hover:text-moss transition-colors">
+          Quickstarts
+        </a>
+      </nav>
 
-          <div className="flex items-center gap-2 text-sm">
-            <Link href="/user/sandbox" className="px-3 py-2 text-muted hover:text-ink transition-colors">
-              Sandbox
-            </Link>
-            <Link
-              href="/user"
-              className="px-4 py-2 rounded-md bg-ink text-paper font-medium hover:bg-accent transition-colors active:scale-[0.98]"
-            >
-              Console
-            </Link>
-          </div>
-        </nav>
-      </header>
+      <div className="flex-[999_1_640px] min-w-0">
+        <h1 className="max-w-[720px] text-[40px] sm:text-[54px] leading-[1.04] tracking-[-0.02em]">Developer docs</h1>
+        <p className="mt-4 max-w-[620px] text-lg leading-relaxed text-bark-soft">
+          Everything here is called from your backend with a project key and secret. Keys, storage, update endpoints
+          and billing live in the dashboard.
+        </p>
 
-      <div className="border-b border-line bg-paper-deep px-6 py-14">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight leading-tight max-w-3xl">
-            Calling, broadcast, messaging and recording API
-          </h1>
-          <p className="mt-4 text-muted max-w-2xl leading-relaxed">
-            Everything here is called from your backend with a project key and secret. Keys, storage buckets,
-            webhook endpoints and billing are managed in the console.
-          </p>
-
-          <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium">
-            <a href="#app-apis" className="underline underline-offset-4 decoration-accent hover:text-accent transition-colors">
-              Server APIs
-            </a>
-            <a href="#sdks" className="underline underline-offset-4 decoration-accent hover:text-accent transition-colors">
-              Client integration guides
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full space-y-16">
-        {/* ========================================================================= */}
-        {/* SECTION 1: CORE APPLICATION APIS (CALL, VIDEO, BROADCAST, CHAT) */}
-        {/* ========================================================================= */}
-        <section id="app-apis" className="space-y-6">
-          <div className="pb-4 border-b border-line flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                <Cpu className="h-5 w-5 text-accent" />
-                1. Application-Facing WebRTC & Messaging APIs
-              </h2>
-              <p className="text-xs text-muted mt-0.5">
-                These are the core endpoints your product backend calls to orchestrate live sessions, enforce room participant permissions, and securely authenticate users.
-              </p>
-            </div>
-
-            {/* Dynamic Environment & Credentials Switcher */}
-            <div className="flex flex-wrap items-center gap-2 bg-paper-deep p-2 rounded-md border border-line text-xs">
-              <span className="font-semibold text-muted">Active Key:</span>
-              {projects.length > 0 ? (
-                <select
-                  value={selectedApiKey}
-                  onChange={(e) => setSelectedApiKey(e.target.value)}
-                  className="bg-white border border-line rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-accent-deep focus:outline-none focus:ring-1 focus:ring-accent"
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.apiKeyPrefix}>
-                      {p.name} ({p.environment}) — {p.apiKeyPrefix}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="font-mono bg-white px-2 py-1 rounded border border-line text-ink">
-                  {selectedApiKey} (Sandbox Demo)
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            {APPLICATION_APIS.map((api, index) => (
-              <div
-                key={api.title}
-                className="bg-white rounded-lg border border-line  overflow-hidden"
+        <div className="mt-6 flex flex-wrap items-center gap-x-3.5 gap-y-2.5 rounded-[10px] bg-cream px-[18px] py-3.5 text-[15px]">
+          {projects.length > 0 ? (
+            <>
+              <label htmlFor="activeKey" className="text-bark-muted">
+                Show examples with
+              </label>
+              <select
+                id="activeKey"
+                value={selectedApiKey}
+                onChange={(e) => setSelectedApiKey(e.target.value)}
+                className="min-h-10 max-w-full rounded-lg border border-crust bg-white px-3 py-1.5 font-plex text-[13px] text-bark"
               >
-                <div className="bg-console p-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="h-7 w-7 rounded-lg bg-accent text-white font-extrabold text-xs flex items-center justify-center">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-sm text-white">{api.title}</h3>
-                        {api.badge && (
-                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            {api.badge}
-                          </span>
-                        )}
-                      </div>
-                      <div className="font-mono text-xs text-emerald-400 mt-0.5">{api.endpoint}</div>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-mono text-slate-400 bg-console-line px-3 py-1 rounded-lg border border-console-line">
-                    Control Plane: {apiBaseUrl}
-                  </span>
-                </div>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.apiKeyPrefix}>
+                    {p.name} ({p.environment}) — {p.apiKeyPrefix}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <>
+              <span className="text-bark-muted">Showing examples with</span>
+              <span className="rounded-lg border border-crust bg-white px-3 py-1.5 font-plex text-[13px] break-all">
+                {selectedApiKey} (sandbox demo)
+              </span>
+            </>
+          )}
+          <span className="font-plex text-xs text-bark-muted break-all">API: {apiBaseUrl}</span>
+        </div>
 
-                <div className="p-6 space-y-4">
-                  <div className="text-xs text-muted leading-relaxed">
-                    {api.desc}
-                    {api.link && (
-                      <span className="block mt-1">
-                        <Link href={api.link.href} className="font-semibold text-accent hover:underline inline-flex items-center gap-1">
-                          {api.link.label} &rarr;
-                        </Link>
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-3 bg-paper-deep border border-line rounded-md text-xs text-ink">
-                    <span className="font-bold text-accent-deep">Architecture Flow:</span> {api.flow}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
-                    {/* Request */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-sans font-bold text-ink">
-                        <span>API Call Example (cURL / Backend Request)</span>
-                        <button
-                          onClick={() => copyToClipboard(api.request, `req-${index}`)}
-                          className="text-slate-400 hover:text-accent transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          {copiedKey === `req-${index}` ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                        </button>
-                      </div>
-                      <pre className="p-3 bg-console text-slate-200 rounded-md overflow-x-auto text-[11px] leading-relaxed max-h-56">
-                        <code>{api.request}</code>
-                      </pre>
-                    </div>
-
-                    {/* Response */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-sans font-bold text-ink">
-                        <span>Response / Client Handler</span>
-                        <button
-                          onClick={() => copyToClipboard(api.response, `res-${index}`)}
-                          className="text-slate-400 hover:text-accent transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          {copiedKey === `res-${index}` ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                        </button>
-                      </div>
-                      <pre className="p-3 bg-console text-emerald-400 rounded-md overflow-x-auto text-[11px] leading-relaxed max-h-56">
-                        <code>{api.response}</code>
-                      </pre>
-                    </div>
-                  </div>
+        <section id="app-apis" aria-label="Server APIs" className="mt-9">
+          {APPLICATION_APIS.map((api, index) => (
+            <details key={api.title} id={`api-${index + 1}`} open={index === 0} className="mb-3 scroll-mt-6 overflow-hidden rounded-[10px] bg-cream">
+              <summary className="flex cursor-pointer flex-wrap items-baseline justify-between gap-x-5 gap-y-1.5 px-6 py-5">
+                <span className="font-serif text-[23px]">
+                  {api.title}
+                  {api.badge && <span className="ml-2.5 font-body text-[13px] font-semibold text-ember">· {api.badge}</span>}
+                </span>
+                <span className="font-plex text-[12.5px] text-moss">{api.endpoint.replace(/ \| /g, ' · ')}</span>
+              </summary>
+              <div className="px-6 pb-6">
+                <p className="max-w-[640px] text-base leading-relaxed text-bark-soft">
+                  {api.desc}
+                  {api.link && (
+                    <>
+                      {' '}
+                      <Link href={api.link.href} className="text-moss underline underline-offset-4">
+                        {api.link.label}
+                      </Link>
+                    </>
+                  )}
+                </p>
+                <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-3">
+                  <CodePanel
+                    label="You send"
+                    code={api.request}
+                    tone="text-sand"
+                    copied={copiedKey === `req-${index}`}
+                    onCopy={() => copyToClipboard(api.request, `req-${index}`)}
+                  />
+                  <CodePanel
+                    label="You get back"
+                    code={api.response}
+                    tone="text-amber-code"
+                    copied={copiedKey === `res-${index}`}
+                    onCopy={() => copyToClipboard(api.response, `res-${index}`)}
+                  />
                 </div>
               </div>
+            </details>
+          ))}
+        </section>
+
+        <section id="sdks" aria-labelledby="sdks-heading" className="mt-14 scroll-mt-6">
+          <h2 id="sdks-heading" className="text-[32px] sm:text-[40px] leading-[1.1] tracking-[-0.015em]">
+            Quickstarts for your app
+          </h2>
+          <p className="mt-2.5 max-w-[620px] text-base leading-relaxed text-bark-soft">Choose where your app runs, then what you’re building.</p>
+
+          <div role="group" aria-label="Platform" className="mt-[22px] flex flex-wrap gap-2">
+            {PLATFORMS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={activeSdk === id}
+                onClick={() => setActiveSdk(id)}
+                className={`min-h-11 rounded-full border px-[18px] py-2.5 text-[15px] cursor-pointer transition-colors ${
+                  activeSdk === id ? 'border-moss bg-moss text-cream' : 'border-crust bg-cream text-bark hover:border-bark-muted'
+                }`}
+              >
+                {label}
+              </button>
             ))}
           </div>
-        </section>
-
-        {/* ========================================================================= */}
-        {/* SECTION 2: NATIVE CLIENT SDK GUIDES (ANDROID, FLUTTER, IOS, WEB) */}
-        {/* ========================================================================= */}
-        <section id="sdks" className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line">
-            <div>
-              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-accent" />
-                2. Native Client SDK Quickstarts (Android, Flutter, iOS, Web)
-              </h2>
-              <p className="text-xs text-muted mt-0.5">
-                Complete copy-pasteable production implementations for your mobile & web development teams.
-              </p>
-            </div>
-
-            {/* Platform Selector Buttons */}
-            <div className="flex items-center gap-1.5 bg-line/70 p-1 rounded-md">
-              {(['android', 'flutter', 'ios', 'web'] as SdkTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveSdk(tab)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
-                    activeSdk === tab
-                      ? 'bg-white text-accent '
-                      : 'text-muted hover:text-ink'
-                  }`}
-                >
-                  {tab === 'ios' ? 'iOS (Swift)' : tab}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Feature Selector Tabs */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'video', label: 'Video Calling (1:1 & Group)', icon: Video },
-              { id: 'voice', label: 'Audio / Voice Calling', icon: Mic },
-              { id: 'broadcast', label: 'Interactive Live Broadcast', icon: Radio },
-              { id: 'messaging', label: 'In-Room Real-time Chat (DataChannel)', icon: MessageSquare },
-            ].map((f) => {
-              const Icon = f.icon;
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => setActiveFeature(f.id as FeatureTab)}
-                  className={`px-3.5 py-2 rounded-md text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border ${
-                    activeFeature === f.id
-                      ? 'bg-accent text-white border-accent '
-                      : 'bg-white text-ink border-line hover:bg-paper'
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {f.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* SDK Code Snippet Box */}
-          <div className="bg-console rounded-lg border border-console-line  overflow-hidden">
-            <div className="bg-console px-4 py-3 flex items-center justify-between border-b border-console-line">
-              <span className="font-mono text-xs font-bold text-slate-300">
-                {SDK_GUIDES[activeSdk][activeFeature].title}
-              </span>
+          <div role="group" aria-label="Feature" className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+            {FEATURES.map(([id, label]) => (
               <button
-                onClick={() =>
-                  copyToClipboard(
-                    `${SDK_GUIDES[activeSdk][activeFeature].guide}\n\n${SDK_GUIDES[activeSdk][activeFeature].code}`,
-                    `sdk-${activeSdk}-${activeFeature}`,
-                  )
-                }
-                className="px-2.5 py-1 rounded-lg bg-console-line hover:bg-console-line text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                key={id}
+                type="button"
+                aria-pressed={activeFeature === id}
+                onClick={() => setActiveFeature(id)}
+                className={`min-h-10 py-2 text-[15px] cursor-pointer underline-offset-[6px] ${
+                  activeFeature === id
+                    ? 'font-semibold text-bark underline decoration-moss decoration-2'
+                    : 'text-bark-muted hover:text-bark'
+                }`}
               >
-                {copiedKey === `sdk-${activeSdk}-${activeFeature}` ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-400" /> Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" /> Copy Code
-                  </>
-                )}
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-[10px] bg-bark">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#4a3c30] px-[18px] py-3 text-[13px] text-sand">
+              <span>{guide.title}</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(`${guide.guide}\n\n${guide.code}`, guideKey)}
+                className="py-1 text-taupe hover:text-cream cursor-pointer"
+              >
+                {copiedKey === guideKey ? 'Copied' : 'Copy'}
               </button>
             </div>
-
-            {/* Quick Setup Guide */}
-            <div className="p-4 bg-console/60 border-b border-console-line/80">
-              <div className="text-[10px] font-bold text-slate-400 mb-1">
-                Prerequisites & Setup
-              </div>
-              <pre className="font-mono text-xs text-indigo-300 overflow-x-auto whitespace-pre-wrap">
-                <code>{SDK_GUIDES[activeSdk][activeFeature].guide}</code>
-              </pre>
-            </div>
-
-            {/* Code Body */}
-            <div className="p-4 overflow-x-auto max-h-[500px]">
-              <pre className="font-mono text-xs text-slate-200 leading-relaxed">
-                <code>{SDK_GUIDES[activeSdk][activeFeature].code}</code>
-              </pre>
-            </div>
+            <pre className="m-0 border-b border-[#4a3c30] px-[18px] py-3.5 font-plex text-xs leading-relaxed text-amber-code whitespace-pre-wrap">
+              <code>{`# before you start\n${guide.guide}`}</code>
+            </pre>
+            <pre className="m-0 max-h-[560px] min-h-[200px] overflow-auto p-[18px] font-plex text-xs leading-[1.65] text-sand">
+              <code>{guide.code}</code>
+            </pre>
           </div>
         </section>
       </div>
+    </div>
+  );
+}
 
-      {/* Footer */}
-      <footer className="mt-12 bg-white border-t border-line py-6 px-6 text-center text-xs text-muted">
-        Nexora RTC Platform • Self-Hosted WebRTC Control Plane & Media Mesh • Developer Documentation v1.0.0
-      </footer>
+const PLATFORMS: [SdkTab, string][] = [
+  ['android', 'Android'],
+  ['flutter', 'Flutter'],
+  ['ios', 'iPhone'],
+  ['web', 'Web'],
+];
+
+const FEATURES: [FeatureTab, string][] = [
+  ['video', 'Video calls'],
+  ['voice', 'Voice calls'],
+  ['broadcast', 'Broadcasts'],
+  ['messaging', 'Chat'],
+];
+
+interface CodePanelProps {
+  label: string;
+  code: string;
+  tone: string;
+  copied: boolean;
+  onCopy: () => void;
+}
+
+function CodePanel({ label, code, tone, copied, onCopy }: CodePanelProps) {
+  return (
+    <div className="min-w-0 overflow-hidden rounded-lg bg-bark">
+      <div className="flex justify-between border-b border-[#4a3c30] px-3.5 py-2 text-xs text-taupe">
+        <span>{label}</span>
+        <button type="button" onClick={onCopy} className="py-1 hover:text-cream cursor-pointer">
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <pre className={`m-0 max-h-80 overflow-auto p-3.5 font-plex text-xs leading-[1.65] ${tone}`}>
+        <code>{code}</code>
+      </pre>
     </div>
   );
 }

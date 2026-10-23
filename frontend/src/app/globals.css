@@ -17,6 +17,26 @@
   --color-console: #10132b;
   --color-console-line: #262b52;
 
+  /* Public site: warm palette, used only under .site-warm */
+  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-body: var(--font-figtree), system-ui, sans-serif;
+  --font-plex: var(--font-plex-mono), ui-monospace, monospace;
+  --color-sand: #efe8dd;
+  --color-sand-deep: #e2d8c9;
+  --color-cream: #f8f4ec;
+  --color-bark: #2b2118;
+  --color-bark-soft: #4a3c30;
+  --color-bark-muted: #6b5d4f;
+  --color-crust: #d9cfc0;
+  --color-taupe: #bfb2a1;
+  --color-slot: #d3c5b1;
+  --color-slot-ink: #5a4b3c;
+  --color-moss: #2f6b4f;
+  --color-forest: #234f3b;
+  --color-sage: #c9dccf;
+  --color-ember: #8a4b1f;
+  --color-amber-code: #e3b98a;
+
   /* Radius follows hierarchy: controls are tight, containers and dialogs a little softer. */
   --radius-sm: 2px;
   --radius-md: 3px;
@@ -48,6 +68,34 @@ h1, h2, h3 {
 ::selection {
   background: var(--color-accent);
   color: #fff;
+}
+
+/* Public site scope: warm ground, serif headings, green focus and selection. Base layer, so utilities override it. */
+@layer base {
+  .site-warm {
+    background-color: var(--color-sand);
+    color: var(--color-bark);
+    font-family: var(--font-body);
+  }
+  .site-warm :is(h1, h2, h3) {
+    font-family: var(--font-serif);
+    font-weight: 500;
+  }
+  .site-warm details > summary {
+    list-style: none;
+  }
+  .site-warm details > summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+/* Unlayered, like the global focus and selection rules they override. */
+.site-warm :focus-visible {
+  outline-color: var(--color-moss);
+}
+.site-warm ::selection {
+  background: var(--color-moss);
+  color: var(--color-cream);
 }
 
 /* Amounts, timers and IDs line up in columns. */
