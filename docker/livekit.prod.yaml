@@ -1,6 +1,6 @@
 port: 7880
 bind_addresses:
-  - ""
+  - ''
 
 logging:
   json: true

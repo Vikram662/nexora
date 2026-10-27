@@ -48,11 +48,11 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     ports:
-      - "127.0.0.1:6379:6379" # Bind strictly to loopback interface
+      - '127.0.0.1:6379:6379' # Bind strictly to loopback interface
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      test: ['CMD-SHELL', 'redis-cli ping | grep -q PONG']
       interval: 10s
       timeout: 3s
       retries: 5

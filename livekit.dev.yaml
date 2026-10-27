@@ -1,6 +1,6 @@
 port: 7880
 bind_addresses:
-  - ""
+  - ''
 
 # API keys come from the LIVEKIT_KEYS environment variable (set by start-livekit-windows.ps1).
 
