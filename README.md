@@ -225,14 +225,20 @@ There is no migrations folder: the schema is applied with `db push`.
 # Terminal 1: LiveKit (Windows native; reads the key pair from backend\.env)
 ./start-livekit-windows.ps1     # or: cd docker && docker compose up -d
 
-# Terminal 2: API (port 4000)
+# Terminal 2: API (port 4000), HTTP only
 cd backend && npm run start:dev
 
-# Terminal 3: site and console (port 3000)
+# Terminal 3: worker (email/SMS queue, webhook retries, auto recharge, invoices, recording checks)
+cd backend && npm run start:worker:dev
+#   or skip it and set APP_ROLE=all in backend/.env to run the jobs inside the API
+
+# Terminal 4: site and console (port 3000)
 cd frontend && npm run dev
 ```
 
-Production (PM2): `cd backend && npm run build && cd ../frontend && npm run build && cd .. && pm2 start ecosystem.config.cjs`
+Production (PM2): `cd backend && npm run build && cd ../frontend && npm run build && cd .. && pm2 start deploy/pm2/ecosystem.config.cjs`
+This starts `nexora-api` (cluster), `nexora-worker` (one process) and `nexora-frontend` (`.next/standalone/server.js`).
+Servers, Jenkins and AWS: [DEPLOYMENT_RULES.md](DEPLOYMENT_RULES.md). Code and Git rules: [ENGINEERING_RULES.md](ENGINEERING_RULES.md).
 
 ---
 
@@ -287,7 +293,7 @@ Also set `SMS_PROVIDER=MSG91` and `SMS_API_KEY=<authkey>`. SMS goes to the organ
 - **Wallet:** prepaid in rupees. Minting a production token deducts the first 10 minutes at the plan rate plus GST. When the participant leaves, unused time is refunded and longer sessions are charged the difference (minimum one minute).
 - **Tax invoices:** Admin, Billing, Tax Invoices, choose a month, **Generate invoices** (or set `INVOICE_AUTO_GENERATE=true`). A month can be invoiced 24 hours after it ends. Running it again never duplicates an invoice. Customers without a billing profile are skipped with a reason. Numbers look like `NXR/2627/000123`.
 - **Credit notes:** on an invoice, **Credit note** takes the GST-inclusive amount and a reason. Numbers look like `NXC/2627/000001`. The tax is reversed in the same proportion, and the amount goes back to the wallet unless you untick it.
-- **PDF:** the invoice and credit note PDFs embed Noto Sans (SIL Open Font License, `backend/src/invoicing/fonts/`), so the rupee sign and Devanagari names print correctly.
+- **PDF:** the invoice and credit note PDFs embed Noto Sans (SIL Open Font License, `backend/libs/modules/invoicing/fonts/`), so the rupee sign and Devanagari names print correctly.
 - **GSTR-1** (Admin, Billing) lists invoices and credit notes to registered buyers and shows totals net of credit notes. GSTR-2 is not provided.
 
 **Ask your CA before going live:** how GST applies to prepaid wallet top-ups (advance received for services), whether you must issue receipt vouchers at top-up, and whether e-invoicing (IRN) applies at your turnover. This software follows the invoice fields in Rule 46 and the credit note rules in Section 34, but it is not tax advice.
@@ -317,10 +323,11 @@ Customers register endpoints in **Console, Webhooks** and choose events: `room.s
 ## Checks before you push
 
 ```bash
-cd backend  && npm run typecheck && npm run lint && npm test
-cd frontend && npx tsc --noEmit && npm run lint && npm run build
+cd backend  && npm run typecheck && npm run lint && npm test && npm run test:e2e && npm run build
+cd frontend && npm run typecheck && npm run lint && npm run build
 ```
 
+Run `npm install` once at the repo root: it installs the git hooks (lint-staged and related tests on commit, commitlint on the message, type-check and build on push).
 `.github/workflows/ci.yml` runs the same checks. These are unit tests and a build. There are no browser or database end-to-end tests yet, so always try the full path from the checklist above on a test environment.
 
 ## Known gaps
@@ -338,7 +345,7 @@ cd frontend && npx tsc --noEmit && npm run lint && npm run build
 - **Developer documentation:** `http://localhost:3000/docs`
 - **Sandbox:** `http://localhost:3000/user/sandbox`
 - **Admin ops center:** `http://localhost:3000/admin`
-- Architecture notes: `RTC_PAAS_ARCHITECTURE_BLUEPRINT.md`
+- Architecture notes: `nexora-docs/RTC_PAAS_ARCHITECTURE_BLUEPRINT.md`
 
 ## License
 

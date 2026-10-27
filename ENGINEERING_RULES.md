@@ -28,8 +28,8 @@ Status key: **Now** = how the repo is today · **Target** = where we are going �
 | `README.md` | How to run, test and deploy, plus every env key |
 
 Notes, research, request docs and large design documents do **not** live in the repo.
-They go in `../nexora-docs/`, next to the repo. Only rules that the code must follow (this file) and READMEs stay here.
-`RTC_PAAS_ARCHITECTURE_BLUEPRINT.md` should move to `../nexora-docs/`.
+They go in `nexora-docs/` at the repo root, never inside `backend/` or `frontend/`. Only code, tooling, READMEs and these rules files sit outside it.
+The architecture blueprint lives in `nexora-docs/RTC_PAAS_ARCHITECTURE_BLUEPRINT.md`.
 
 ### 1.2 Top level (Target)
 
@@ -44,10 +44,11 @@ nexora/
 │   └── k8s/            base + overlays dev / stag / prod (Flow 1, later)
 ├── docker/             LiveKit, Coturn, Redis, egress (local + prod media plane)
 ├── bin/                LiveKit binary for Windows dev (binary itself git-ignored)
+├── nexora-docs/        notes, research, architecture blueprint (no code)
 └── <root files from 1.1>
 ```
 
-Now → Target: `ecosystem.config.cjs` sits at the root; it moves to `deploy/pm2/` and gains a `nexora-worker` app.
+Done: the PM2 file is `deploy/pm2/ecosystem.config.cjs` with `nexora-api`, `nexora-worker` and `nexora-frontend`.
 
 ---
 
@@ -83,16 +84,19 @@ backend/
 └── nest-cli.json                "monorepo": true → apps/ + libs/
 ```
 
-Now → Target mapping:
+Status of the move:
 
-| Now | Target |
-| :--- | :--- |
-| `src/main.ts`, `src/app.*` | `apps/api/src/` |
-| `src/{auth,team,livekit,portal,invoicing,notifications,settings}/` | `libs/modules/<same name>/` |
-| `src/prisma/` | `libs/database/` |
-| `src/crypto/` | `libs/crypto/` |
-| `setInterval` timers in `NotificationsService`, `OutboundWebhookService`, `AutoRechargeService`, `InvoiceService`, `RecordingService` | BullMQ job schedulers + `*.processor.ts`, run by `apps/worker` |
-| env checks spread over services | `libs/config` schema, checked once at boot |
+| Before | Now | Status |
+| :--- | :--- | :--- |
+| `src/main.ts`, `src/app.*` | `apps/api/src/` | done |
+| `src/{auth,team,livekit,portal,invoicing,notifications,settings}/` | `libs/modules/<same name>/` | done |
+| `src/prisma/` | `libs/database/` | done |
+| `src/crypto/` | `libs/crypto/` | done |
+| env checks spread over services | `libs/config/env.validation.ts`, checked once at boot | done (the old per-service checks stay as a second guard) |
+| repeating `setInterval` jobs in the api | run only in `apps/worker` (`APP_ROLE`, `libs/config/app-role.ts`) | done |
+| `setInterval` timers in `NotificationsService`, `OutboundWebhookService`, `AutoRechargeService`, `InvoiceService`, `RecordingService` | BullMQ job schedulers + `*.processor.ts` | to do |
+| — | `libs/queue`, `libs/observability` (OTel + pino) | to do |
+| modules import each other | ports (section 2.2) | to do |
 
 ### 2.2 Module boundaries (Rule)
 
