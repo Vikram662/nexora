@@ -39,7 +39,9 @@ nexora/
 ├── frontend/           Next.js App Router (section 3)
 ├── deploy/
 │   ├── pm2/            ecosystem.config.cjs (api, worker, frontend)
-│   └── jenkins/        Jenkinsfile + deploy.sh (only if Jenkins is used for deploy)
+│   ├── jenkins/        Jenkinsfile + check.sh, build.sh, package.sh, deploy.sh
+│   ├── ansible/        server setup playbooks (app, jenkins, media)
+│   └── k8s/            base + overlays dev / stag / prod (Flow 1, later)
 ├── docker/             LiveKit, Coturn, Redis, egress (local + prod media plane)
 ├── bin/                LiveKit binary for Windows dev (binary itself git-ignored)
 └── <root files from 1.1>
@@ -199,12 +201,12 @@ Remote: `github.com/Vikram662/nexora`.
 | `main` | production | merge from `stag` only, through a PR |
 | `stag` | staging (`stag-*` hosts) | merge from `dev` through a PR, or a hotfix |
 | `dev` | dev (`dev-*` hosts) | merge from feature branches through a PR |
-| `feat/<short-name>` | — | you |
-| `fix/<short-name>` | — | you |
-| `hotfix/<short-name>` | — | branch from `main`, PR into `main`, then merge `main` back into `stag` and `dev` |
+| `feat/<ticket>-<slug>` | — | you |
+| `fix/<ticket>-<slug>` | — | you |
+| `hotfix/<ticket>-<slug>` | — | branch from `main`, PR into `main`, then merge `main` back into `stag` and `dev` the same day |
 
 - Branch from `dev` (or `main` for a hotfix). Keep branches short-lived: merge within a few days.
-- Branch names: lowercase, words joined with `-`, for example `feat/wallet-auto-recharge`.
+- Branch names: lowercase, words joined with `-`, for example `feat/nx-142-wallet-auto-recharge`. Must match `^(feat|fix|hotfix|chore)/[a-z0-9._-]+$`.
 - Delete the branch after merging.
 
 ### 4.2 Commit messages (Rule)
@@ -216,6 +218,7 @@ Conventional commits, checked by commitlint in the `commit-msg` hook and in CI:
 ```
 
 - Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`, `style`, `revert`.
+- Regex (push rule): `^(feat|fix|chore|docs|refactor|test|perf|ci|build|style|revert)(\(.+\))?!?: .{1,72}$`
 - Scopes: `backend`, `frontend`, `api`, `worker`, `auth`, `team`, `livekit`, `portal`, `invoicing`, `notifications`, `settings`, `db`, `deploy`, `ci`, `deps`.
 - Breaking change: `feat(api)!: ...` and a `BREAKING CHANGE:` footer.
 - One logical change per commit. Messages like `update`, `changes`, `design change` or `commit live` are rejected.
@@ -233,9 +236,10 @@ docs: add engineering rules
 
 | Hook | Runs | Blocks when |
 | :--- | :--- | :--- |
-| `pre-commit` | lint-staged: oxlint/eslint `--fix` + prettier on staged files | lint error |
-| `commit-msg` | commitlint | message not conventional |
-| `pre-push` | backend `typecheck` + `test`, frontend `tsc --noEmit` | type error or failing test |
+| `pre-commit` | lint-staged: oxlint/eslint `--fix` + prettier `--write` on staged files | lint error |
+| `pre-commit` | related unit tests only (`vitest related --run`) | failing test |
+| `commit-msg` | commitlint, subject at most 72 characters | message not conventional |
+| `pre-push` | type-check + build (backend and frontend) | type or build error |
 
 Never bypass with `--no-verify`. If a hook is wrong, fix the hook in a PR.
 
@@ -273,16 +277,16 @@ Runs on every push to `dev`, `stag`, `main` and on every PR:
 - **commitlint** on PR commits
 - Node version from `.nvmrc`, npm cache on.
 
-Deploy (Flow 2: build server + PM2 on EC2, no Docker):
+Deploy (Flow 2: Jenkins build server + PM2 on EC2, no Docker):
 
 ```
-push to dev / stag / main → CI green → build → rsync release to server over SSH
-→ pm2 reload (zero downtime) → /health check → keep previous release for rollback
+merge to dev / stag / main → Jenkins: lint + test → build → release-<sha>.tar.gz
+→ rsync over SSH → current symlink → pm2 reload (zero downtime) → /health check → rollback on fail
 ```
 
-- `main` deploys only after an approval (GitHub Environment `production` with required reviewers).
-- Secrets live in GitHub Environments (`dev`, `stag`, `production`) or the secret manager, never in the repo.
-- Rollback = point the `current` symlink to the previous release and `pm2 reload`.
+- `dev` and `stag` deploy automatically; `main` deploys after an approval in Jenkins, one server at a time.
+- Secrets live in Infisical (dev / stag / prod), read at runtime, never in the repo or in CI variables.
+- Full steps, server folders, AWS layout and runbooks: [DEPLOYMENT_RULES.md](DEPLOYMENT_RULES.md).
 
 ### 4.7 CODEOWNERS and dependencies
 
