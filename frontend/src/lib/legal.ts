@@ -76,7 +76,9 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   },
   {
     heading: 'Changes to this policy',
-    paragraphs: ['We will update the date at the top of this page when the policy changes. Material changes will also be announced in the console.'],
+    paragraphs: [
+      'We will update the date at the top of this page when the policy changes. Material changes will also be announced in the console.',
+    ],
   },
 ];
 
@@ -139,6 +141,8 @@ export const TERMS_SECTIONS: LegalSection[] = [
   },
   {
     heading: 'Changes and contact',
-    paragraphs: ['We may update these terms and will change the date above when we do. Questions about them can be sent to the contact address below.'],
+    paragraphs: [
+      'We may update these terms and will change the date above when we do. Questions about them can be sent to the contact address below.',
+    ],
   },
 ];

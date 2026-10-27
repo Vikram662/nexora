@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme inline {
   --font-display: var(--font-familjen), system-ui, sans-serif;
@@ -53,10 +53,12 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-feature-settings: "ss01", "cv11";
+  font-feature-settings: 'ss01', 'cv11';
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   text-wrap: balance;
 }
 
@@ -105,8 +107,13 @@ h1, h2, h3 {
 
 /* Blinking "on air" light, used only for live or recording state. */
 @keyframes onair-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 .onair-dot {
   display: inline-block;
@@ -118,8 +125,12 @@ h1, h2, h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .onair-dot { animation: none; }
-  *, *::before, *::after {
+  .onair-dot {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
@@ -167,12 +178,18 @@ h1, h2, h3 {
   background: #ffffff;
   border: 1px solid var(--color-line);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgb(23 27 52 / 0.04), 0 6px 16px -4px rgb(23 27 52 / 0.03);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow:
+    0 1px 3px rgb(23 27 52 / 0.04),
+    0 6px 16px -4px rgb(23 27 52 / 0.03);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 .panel-card:hover {
   border-color: color-mix(in srgb, var(--color-line) 70%, var(--color-ink));
-  box-shadow: 0 4px 12px rgb(23 27 52 / 0.06), 0 12px 24px -6px rgb(23 27 52 / 0.05);
+  box-shadow:
+    0 4px 12px rgb(23 27 52 / 0.06),
+    0 12px 24px -6px rgb(23 27 52 / 0.05);
 }
 
 /* Translucent sticky header. */
@@ -200,7 +217,15 @@ h1, h2, h3 {
     transform: translate3d(0, var(--enter-translate-y, 0), 0) scale(var(--enter-scale, 1));
   }
 }
-.animate-in { animation: enter 0.18s ease-out; }
-.fade-in { --enter-opacity: 0; }
-.zoom-in-95 { --enter-scale: 0.95; }
-.slide-in-from-bottom-5 { --enter-translate-y: 1.25rem; }
+.animate-in {
+  animation: enter 0.18s ease-out;
+}
+.fade-in {
+  --enter-opacity: 0;
+}
+.zoom-in-95 {
+  --enter-scale: 0.95;
+}
+.slide-in-from-bottom-5 {
+  --enter-translate-y: 1.25rem;
+}

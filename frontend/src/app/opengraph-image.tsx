@@ -22,38 +22,36 @@ export default async function OpengraphImage() {
   const photoSrc = `data:image/jpeg;base64,${photo.toString('base64')}`;
 
   return new ImageResponse(
-    (
-      <div style={{ width: '100%', height: '100%', display: 'flex', background: SAND, color: BARK, fontFamily: 'Figtree' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '64px 48px 64px 72px' }}>
-          <div style={{ display: 'flex', fontFamily: 'Newsreader', fontSize: 44 }}>Nexora</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-            <div style={{ display: 'flex', fontFamily: 'Newsreader', fontSize: 72, lineHeight: 1.04, letterSpacing: -1.5 }}>
-              Video calls that run on servers you own.
-            </div>
-            <div style={{ display: 'flex', fontSize: 28, lineHeight: 1.4, color: BARK_SOFT }}>
-              Rooms, recordings and GST billing in rupees.
-            </div>
+    <div style={{ width: '100%', height: '100%', display: 'flex', background: SAND, color: BARK, fontFamily: 'Figtree' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '64px 48px 64px 72px' }}>
+        <div style={{ display: 'flex', fontFamily: 'Newsreader', fontSize: 44 }}>Nexora</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <div style={{ display: 'flex', fontFamily: 'Newsreader', fontSize: 72, lineHeight: 1.04, letterSpacing: -1.5 }}>
+            Video calls that run on servers you own.
           </div>
-          <div
-            style={{
-              display: 'flex',
-              alignSelf: 'flex-start',
-              padding: '12px 22px',
-              borderRadius: 999,
-              background: MOSS,
-              color: CREAM,
-              fontSize: 22,
-            }}
-          >
-            Media on your servers · Recordings in your bucket
+          <div style={{ display: 'flex', fontSize: 28, lineHeight: 1.4, color: BARK_SOFT }}>
+            Rooms, recordings and GST billing in rupees.
           </div>
         </div>
-        <div style={{ display: 'flex', width: 440, padding: '40px 40px 40px 0' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
-          <img src={photoSrc} width={400} height={550} style={{ width: 400, height: 550, objectFit: 'cover', borderRadius: 18 }} />
+        <div
+          style={{
+            display: 'flex',
+            alignSelf: 'flex-start',
+            padding: '12px 22px',
+            borderRadius: 999,
+            background: MOSS,
+            color: CREAM,
+            fontSize: 22,
+          }}
+        >
+          Media on your servers · Recordings in your bucket
         </div>
       </div>
-    ),
+      <div style={{ display: 'flex', width: 440, padding: '40px 40px 40px 0' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
+        <img src={photoSrc} width={400} height={550} style={{ width: 400, height: 550, objectFit: 'cover', borderRadius: 18 }} />
+      </div>
+    </div>,
     {
       ...size,
       fonts: [

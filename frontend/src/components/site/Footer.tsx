@@ -28,7 +28,12 @@ export function Footer({ brand, contact, social }: FooterProps) {
               <ul aria-label="Social profiles" className="mt-5 flex flex-wrap gap-x-[18px] gap-y-1">
                 {socialKeys.map((key) => (
                   <li key={key}>
-                    <a href={social[key]} target="_blank" rel="noopener noreferrer me" className="inline-block py-1.5 underline underline-offset-4 hover:text-cream">
+                    <a
+                      href={social[key]}
+                      target="_blank"
+                      rel="noopener noreferrer me"
+                      className="inline-block py-1.5 underline underline-offset-4 hover:text-cream"
+                    >
                       {SOCIAL_LABELS[key]}
                     </a>
                   </li>
@@ -39,9 +44,7 @@ export function Footer({ brand, contact, social }: FooterProps) {
 
           {FOOTER_GROUPS.map((group) => (
             <nav key={group.heading} aria-label={group.heading} className="flex-[1_1_140px]">
-              <h2 className="text-[13px] font-body font-semibold text-cream">
-                {group.heading}
-              </h2>
+              <h2 className="text-[13px] font-body font-semibold text-cream">{group.heading}</h2>
               <ul className="mt-3">
                 {group.links.map((item) => (
                   <li key={item.href}>
@@ -55,9 +58,7 @@ export function Footer({ brand, contact, social }: FooterProps) {
           ))}
 
           <div className="flex-[1_1_220px] leading-relaxed">
-            <h2 className="text-[13px] font-body font-semibold text-cream">
-              Say hello
-            </h2>
+            <h2 className="text-[13px] font-body font-semibold text-cream">Say hello</h2>
             <address className="not-italic mt-3">
               <span className="block">{companyName}</span>
               {contact?.address && <span className="block whitespace-pre-line">{contact.address}</span>}

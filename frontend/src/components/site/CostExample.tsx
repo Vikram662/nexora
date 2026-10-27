@@ -57,9 +57,7 @@ export function CostExample({ site, heading, variant }: CostExampleProps) {
         <span>{home ? 'From your wallet' : 'Taken from your wallet'}</span>
         <span className="font-plex tabular">{money(total)}</span>
       </div>
-      {total === null && (
-        <p className="mt-3 text-sm leading-relaxed text-bark-muted">Amounts appear here once rates are published.</p>
-      )}
+      {total === null && <p className="mt-3 text-sm leading-relaxed text-bark-muted">Amounts appear here once rates are published.</p>}
     </div>
   );
 }

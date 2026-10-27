@@ -68,9 +68,7 @@ export default function ActiveCallRoom({
   // Live Call Timer:
   // In video/audio call: Only starts counting when BOTH participants are connected (participantCount >= 2).
   // In broadcast: Host counts from when they go live, and syncs this timestamp with all late-joining viewers!
-  const isCallActive = callMode === 'broadcast' 
-    ? (status === 'connected') 
-    : (status === 'connected' && participantCount >= 2);
+  const isCallActive = callMode === 'broadcast' ? status === 'connected' : status === 'connected' && participantCount >= 2;
 
   useEffect(() => {
     if (!isCallActive) return;
@@ -116,10 +114,12 @@ export default function ActiveCallRoom({
           // In 1-on-1 calls: If we have at least 1 remote peer and no timer started yet, send CALL_START
           if (callMode !== 'broadcast' && remotes >= 1 && durationRef.current === 0) {
             try {
-              const startMsg = new TextEncoder().encode(JSON.stringify({ 
-                type: 'CALL_START_TIME', 
-                timestamp: Date.now() 
-              }));
+              const startMsg = new TextEncoder().encode(
+                JSON.stringify({
+                  type: 'CALL_START_TIME',
+                  timestamp: Date.now(),
+                }),
+              );
               currentRoom.localParticipant.publishData(startMsg, { reliable: true }).catch(() => {});
             } catch (_) {}
           }
@@ -132,13 +132,15 @@ export default function ActiveCallRoom({
 
           // If current participant is Broadcast Host, broadcast live heartbeat timer every 3s
           if (callMode === 'broadcast' && isHost) {
-            const hostStartTime = Date.now() - (durationRef.current * 1000);
+            const hostStartTime = Date.now() - durationRef.current * 1000;
             const sendSync = () => {
               try {
-                const msg = new TextEncoder().encode(JSON.stringify({ 
-                  type: 'HOST_START_TIME', 
-                  timestamp: hostStartTime 
-                }));
+                const msg = new TextEncoder().encode(
+                  JSON.stringify({
+                    type: 'HOST_START_TIME',
+                    timestamp: hostStartTime,
+                  }),
+                );
                 currentRoom.localParticipant.publishData(msg, { reliable: true }).catch(() => {});
               } catch (_) {}
             };
@@ -158,11 +160,13 @@ export default function ActiveCallRoom({
           updateParticipants();
           if (callMode === 'broadcast' && isHost) {
             try {
-              const hostStartTime = Date.now() - (durationRef.current * 1000);
-              const msg = new TextEncoder().encode(JSON.stringify({ 
-                type: 'HOST_START_TIME', 
-                timestamp: hostStartTime 
-              }));
+              const hostStartTime = Date.now() - durationRef.current * 1000;
+              const msg = new TextEncoder().encode(
+                JSON.stringify({
+                  type: 'HOST_START_TIME',
+                  timestamp: hostStartTime,
+                }),
+              );
               currentRoom.localParticipant.publishData(msg, { reliable: true }).catch(() => {});
             } catch (_) {}
           }
@@ -191,11 +195,13 @@ export default function ActiveCallRoom({
               const elapsed = Math.max(0, Math.floor((Date.now() - data.timestamp) / 1000));
               setDurationSeconds(elapsed);
             } else if (data.type === 'REQUEST_SYNC' && isHost) {
-              const hostStartTime = Date.now() - (durationRef.current * 1000);
-              const msg = new TextEncoder().encode(JSON.stringify({ 
-                type: 'HOST_START_TIME', 
-                timestamp: hostStartTime 
-              }));
+              const hostStartTime = Date.now() - durationRef.current * 1000;
+              const msg = new TextEncoder().encode(
+                JSON.stringify({
+                  type: 'HOST_START_TIME',
+                  timestamp: hostStartTime,
+                }),
+              );
               currentRoom.localParticipant.publishData(msg, { reliable: true }).catch(() => {});
             } else if (data.type === 'CALL_ENDED' && callMode !== 'broadcast') {
               // 1-on-1 audio/video call: Peer ended the call
@@ -215,7 +221,7 @@ export default function ActiveCallRoom({
 
         currentRoom.on(RoomEvent.ParticipantDisconnected, (participant) => {
           updateParticipants();
-          
+
           if (callMode !== 'broadcast') {
             // In 1-on-1 video or audio calls, if the other person leaves, automatically disconnect this peer too!
             if (currentRoom) {
@@ -224,7 +230,8 @@ export default function ActiveCallRoom({
             onLeaveRef.current();
           } else if (callMode === 'broadcast' && !isHost) {
             // In Live Broadcast: If the Host leaves, goes back, or closes the tab, end stream for all viewers!
-            const wasPublisher = participant.trackPublications.size > 0 || participant.identity.includes('host') || currentRoom.remoteParticipants.size === 0;
+            const wasPublisher =
+              participant.trackPublications.size > 0 || participant.identity.includes('host') || currentRoom.remoteParticipants.size === 0;
             if (wasPublisher) {
               if (currentRoom) {
                 currentRoom.disconnect().catch(() => {});
@@ -241,7 +248,6 @@ export default function ActiveCallRoom({
             onLeaveRef.current();
           }
         });
-
 
         // Track subscribed from remote participants
         currentRoom.on(RoomEvent.TrackSubscribed, (track) => {
@@ -273,8 +279,6 @@ export default function ActiveCallRoom({
         }
 
         setRoom(currentRoom);
-
-
       } catch (err) {
         const isAbort = err instanceof Error && (err.message.includes('Client initiated disconnect') || err.name === 'AbortError');
         if (isAbort) {
@@ -283,7 +287,7 @@ export default function ActiveCallRoom({
         }
         console.error('Failed to connect to LiveKit SFU:', err);
         setStatus('disconnected');
-        const detailedError = errorMessage(err,`Could not connect to LiveKit media node (${livekitUrl})`);
+        const detailedError = errorMessage(err, `Could not connect to LiveKit media node (${livekitUrl})`);
         if (onErrorRef.current) {
           onErrorRef.current?.(`Connection Error: ${detailedError}. Please verify that the LiveKit RTC service is reachable.`);
         }
@@ -302,10 +306,9 @@ export default function ActiveCallRoom({
         currentRoom.disconnect().catch(() => {});
       }
     };
-  // Mode and role are fixed for the lifetime of a token, so they must not trigger a reconnect.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Mode and role are fixed for the lifetime of a token, so they must not trigger a reconnect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, livekitUrl]);
-
 
   const toggleMic = async () => {
     if (!room) return;
@@ -396,18 +399,22 @@ export default function ActiveCallRoom({
               </span>
             </h2>
             <div className="text-xs text-muted flex items-center gap-2 mt-0.5">
-              <span>Status: <strong className="text-emerald-600 capitalize">{status}</strong></span>
+              <span>
+                Status: <strong className="text-emerald-600 capitalize">{status}</strong>
+              </span>
               <span>•</span>
-              <span className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md border text-xs ${
-                isCallActive 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}>
+              <span
+                className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md border text-xs ${
+                  isCallActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
+              >
                 <Clock className={`h-3 w-3 ${isCallActive ? 'text-emerald-600' : 'text-amber-600 animate-spin'}`} />
                 {isCallActive ? formatDuration(durationSeconds) : 'Waiting for Peer...'}
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {participantCount} in call</span>
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" /> {participantCount} in call
+              </span>
             </div>
           </div>
         </div>
@@ -429,7 +436,9 @@ export default function ActiveCallRoom({
               <div className="text-center p-8 space-y-2 text-slate-400">
                 <Radio className="h-10 w-10 mx-auto text-indigo-300 animate-pulse" />
                 <div className="text-sm font-bold text-white">Live Broadcast Starting Soon...</div>
-                <p className="text-xs text-slate-400">Waiting for the Host to go live in room: <strong>{roomName}</strong></p>
+                <p className="text-xs text-slate-400">
+                  Waiting for the Host to go live in room: <strong>{roomName}</strong>
+                </p>
               </div>
             )}
           </div>
@@ -471,7 +480,9 @@ export default function ActiveCallRoom({
               <div className="h-24 w-24 rounded-full bg-console text-white flex items-center justify-center text-3xl font-semibold border-4 border-console-line/80">
                 You
               </div>
-              <div className={`absolute bottom-0 right-0 p-2 rounded-full border-2 border-console  ${isAudioMuted ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}>
+              <div
+                className={`absolute bottom-0 right-0 p-2 rounded-full border-2 border-console  ${isAudioMuted ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}
+              >
                 {isAudioMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </div>
             </div>
@@ -594,7 +605,6 @@ export default function ActiveCallRoom({
           </>
         )}
 
-
         {/* In-Room Real-time Chat Toggle Button */}
         <button
           type="button"
@@ -603,9 +613,7 @@ export default function ActiveCallRoom({
             if (!isChatOpen) setUnreadCount(0);
           }}
           className={`h-11 px-4 rounded-full flex items-center gap-2 font-bold text-xs transition-all cursor-pointer relative ${
-            isChatOpen
-              ? 'bg-accent text-white  '
-              : 'bg-paper-deep hover:bg-line text-ink'
+            isChatOpen ? 'bg-accent text-white  ' : 'bg-paper-deep hover:bg-line text-ink'
           }`}
           title="Toggle In-Room Real-time Chat"
         >
@@ -656,18 +664,14 @@ export default function ActiveCallRoom({
               </div>
             ) : (
               messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex flex-col ${m.isSelf ? 'items-end' : 'items-start'}`}
-                >
+                <div key={m.id} className={`flex flex-col ${m.isSelf ? 'items-end' : 'items-start'}`}>
                   <span className="text-[10px] text-slate-400 mb-0.5 px-1 font-medium">
-                    {m.isSelf ? 'You' : m.sender} • {new Date(m.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {m.isSelf ? 'You' : m.sender} •{' '}
+                    {new Date(m.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   <div
                     className={`max-w-[85%] rounded-lg px-3 py-2 text-xs font-medium ${
-                      m.isSelf
-                        ? 'bg-accent text-white rounded-tr-none'
-                        : 'bg-white text-ink border border-line rounded-tl-none'
+                      m.isSelf ? 'bg-accent text-white rounded-tr-none' : 'bg-white text-ink border border-line rounded-tl-none'
                     }`}
                   >
                     {m.text}

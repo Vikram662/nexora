@@ -1,0 +1,403 @@
+'use client';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState } from 'react';
+import { User, Mail, Phone, Lock, Save, CheckCircle2, Smartphone, X } from 'lucide-react';
+import {
+  fetchOrganizationData,
+  OrganizationData,
+  fetch2faSetup,
+  verifyAndToggle2fa,
+  fetchProfile,
+  updateProfile,
+  errorMessage,
+} from '@/lib/api';
+import { useToast } from '@/components/ToastProvider';
+import { QrCode } from '@/components/QrCode';
+
+export default function UserProfilePage() {
+  const { success, error: toastError, confirm } = useToast();
+  const [orgData, setOrgData] = useState<OrganizationData | null>(null);
+  const [, setLoading] = useState(true);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('');
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Real 2FA state
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [mfaSecret, setMfaSecret] = useState('');
+  const [showMfaModal, setShowMfaModal] = useState(false);
+  const [totpCode, setTotpCode] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+
+  const loadData = () => {
+    fetchOrganizationData()
+      .then((data) => setOrgData(data))
+      .catch((e) => console.error(e))
+      .finally(() => setLoading(false));
+
+    fetchProfile()
+      .then((p) => {
+        setName(p.name ?? '');
+        setEmail(p.email);
+        setPhone(p.phone ?? '');
+        setRole(p.role);
+      })
+      .catch(() => toastError('Could not load your profile. Refresh the page to try again.'))
+      .finally(() => setProfileLoaded(true));
+
+    fetch2faSetup()
+      .then((data) => {
+        if (data) {
+          setTwoFactorEnabled(Boolean(data.enabled));
+          setMfaSecret(data.secret || '');
+        }
+      })
+      .catch(() => {
+        setMfaSecret('');
+      });
+  };
+
+  useEffect(() => {
+    loadData();
+    // Loads once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleOpen2faModal = async () => {
+    setMfaError(null);
+    setTotpCode('');
+    try {
+      const setup = await fetch2faSetup();
+      if (setup && setup.secret) {
+        setMfaSecret(setup.secret);
+      } else {
+        setMfaSecret('');
+      }
+      setShowMfaModal(true);
+    } catch (err) {
+      console.warn('Backend 2FA setup endpoint notice:', err);
+      setMfaSecret('');
+      setShowMfaModal(true);
+    }
+  };
+
+  const handleVerify2fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMfaLoading(true);
+    setMfaError(null);
+    try {
+      await verifyAndToggle2fa(totpCode.trim(), true);
+      setTwoFactorEnabled(true);
+      setShowMfaModal(false);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 4000);
+    } catch (err) {
+      setMfaError(errorMessage(err, 'Verification failed'));
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleDisable2fa = async () => {
+    const ok = await confirm({
+      title: 'Disable Two-Factor Authentication?',
+      message: 'Your account will be protected by your password only.',
+      confirmLabel: 'Disable',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await verifyAndToggle2fa('', false);
+      setTwoFactorEnabled(false);
+      setSavedSuccess(true);
+      success('Two-Factor Authentication disabled successfully');
+      setTimeout(() => setSavedSuccess(false), 4000);
+    } catch (err) {
+      toastError(errorMessage(err, 'Failed to disable 2FA'));
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      const saved = await updateProfile({ name: name.trim(), phone: phone.replace(/[\s-]/g, '') });
+      setName(saved.name ?? '');
+      setPhone(saved.phone ?? '');
+      success('Profile saved.');
+    } catch (err) {
+      toastError(errorMessage(err, 'Could not save your profile'));
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      {/* Top Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-ink tracking-tight flex items-center gap-2">
+            <User className="h-5 w-5 text-accent" />
+            <span>Profile</span>
+          </h1>
+          <p className="text-xs text-muted mt-0.5">Your name, phone number and sign-in security.</p>
+        </div>
+      </div>
+
+      {savedSuccess && (
+        <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <span>Two-factor settings saved.</span>
+        </div>
+      )}
+
+      {/* Profile Overview Card */}
+      <div className="border-t-2 border-ink pt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 rounded-lg bg-console text-white flex items-center justify-center font-semibold text-2xl">
+            {(name || email || '?').substring(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-ink">{name || email}</h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-accent/10 text-accent-deep border border-accent/30">
+                {role ? role.charAt(0) + role.slice(1).toLowerCase() : '...'}
+              </span>
+            </div>
+            <div className="text-xs text-muted mt-0.5 flex items-center gap-2">
+              <span>
+                Organization: <strong>{orgData?.name ?? '...'}</strong>
+              </span>
+              <span>•</span>
+              <span className="font-mono text-[11px]">{orgData?.id ? `ID: ${orgData.id.substring(0, 8)}...` : ''}</span>
+            </div>
+            <div className="text-xs text-slate-400 mt-1 flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <Mail className="h-3 w-3" /> {email}
+              </span>
+              <span className="flex items-center gap-1">
+                <Phone className="h-3 w-3" /> {phone || 'No phone number'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-md bg-paper border border-line text-xs text-right space-y-1">
+          <div className="text-[10px] text-slate-400 font-semibold">Wallet balance</div>
+          <div className="text-lg font-semibold text-emerald-600">₹{Number(orgData?.walletBalance || 0).toFixed(2)}</div>
+          <div className="text-[10px] text-accent font-bold">Plan: {orgData?.planTier || 'STARTER'}</div>
+        </div>
+      </div>
+
+      {/* Edit Information Form */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Personal Details */}
+        <div className="border-t-2 border-ink pt-5 space-y-4">
+          <h3 className="font-bold text-sm text-ink flex items-center gap-2 border-b border-line pb-3">
+            <User className="h-4 w-4 text-accent" />
+            Your details
+          </h3>
+
+          <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold text-ink mb-1">Full Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
+                required
+              />
+            </div>
+
+            <div suppressHydrationWarning>
+              <label className="block font-semibold text-ink mb-1">Email address</label>
+              <input
+                type="email"
+                value={email}
+                readOnly
+                className="w-full px-3 py-2 bg-paper-deep border border-line rounded-md font-medium text-muted"
+              />
+              <span className="block text-muted mt-1">This is your sign-in email and cannot be changed here.</span>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-ink mb-1">Mobile phone (SMS alerts)</label>
+              <input
+                type="tel"
+                value={phone}
+                placeholder="+919876543210"
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-3 py-2 bg-paper border border-line rounded-md font-medium"
+              />
+              <span className="block text-muted mt-1">
+                Include the country code. Owners get SMS alerts here if they turn them on in Notifications.
+              </span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={!profileLoaded || savingProfile}
+              className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Save className="h-3.5 w-3.5" /> {savingProfile ? 'Saving...' : 'Save changes'}
+            </button>
+          </form>
+        </div>
+
+        {/* Security & Authentication */}
+        <div className="border-t-2 border-ink pt-5 space-y-4">
+          <h3 className="font-bold text-sm text-ink flex items-center gap-2 border-b border-line pb-3">
+            <Lock className="h-4 w-4 text-emerald-600" />
+            Security & Access Control
+          </h3>
+
+          <div className="space-y-3 text-xs">
+            <div className="p-3.5 rounded-md border border-line bg-paper/70 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-ink">Two-Factor Authentication (2FA)</div>
+                <div className="text-[11px] text-muted">TOTP Authenticator app protection</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                    twoFactorEnabled
+                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                      : 'text-amber-700 bg-amber-50 border border-amber-200'
+                  }`}
+                >
+                  {twoFactorEnabled ? 'ENABLED' : 'DISABLED'}
+                </span>
+                {twoFactorEnabled ? (
+                  <button
+                    type="button"
+                    onClick={handleDisable2fa}
+                    className="px-2.5 py-1 text-[11px] font-bold text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
+                  >
+                    Disable
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleOpen2faModal}
+                    className="px-2.5 py-1 text-[11px] font-bold text-accent bg-white border border-accent/30 rounded-lg hover:bg-accent/10 cursor-pointer"
+                  >
+                    Enable 2FA
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-md border border-line bg-paper/70 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-ink">Session Security</div>
+                <div className="text-[11px] text-muted">Signed HttpOnly cookie</div>
+              </div>
+              <span className="font-bold text-accent-deep bg-accent/10 border border-accent/30 px-2 py-0.5 rounded text-[10px]">
+                ACTIVE
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-md border border-line bg-paper/70 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-ink">Your role</div>
+                <div className="text-[11px] text-muted">What you can do in this organization</div>
+              </div>
+              <span className="font-bold text-ink bg-paper-deep border border-line px-2 py-0.5 rounded text-[10px]">
+                {role ? role.toUpperCase() : '...'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2FA Setup Modal */}
+      {showMfaModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-line space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2 text-ink font-bold text-sm">
+                <Smartphone className="h-5 w-5 text-accent" />
+                <span>Setup Two-Factor Authenticator</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMfaModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-muted hover:bg-paper-deep cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted leading-relaxed text-center">
+              Scan this QR Code with your Authenticator App (Google Authenticator, Microsoft Authenticator, or Authy).
+            </p>
+
+            {/* QR Code Container */}
+            <div className="flex flex-col items-center justify-center p-4 bg-paper rounded-lg border border-line space-y-3">
+              <div className="p-2.5 bg-white rounded-md border border-line">
+                {mfaSecret && (
+                  <QrCode
+                    alt="2FA TOTP QR Code"
+                    value={`otpauth://totp/${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || 'Nexora')}:${encodeURIComponent(email)}?secret=${mfaSecret}&issuer=${encodeURIComponent(process.env.NEXT_PUBLIC_MFA_ISSUER || 'Nexora')}`}
+                  />
+                )}
+              </div>
+
+              {/* Secret Key with copy */}
+              <div className="w-full text-center">
+                <span className="text-[10px] text-slate-400 font-bold block">Or enter secret key manually:</span>
+                <span className="font-mono text-xs font-semibold text-accent-deep select-all bg-white px-3 py-1 rounded-lg border border-line mt-1 inline-block">
+                  {mfaSecret}
+                </span>
+              </div>
+            </div>
+
+            {mfaError && (
+              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">{mfaError}</div>
+            )}
+
+            <form onSubmit={handleVerify2fa} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-ink mb-1">Enter 6-Digit Authenticator Code</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="000000"
+                  className="w-full px-3 py-2 bg-paper border border-line rounded-md font-mono text-center text-lg font-bold tracking-widest"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMfaModal(false)}
+                  className="px-4 py-2 text-muted font-bold hover:bg-paper-deep rounded-md transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={mfaLoading || totpCode.length !== 6}
+                  className="px-4 py-2 bg-accent hover:bg-accent-deep text-white font-bold rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {mfaLoading ? 'Verifying...' : 'Verify & Enable 2FA'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -106,7 +106,10 @@ export function AuthField({ id, label, type, value, onChange, placeholder, icon:
 
 export function AuthError({ message }: { message: string }) {
   return (
-    <div role="alert" className="mb-5 flex items-start gap-2 rounded-[10px] border border-[#e5b8a8] bg-[#fbeee8] px-3.5 py-3 text-sm text-[#8a2e1a]">
+    <div
+      role="alert"
+      className="mb-5 flex items-start gap-2 rounded-[10px] border border-[#e5b8a8] bg-[#fbeee8] px-3.5 py-3 text-sm text-[#8a2e1a]"
+    >
       <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
       <span>{message}</span>
     </div>

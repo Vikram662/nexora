@@ -78,7 +78,10 @@ export function websiteJsonLd(brand: BrandSettings): JsonLd {
   };
 }
 
-export interface Crumb { name: string; path: string }
+export interface Crumb {
+  name: string;
+  path: string;
+}
 
 export function breadcrumbJsonLd(crumb: Crumb): JsonLd {
   return {

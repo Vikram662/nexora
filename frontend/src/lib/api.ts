@@ -1,4 +1,13 @@
-import type { AdminAuditEntry, AdminSettingsData, BillingProfile, CreditNote, LedgerTransaction, SystemHealth, TaxInvoice, UpdateSettingsPayload } from './types';
+import type {
+  AdminAuditEntry,
+  AdminSettingsData,
+  BillingProfile,
+  CreditNote,
+  LedgerTransaction,
+  SystemHealth,
+  TaxInvoice,
+  UpdateSettingsPayload,
+} from './types';
 
 export function errorMessage(err: unknown, fallback = 'Something went wrong'): string {
   return err instanceof Error && err.message ? err.message : fallback;
@@ -135,6 +144,20 @@ export async function signupUser(email: string, orgName: string, password: strin
   return res.json();
 }
 
+export interface SessionUser {
+  email?: string;
+  role?: string;
+  isStaff?: boolean;
+}
+
+/** The signed-in session from /v1/auth/me. Throws when there is no valid session. */
+export async function fetchCurrentUser(): Promise<SessionUser> {
+  const res = await fetch(`${getApiBaseUrl()}/v1/auth/me`, { credentials: 'include' });
+  if (!res.ok) throw new Error('Unauthenticated');
+  const json = (await res.json()) as { data?: SessionUser };
+  return json.data ?? {};
+}
+
 export async function logoutUser() {
   const res = await fetch(`${getApiBaseUrl()}/v1/auth/logout`, {
     method: 'POST',
@@ -160,7 +183,10 @@ export async function fetchOrganizationData(): Promise<OrganizationData> {
   return json.data;
 }
 
-export async function createNewProject(name: string, environment: 'SANDBOX' | 'PRODUCTION'): Promise<{ project: Project; rawSecret: string }> {
+export async function createNewProject(
+  name: string,
+  environment: 'SANDBOX' | 'PRODUCTION',
+): Promise<{ project: Project; rawSecret: string }> {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/projects`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -195,7 +221,7 @@ export async function saveStorage(
     accessKey?: string;
     secretKey?: string;
     gcsServiceAccountJson?: string;
-  }
+  },
 ) {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/projects/${projectId}/storage`, {
     method: 'POST',
@@ -255,11 +281,7 @@ export async function resendWebhookDelivery(id: string): Promise<{ succeeded: bo
   return (await res.json()).data;
 }
 
-export async function submitKycVerification(data: {
-  documentType: string;
-  documentNumber: string;
-  digilockerOtp?: string;
-}) {
+export async function submitKycVerification(data: { documentType: string; documentNumber: string; digilockerOtp?: string }) {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/kyc/submit`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -404,12 +426,7 @@ export async function fetchSupportTickets() {
   return json.data;
 }
 
-export async function createSupportTicket(data: {
-  subject: string;
-  category: string;
-  priority: string;
-  message: string;
-}) {
+export async function createSupportTicket(data: { subject: string; category: string; priority: string; message: string }) {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/tickets`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -464,11 +481,7 @@ export async function fetchNotificationPreferences() {
   return json.data || { emailEnabled: true, smsEnabled: false, criticalOnlyViaSms: true };
 }
 
-export async function updateNotificationPreferences(data: {
-  emailEnabled: boolean;
-  smsEnabled: boolean;
-  criticalOnlyViaSms: boolean;
-}) {
+export async function updateNotificationPreferences(data: { emailEnabled: boolean; smsEnabled: boolean; criticalOnlyViaSms: boolean }) {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/notifications/preferences`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -574,7 +587,9 @@ export async function saveAutoRecharge(settings: { enabled: boolean; threshold: 
   return (await res.json()).data;
 }
 
-export async function startAutoRechargeSetup(amount: number): Promise<{ orderId: string; customerId: string; keyId: string; amount: number }> {
+export async function startAutoRechargeSetup(
+  amount: number,
+): Promise<{ orderId: string; customerId: string; keyId: string; amount: number }> {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/auto-recharge/setup`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -585,7 +600,11 @@ export async function startAutoRechargeSetup(amount: number): Promise<{ orderId:
   return (await res.json()).data;
 }
 
-export async function confirmAutoRechargeSetup(data: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }): Promise<AutoRechargeStatus> {
+export async function confirmAutoRechargeSetup(data: {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}): Promise<AutoRechargeStatus> {
   const res = await fetch(`${getApiBaseUrl()}/v1/portal/auto-recharge/confirm`, {
     method: 'POST',
     headers: getAuthHeaders(),

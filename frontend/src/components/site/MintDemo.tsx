@@ -69,10 +69,7 @@ export function MintDemo({ ratePerMinute }: { ratePerMinute: number | null }) {
       <figcaption className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[#4a3c30] font-plex text-xs text-taupe">
         <span>Step 1, for your developer</span>
         <span className="inline-flex items-center gap-2 tabular">
-          <span
-            className={`h-2 w-2 rounded-full ${live ? 'bg-[#e07a4f] motion-safe:animate-pulse' : 'bg-[#6b5d4f]'}`}
-            aria-hidden="true"
-          />
+          <span className={`h-2 w-2 rounded-full ${live ? 'bg-[#e07a4f] motion-safe:animate-pulse' : 'bg-[#6b5d4f]'}`} aria-hidden="true" />
           {live ? 'live' : 'idle'} · <span aria-hidden="true">{timecode(seconds)}</span>
           {charged !== null && live && <span aria-hidden="true">· ₹{rateFormat.format(charged)} so far</span>}
         </span>

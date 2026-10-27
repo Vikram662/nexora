@@ -43,11 +43,7 @@ export async function proxy(request: NextRequest) {
 
     // Cryptographically verified role checking for /admin/*
     if (pathname.startsWith('/admin')) {
-      const isStaff = Boolean(
-        decodedPayload?.isStaff ||
-        decodedPayload?.role === 'SUPER_ADMIN' ||
-        decodedPayload?.role === 'STAFF'
-      );
+      const isStaff = Boolean(decodedPayload?.isStaff || decodedPayload?.role === 'SUPER_ADMIN' || decodedPayload?.role === 'STAFF');
 
       if (!isStaff) {
         // Normal customer attempting to access staff operations

@@ -41,7 +41,11 @@ export function AutoRecharge({ onWalletChange }: { onWalletChange: () => void })
   }, []);
 
   if (!status) {
-    return <p className="text-xs text-muted" role="status">Loading auto recharge...</p>;
+    return (
+      <p className="text-xs text-muted" role="status">
+        Loading auto recharge...
+      </p>
+    );
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -121,9 +125,12 @@ export function AutoRecharge({ onWalletChange }: { onWalletChange: () => void })
   return (
     <section aria-labelledby="auto-recharge-heading" className="space-y-4 max-w-2xl">
       <div>
-        <h3 id="auto-recharge-heading" className="font-display text-base font-semibold">Auto recharge</h3>
+        <h3 id="auto-recharge-heading" className="font-display text-base font-semibold">
+          Auto recharge
+        </h3>
         <p className="text-xs text-muted mt-1">
-          When your balance falls below the level you set, we charge your saved card and add the money, so calls never stop for lack of balance.
+          When your balance falls below the level you set, we charge your saved card and add the money, so calls never stop for lack of
+          balance.
           {status.noticeHours > 0
             ? ` We email you ${status.noticeHours} hours before each charge, and skip it if the balance is back above the level.`
             : ''}{' '}
@@ -201,7 +208,8 @@ export function AutoRecharge({ onWalletChange }: { onWalletChange: () => void })
         ) : (
           <div className="space-y-2">
             <p className="text-muted">
-              You pay a first top-up now, and the bank asks you to allow future automatic charges on that card. Cards only. Your mobile number in Profile is needed for this.
+              You pay a first top-up now, and the bank asks you to allow future automatic charges on that card. Cards only. Your mobile
+              number in Profile is needed for this.
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <label className="block">

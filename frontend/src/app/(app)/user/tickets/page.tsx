@@ -1,0 +1,199 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { HelpCircle, CheckCircle2 } from 'lucide-react';
+import { fetchSupportTickets, createSupportTicket, errorMessage } from '@/lib/api';
+import type { SupportTicket } from '@/lib/types';
+import { useToast } from '@/components/ToastProvider';
+
+const TICKET_STATUS_STYLE: Record<string, string> = {
+  OPEN: 'bg-amber-50 text-amber-800 border-amber-200',
+  IN_PROGRESS: 'bg-accent/10 text-accent-deep border-accent/30',
+  WAITING_ON_CUSTOMER: 'bg-red-50 text-red-700 border-red-200',
+  RESOLVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  CLOSED: 'bg-slate-100 text-slate-700 border-slate-200',
+};
+
+export default function UserTicketsPage() {
+  const { success, error: toastError } = useToast();
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketSubject, setTicketSubject] = useState('');
+  const [ticketCategory, setTicketCategory] = useState<'MEDIA_QUALITY' | 'RECORDING_EGRESS' | 'BILLING_WALLET' | 'API_INTEGRATION'>(
+    'API_INTEGRATION',
+  );
+  const [ticketPriority, setTicketPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('MEDIUM');
+  const [ticketMessage, setTicketMessage] = useState('');
+  const [ticketSuccess, setTicketSuccess] = useState(false);
+  const [, setLoading] = useState(true);
+
+  const loadTickets = async () => {
+    try {
+      const tks = await fetchSupportTickets();
+      setTickets(tks || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void Promise.resolve().then(loadTickets);
+  }, []);
+
+  const handleTicketSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createSupportTicket({
+        subject: ticketSubject,
+        category: ticketCategory,
+        priority: ticketPriority,
+        message: ticketMessage,
+      });
+      setTicketSuccess(true);
+      setTicketSubject('');
+      setTicketMessage('');
+      success('Support ticket submitted successfully');
+      setTimeout(() => setTicketSuccess(false), 4000);
+      loadTickets();
+    } catch (err) {
+      toastError(errorMessage(err, 'Failed to submit ticket'));
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="border-t-2 border-ink pt-5 space-y-6">
+        <div>
+          <h2 className="font-bold text-ink text-lg flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-accent" />
+            Developer Support & Technical Helpdesk
+          </h2>
+          <p className="text-xs text-muted mt-0.5">Open a direct support inquiry with our WebRTC infrastructure engineers.</p>
+        </div>
+
+        {ticketSuccess && (
+          <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            Support ticket submitted successfully! Our on-call engineers are reviewing.
+          </div>
+        )}
+
+        {/* Create Ticket Form */}
+        <form onSubmit={handleTicketSubmit} className="space-y-4 max-w-2xl text-xs bg-paper p-5 rounded-md border border-line">
+          <div className="font-bold text-ink">Open a New Ticket</div>
+          <div>
+            <label className="block font-semibold text-ink mb-1">Subject</label>
+            <input
+              type="text"
+              placeholder="e.g. BYOS Cloudflare R2 recording upload timeout"
+              value={ticketSubject}
+              onChange={(e) => setTicketSubject(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-line rounded-md text-ink"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-ink mb-1">Category</label>
+              <select
+                value={ticketCategory}
+                onChange={(e) => setTicketCategory(e.target.value as typeof ticketCategory)}
+                className="w-full px-3 py-2 bg-white border border-line rounded-md font-semibold text-ink"
+              >
+                <option value="API_INTEGRATION">API & Token Integration</option>
+                <option value="MEDIA_QUALITY">WebRTC SFU Quality / Latency</option>
+                <option value="RECORDING_EGRESS">BYOS Recording / Egress Upload</option>
+                <option value="BILLING_WALLET">Prepaid Billing & GST Invoices</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-ink mb-1">Priority</label>
+              <select
+                value={ticketPriority}
+                onChange={(e) => setTicketPriority(e.target.value as typeof ticketPriority)}
+                className="w-full px-3 py-2 bg-white border border-line rounded-md font-semibold text-ink"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="URGENT">Urgent (Production Down)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-ink mb-1">Message / Logs</label>
+            <textarea
+              rows={4}
+              placeholder="Describe the issue, include roomName, participant identity, and error logs..."
+              value={ticketMessage}
+              onChange={(e) => setTicketMessage(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-line rounded-md text-ink"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="px-6 py-2.5 bg-accent hover:bg-accent-deep text-white font-bold rounded-md text-xs transition-all cursor-pointer"
+          >
+            Submit Ticket
+          </button>
+        </form>
+
+        {/* Tickets List */}
+        <div className="space-y-3">
+          <div className="font-bold text-xs text-ink">Your Support Tickets</div>
+          {tickets.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th scope="col">Ticket</th>
+                    <th scope="col">Category</th>
+                    <th scope="col" className="text-right">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((tk) => (
+                    <tr key={tk.id}>
+                      <td>
+                        <div className="font-semibold text-ink flex flex-wrap items-center gap-x-2">
+                          <span className="font-mono text-accent">{tk.ticketNumber}</span>
+                          <span>{tk.subject}</span>
+                        </div>
+                        <span className="text-[11px] text-muted block mt-0.5">
+                          Priority: <strong className="text-ink">{tk.priority}</strong> •{' '}
+                          {new Date(tk.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="px-2.5 py-0.5 bg-paper-deep text-ink rounded-sm font-medium text-[10px] whitespace-nowrap">
+                          {tk.category}
+                        </span>
+                      </td>
+                      <td className="text-right">
+                        <span
+                          className={`px-2.5 py-0.5 border rounded-sm font-bold text-[10px] whitespace-nowrap ${TICKET_STATUS_STYLE[tk.status] ?? TICKET_STATUS_STYLE.CLOSED}`}
+                        >
+                          {tk.status.replaceAll('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="p-6 text-center text-muted text-xs">No tickets yet. Need help? Use the form above to reach support engineers.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

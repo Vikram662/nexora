@@ -6,16 +6,7 @@ import { createContext, useContext } from 'react';
 // this only decides what the admin console shows.
 export type StaffRole = 'SUPER_ADMIN' | 'SUPPORT' | 'BILLING_OPS' | 'KYC_REVIEWER' | 'SECURITY_ADMIN';
 
-export type StaffArea =
-  | 'overview'
-  | 'organizations'
-  | 'adjustBalance'
-  | 'billing'
-  | 'offers'
-  | 'kyc'
-  | 'tickets'
-  | 'audit'
-  | 'settings';
+export type StaffArea = 'overview' | 'organizations' | 'adjustBalance' | 'billing' | 'offers' | 'kyc' | 'tickets' | 'audit' | 'settings';
 
 const ACCESS: Record<StaffArea, StaffRole[] | 'all'> = {
   overview: 'all',

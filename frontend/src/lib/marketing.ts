@@ -95,7 +95,10 @@ export const FOOTER_GROUPS = [
   },
 ] as const;
 
-export interface Step { title: string; body: string }
+export interface Step {
+  title: string;
+  body: string;
+}
 
 export const HOW_IT_WORKS: Step[] = [
   {
@@ -116,7 +119,11 @@ export const HOW_IT_WORKS: Step[] = [
   },
 ];
 
-export interface UseCase { name: string; detail: string; image: ImageSlotKey }
+export interface UseCase {
+  name: string;
+  detail: string;
+  image: ImageSlotKey;
+}
 
 export const USE_CASES: UseCase[] = [
   {
@@ -136,7 +143,11 @@ export const USE_CASES: UseCase[] = [
   },
 ];
 
-export interface CallKind { name: string; detail: string; image: ImageSlotKey }
+export interface CallKind {
+  name: string;
+  detail: string;
+  image: ImageSlotKey;
+}
 
 export const CALL_KINDS: CallKind[] = [
   { name: 'Video call', detail: 'Camera, mic and screen sharing. Charged at the video rate.', image: 'kindVideo' },
@@ -148,7 +159,10 @@ export const CALL_KINDS: CallKind[] = [
   },
 ];
 
-export interface FaqItem { q: string; a: string }
+export interface FaqItem {
+  q: string;
+  a: string;
+}
 
 export const FAQ: FaqItem[] = [
   {
@@ -186,7 +200,10 @@ export const BILLING_FAQ: FaqItem[] = [
 
 export const CLIENT_PLATFORMS = ['Web and React', 'Android', 'iPhone and iPad', 'Flutter'];
 
-export interface SecuritySection { title: string; points: string[] }
+export interface SecuritySection {
+  title: string;
+  points: string[];
+}
 
 export const SECURITY_SECTIONS: SecuritySection[] = [
   {
@@ -229,7 +246,12 @@ export const SECURITY_SECTIONS: SecuritySection[] = [
  * shows a labelled placeholder built from `hint`. Current photos are free stock under the Unsplash License
  * (commercial use allowed, no attribution required); `source` records where each came from.
  */
-export interface ImageSlotSpec { src: string; alt: string; hint: string; source: string }
+export interface ImageSlotSpec {
+  src: string;
+  alt: string;
+  hint: string;
+  source: string;
+}
 
 const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}`;
 
