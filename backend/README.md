@@ -19,18 +19,35 @@ npm install
 # 2. Configure environment
 cp .env.example .env
 
-# 3. Synchronize database schema and seed initial data
+# 3. Synchronize database schema and seed initial data (local database only)
 npx prisma db push
 npx prisma db seed
 
-# 4. Start local development server
+# 4. Start the API and the worker
 npm run start:dev
+npm run start:worker:dev
 ```
+
+## Layout
+
+```
+apps/api/src/        HTTP only: main.ts, root module, /health
+apps/worker/src/     background jobs, no HTTP (APP_ROLE=worker)
+libs/modules/        auth, team, livekit, portal, invoicing, notifications, settings
+libs/database/       Prisma module and service
+libs/crypto/         AES-256-GCM key vault
+libs/config/         env schema (refuses to start on a bad value), APP_ROLE
+test/                e2e with supertest, no database
+database/manual/     reviewed SQL with rollback SQL, run by hand
+```
+
+Repeating jobs run only when `APP_ROLE` is not `api`. The API sets `api` by default; set `APP_ROLE=all` to run everything in one process locally.
 
 ## Available Scripts
 
-- `npm run start:dev`: Launch NestJS in watch mode.
-- `npm run build`: Compile TypeScript bundle for production.
-- `npm run test`: Run unit test suite via Vitest.
-- `npm run test:e2e`: Run end-to-end integration tests.
-- `npm run lint`: Lint codebase via Oxlint.
+- `npm run start:dev` / `npm run start:worker:dev`: API / worker in watch mode.
+- `npm run build`: compile both apps to `dist/apps/{api,worker}` and `dist/libs`.
+- `npm run start:prod` / `npm run start:worker:prod`: run the built API / worker.
+- `npm run test`: unit tests (Vitest).
+- `npm run test:e2e`: e2e tests (supertest, no database).
+- `npm run lint`: Oxlint. `npm run typecheck`: TypeScript.
