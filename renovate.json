@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "minimumReleaseAge": "7 days",
+  "schedule": ["before 6am on monday"],
+  "timezone": "Asia/Kolkata",
+  "baseBranches": ["dev"],
+  "labels": ["deps"],
+  "semanticCommits": "enabled",
+  "semanticCommitScope": "deps",
+  "packageRules": [
+    { "matchUpdateTypes": ["minor", "patch"], "groupName": "minor and patch" },
+    { "matchUpdateTypes": ["major"], "dependencyDashboardApproval": true }
+  ]
+}

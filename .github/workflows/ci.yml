@@ -2,10 +2,28 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, stag, dev, 'feat/**', 'fix/**', 'hotfix/**', 'chore/**']
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  commitlint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
   backend:
     runs-on: ubuntu-latest
     defaults:
@@ -15,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
@@ -23,19 +41,30 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run test:e2e
+      - run: npm run build
+      # Report only until the open advisories are fixed (next, sharp, body-parser, multer, nodemailer); then remove continue-on-error.
+      - run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
 
   frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
       - run: npm run lint
+      - run: npm run build
+      # Report only until the open advisories are fixed (next, sharp, body-parser, multer, nodemailer); then remove continue-on-error.
+      - run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

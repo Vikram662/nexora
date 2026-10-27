@@ -1,0 +1,6 @@
+# Type-check and build both apps before anything leaves the laptop.
+set -e
+npm --prefix backend run typecheck
+npm --prefix backend run build
+npm --prefix frontend run typecheck
+npm --prefix frontend run build

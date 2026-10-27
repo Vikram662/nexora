@@ -44,3 +44,6 @@ Thumbs.db
 bin/livekit-server.exe
 bin/*.tar.gz
 bin/*.zip
+
+# Deploy packaging (deploy/jenkins/package.sh)
+release/

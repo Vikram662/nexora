@@ -1,0 +1,6 @@
+# Code owners must approve every PR into dev, stag and main (ENGINEERING_RULES.md section 4.7).
+*            @Vikram662
+/backend/    @Vikram662
+/frontend/   @Vikram662
+/deploy/     @Vikram662
+/.github/    @Vikram662
