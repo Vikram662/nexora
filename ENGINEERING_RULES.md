@@ -140,6 +140,35 @@ Now → Target mapping:
 - `oxlint` (`backend/oxlint.json`) and the root `.prettierrc`.
 - Commands: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 
+### 2.8 Architecture decision: modular monolith, not microservices (Rule)
+
+The backend stays **one NestJS codebase** that runs as **two processes** (`apps/api`, `apps/worker`). Do not split it into microservices.
+
+Why:
+
+| Reason | In this codebase |
+| :--- | :--- |
+| Small backend | 7 business modules (auth, team, livekit, portal, invoicing, notifications, settings) |
+| Money must change in one DB transaction | wallet debit on token mint, refund on participant leave, top-ups, GST invoices, credit notes. Across services this needs sagas / distributed transactions, which are hard to get right with money and GST |
+| One database | all modules share one MySQL schema; microservices would need a database per service and a data split |
+| Small team | every service needs its own deploy, monitoring and on-call; Flow 2 (PM2 on EC2) is built for a few apps |
+| Heavy traffic is already separate | video and audio go through LiveKit and Coturn (media plane), not Nest. Nest only mints tokens and handles billing and webhooks |
+
+What we do instead:
+
+1. **API and worker split.** `apps/api` serves HTTP only. `apps/worker` runs every background job: email and SMS queue, webhook retries, auto recharge, invoice generation, recording reconciliation. Today these run on `setInterval` timers inside the API. With PM2 cluster mode (`instances: max`), each API copy runs its own timers, so the same job can run several times. Fixing this comes first.
+2. **BullMQ on Redis** for those jobs: retries with backoff, dead-letter queue, idempotent handlers (safe to run twice).
+3. **Clean module boundaries** (section 2.2). Modules talk through ports, not direct imports. Once a module only talks through ports, it can later move into its own service without a rewrite.
+
+Split a module into its own service only when at least one of these is true, and record the decision in a PR that updates this section:
+
+- it must scale very differently from the rest (for example webhook delivery at very high volume)
+- it needs another language or runtime (for example a Python ML or OCR service; it then runs as an internal-only app under PM2, called only by the backend)
+- a separate team owns it and deploys it on its own schedule
+- a compliance rule applies to that part only (for example isolating KYC data)
+
+None of these apply today. Next step: phase P2 in [DEPLOYMENT_RULES.md](DEPLOYMENT_RULES.md) (Nest monorepo layout, timers → BullMQ in `apps/worker`).
+
 ---
 
 ## 3. Frontend rules (Next.js)
