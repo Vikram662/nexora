@@ -1,0 +1,30 @@
+// Flow 2 pipeline (DEPLOYMENT_RULES.md section 3). dev and stag deploy on merge; main waits for an approval.
+pipeline {
+  agent { label 'builder' }
+  options { disableConcurrentBuilds(); timestamps(); buildDiscarder(logRotator(daysToKeepStr: '14')) }
+  environment { NEXT_TELEMETRY_DISABLED = '1' }
+  stages {
+    stage('Install') {
+      steps { sh 'npm ci --prefix backend && npm ci --prefix frontend' }
+    }
+    stage('Lint + Test') {
+      steps { sh 'deploy/jenkins/check.sh' }
+    }
+    stage('Build + Package') {
+      steps { sh "deploy/jenkins/package.sh ${env.BRANCH_NAME}" }
+    }
+    stage('Approve prod') {
+      when { branch 'main' }
+      steps { input message: 'Deploy to production?' }
+    }
+    stage('Deploy') {
+      when { anyOf { branch 'dev'; branch 'stag'; branch 'main' } }
+      steps { sshagent(['deploy-key']) { sh "deploy/jenkins/deploy.sh ${env.BRANCH_NAME}" } }
+    }
+  }
+  post {
+    failure { slackSend channel: '#deploys', message: "FAILED ${env.JOB_NAME} #${env.BUILD_NUMBER}" }
+    success { slackSend channel: '#deploys', message: "OK ${env.JOB_NAME} #${env.BUILD_NUMBER}" }
+    always { cleanWs() }
+  }
+}
